@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MBA Study Tutor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421</span></div>
+  <div id="netNote" class="net" hidden>offline</div>
+</header>
+
+<div id="statusBanner" class="banner ready" role="status" aria-live="polite">
+  <div id="statusWord" class="word">READY</div>
+  <div id="statusSub" class="subtext">Tap START to begin.</div>
+</div>
+<button id="btnMute" class="bigbtn mute" hidden>MUTE</button>
+<button id="btnUnmute" class="bigbtn unmute" hidden>UNMUTE</button>
+<div id="heardLine" class="heard" hidden></div>
+<div id="alert" class="alert" hidden></div>
+
+<nav class="tabs" role="tablist">
+  <button data-tab="tutor" class="tab active">Tutor</button>
+  <button data-tab="lessons" class="tab">Lessons</button>
+  <button data-tab="progress" class="tab">Progress</button>
+  <button data-tab="log" class="tab">Log</button>
+  <button data-tab="settings" class="tab">Settings</button>
+  <button data-tab="help" class="tab">Help</button>
+</nav>
+
+<main>
+  <!-- TUTOR -->
+  <section id="tab-tutor" class="panel active">
+    <div id="startCard" class="card">
+      <h2>Ready when you are</h2>
+      <p>Pick what to practice, then tap a start button. I will talk and listen. Put your phone on the charger and keep this screen open.</p>
+      <label class="lbl" for="focusSel">Practice</label>
+      <select id="focusSel">
+        <option value="all">Everything (mixed)</option>
+        <option value="weak">My weak areas</option>
+        <option value="acct">Accounting &amp; finance (BUS 5601)</option>
+        <option value="econ">Managerial economics (BUS 5421)</option>
+      </select>
+      <button id="btnStart" class="bigbtn go">START QUIZ</button>
+      <button id="btnStartLesson" class="bigbtn alt">START LESSONS (listen &amp; learn)</button>
+      <button id="btnGym" class="btn">Gym mode (dark screen)</button>
+      <p class="small" id="supportNote"></p>
+    </div>
+
+    <div id="quizCard" class="card" hidden>
+      <div class="meta"><span id="qSubj" class="chip"></span><span id="qTopic" class="chip alt"></span><span id="qDiff" class="chip"></span></div>
+      <div id="qText" class="qtext"></div>
+      <div id="qOpts" class="opts"></div>
+      <div id="qInputRow" class="inputrow" hidden>
+        <input id="qInput" type="text" inputmode="text" autocomplete="off" placeholder="Type your answer (or just say it)">
+        <button id="btnSubmit" class="btn go">Submit</button>
+      </div>
+      <div id="bufferLine" class="small" hidden></div>
+      <div class="row">
+        <button id="btnGradeNow" class="btn" hidden>I'm done answering</button>
+        <button id="btnDontKnow" class="btn">I don't know</button>
+        <button id="btnSkip" class="btn">Skip</button>
+      </div>
+      <div id="feedback" class="feedback" hidden>
+        <div id="fbHead" class="fbhead"></div>
+        <div id="fbBody"></div>
+        <div id="fbNote" class="small"></div>
+        <div class="row">
+          <button id="btnRight" class="btn go">I was right</button>
+          <button id="btnWrong" class="btn warn">I was wrong</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="lessonCard" class="card" hidden>
+      <div class="meta"><span id="lName" class="chip alt"></span><span id="lPart" class="chip"></span><span id="lVariant" class="chip"></span></div>
+      <div id="lText" class="qtext lesson"></div>
+      <div class="grid2">
+        <button class="btn" data-ui="back">&#9664; Back</button>
+        <button class="btn" data-ui="repeat">&#8635; Repeat</button>
+        <button class="btn" data-ui="prev">&#9664;&#9664; Previous topic</button>
+        <button class="btn" data-ui="next">Next topic &#9654;&#9654;</button>
+        <button class="btn" data-ui="restart">Repeat that topic</button>
+        <button class="btn" data-ui="simpler">Explain simpler</button>
+        <button class="btn" data-ui="slower">Slower</button>
+        <button class="btn" data-ui="faster">Faster</button>
+      </div>
+      <button class="bigbtn alt" data-ui="quiz">QUIZ ME ON THIS</button>
+    </div>
+
+    <div id="ctrlCard" class="card" hidden>
+      <div class="grid3">
+        <button class="btn" data-ui="repeat">Repeat</button>
+        <button class="btn" data-ui="explain">Explain</button>
+        <button class="btn" data-ui="simpler">Simpler</button>
+        <button class="btn" data-ui="skip">Skip</button>
+        <button class="btn" data-ui="nextpart">Next</button>
+        <button class="btn" data-ui="dashboard">Score</button>
+      </div>
+      <button class="btn warn wide" data-ui="stop">STOP SESSION</button>
+      <div class="small">Session: <span id="sessCount">0</span> answered, <span id="sessRight">0</span> right</div>
+    </div>
+  </section>
+
+  <!-- LESSONS -->
+  <section id="tab-lessons" class="panel">
+    <div class="card"><h2>Lessons</h2>
+      <p>Tap a topic and I will teach it out loud, a short part at a time, based on your hour-long audio script. Say <b>back</b>, <b>repeat</b>, <b>repeat that topic</b>, <b>previous topic</b>, <b>next topic</b>, <b>slower</b>, or <b>explain simpler</b> at any time.</p>
+      <div id="lessonList"></div>
+    </div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section id="tab-progress" class="panel">
+    <div class="card"><h2>How you are doing</h2><div id="overall"></div></div>
+    <div class="card"><h2>Weakest topics</h2><div id="weakList"></div>
+      <button id="btnPracticeWeak" class="bigbtn go">PRACTICE MY WEAK AREAS</button></div>
+    <div class="card"><h2>All topics</h2><div id="topicList"></div>
+      <p class="small">Score is recency-weighted: your last answers count most. Under 3 answers shows as New.</p></div>
+  </section>
+
+  <!-- LOG -->
+  <section id="tab-log" class="panel">
+    <div class="card"><h2>Answer log</h2>
+      <div class="row">
+        <button id="btnCsv" class="btn">Download CSV</button>
+        <button id="btnJson" class="btn">Download JSON</button>
+        <button id="btnCopy" class="btn">Copy to clipboard</button>
+      </div>
+      <div id="logInfo" class="small"></div>
+      <div id="logList"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="panel">
+    <div class="card"><h2>Voice unmute phrase</h2>
+      <p class="small">Say this to turn listening back on after "mute". Pick something you would not say by accident, two or three words.</p>
+      <input id="setKeyword" type="text" autocomplete="off">
+      <button id="btnSaveKeyword" class="btn go">Save phrase</button>
+      <div id="kwMsg" class="small"></div>
+    </div>
+    <div class="card"><h2>What mute does</h2>
+      <label class="check"><input type="radio" name="muteMode" value="keyword"> Quiet mode: I stay silent and ignore everything except your unmute phrase. (The microphone stays open only to catch that phrase. Nothing else is processed or saved.)</label>
+      <label class="check"><input type="radio" name="muteMode" value="off"> Full off: the microphone is turned off completely. You must tap UNMUTE.</label>
+    </div>
+    <div class="card"><h2>Voice</h2>
+      <label class="lbl" for="setRate">Speaking speed: <span id="rateVal"></span></label>
+      <input id="setRate" type="range" min="0.5" max="1.5" step="0.05">
+      <label class="lbl" for="setVoice">Voice</label>
+      <select id="setVoice"></select>
+      <button id="btnTestVoice" class="btn">Test voice</button>
+      <label class="check"><input id="setBarge" type="checkbox"> Earbuds mode: I can hear "mute" and commands while I am talking. Turn this OFF if you use the phone speaker, so I do not hear myself.</label>
+      <label class="check"><input id="setAuto" type="checkbox"> Go to the next question automatically</label>
+      <label class="check"><input id="setWake" type="checkbox"> Keep the screen on during a session</label>
+    </div>
+    <div class="card"><h2>Text size</h2>
+      <div class="row"><button id="fontDown" class="btn">A&minus; smaller</button><button id="fontUp" class="btn">A+ bigger</button></div>
+    </div>
+    <div class="card"><h2>Your data</h2>
+      <p class="small">Everything is stored only on this phone, in this browser.</p>
+      <button id="btnReset" class="btn warn">Erase all my answers</button>
+      <button id="btnInstall" class="btn go" hidden>Install app on home screen</button>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section id="tab-help" class="panel">
+    <div class="card"><h2>Voice commands</h2><div id="cmdList"></div></div>
+    <div class="card"><h2>Honest limits of a phone browser</h2>
+      <ul class="limits">
+        <li><b>Keep the screen on.</b> Chrome on Android stops listening when the screen locks or you switch apps. This app asks the phone to keep the screen awake. At the gym: plug in or keep it in a pocket holder, use Gym mode (dark screen) and earbuds.</li>
+        <li><b>Listening needs internet.</b> Chrome sends your voice to Google to turn it into text. If you are offline, use the buttons. Questions and tapping still work offline.</li>
+        <li><b>You may hear a small beep or tone</b> each time the microphone restarts. That is Chrome, not this app.</li>
+        <li><b>Free-form answers are graded by keywords.</b> I look for the key ideas in what you said. It is approximate. Tap "I was right" or "I was wrong" (or say it) to overrule me.</li>
+        <li><b>Talking while I talk.</b> With earbuds, saying "mute" works while I am speaking. Without earbuds, turn Earbuds mode off in Settings, because the mic can pick up my own voice.</li>
+        <li><b>Muted means muted, but the mic is not off.</b> In Quiet mode the phone microphone stays open only to hear your unmute phrase. Words are checked on the spot and thrown away. Pick Full off in Settings if you want the mic fully off.</li>
+        <li><b>Not a replacement for class.</b> The questions follow standard accounting and economics textbooks. Your professors and Canvas are the final word.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<div id="gym" class="gym" hidden>
+  <div id="gymStatus" class="gymword">READY</div>
+  <div id="gymSub" class="gymsub"></div>
+  <button id="gymMute" class="gymbtn">MUTE</button>
+  <button id="gymExit" class="gymexit">Exit gym mode</button>
+</div>
+
+<script src="questions.js"></script>
+<script src="lessons-data.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

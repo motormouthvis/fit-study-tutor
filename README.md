@@ -1,0 +1,48 @@
+# MBA Study Tutor (Bill's hands-free voice tutor)
+
+A single web page (no server, no accounts, no cost) that quizzes you by voice, teaches you out loud, logs every answer on your phone, and finds your weak spots.
+Covers BUS 5601 (accounting and finance basics) and BUS 5421 (managerial economics).
+
+## Files
+- `index.html`, `style.css`, `app.js`: the screens and the phone glue (speech, mic, screen-awake)
+- `engine.js`: all the logic (grading, mute, commands, adaptive question choice, lessons). Tested.
+- `questions.js`: 217 questions in 24 topics + 18 "endless" number-problem generators, and the topic lessons
+- `lessons-data.js`: the Episode 1 audio script cut into short spoken lesson parts (made by `build_lessons.py`)
+- `manifest.webmanifest`, `sw.js`, `icons/`: lets Chrome install it as an app and run it offline
+- `tests/`: `engine.test.js` (47 logic tests) and `e2e.py` (headless browser test with fake microphone and voice)
+
+## How to use it (on the phone, in Chrome)
+1. Open the web address once (needs internet the first time). Chrome will ask for the microphone: tap Allow.
+2. Menu (three dots) > Add to Home screen / Install app. After that it opens like an app and the questions work offline.
+3. Plug the phone in, put in earbuds, tap **START QUIZ** (or **START LESSONS**). Keep the screen on.
+4. Answer out loud: "B", or "forty percent", or "balance sheet". For "explain" questions, talk for as long as you like, then say "done".
+5. **Mute:** say "mute" or "pause" (or tap the big red MUTE). I stop talking and ignore everything you say, including what you say to other people. **Unmute:** say "resume tutor" (you can change that phrase in Settings) or tap the green UNMUTE.
+6. **Gym mode** makes the screen nearly black with one huge MUTE/UNMUTE button.
+
+### Voice commands
+mute / pause, resume tutor, stop, repeat, skip, next, explain, explain differently (or simpler), I don't know, done, I was right / I was wrong, A B C D,
+teach me [topic], back, repeat that topic, previous topic, next topic, slower, faster, quiz me (on accounting / economics / my weak areas / a topic), how am I doing, help.
+(The Help tab in the app lists them all.)
+
+### Lessons
+The Lessons tab lists the 24 topics. Tap one (or say "teach me balance sheet"). Each topic plays in short parts straight from your audio script. Say "back" to hear the last part again, "repeat that topic" to restart, "previous topic" / "next topic" to move, "slower", and "explain simpler" for plain-words versions. When a topic finishes I wait a few seconds and move on; say "quiz me" to practice that topic.
+
+### Your answers
+Every answer is saved on the phone (question, topic, subject, what you said, right/wrong, time). Log tab: Download CSV, Download JSON, or Copy to clipboard. The Progress tab shows strong/weak topics (recent answers count most). Wrong answers get a spoken explanation, a short lesson with an example, then a similar follow-up question. Questions you miss come back sooner; ones you know come back less often.
+
+## Honest limits (phone browsers)
+- Chrome on Android **stops listening when the screen locks or you switch apps**. The app keeps the screen awake (Wake Lock) and shows a warning if it was interrupted. Best setup: plugged in, screen on (dark Gym mode), earbuds. Speaking sometimes continues with the screen off, but not reliably, and listening will not.
+- Listening needs **internet** (Chrome sends audio to Google). Offline you can still read and tap.
+- Chrome may make a small **beep/tone** each time the microphone restarts.
+- **Mute is software:** in Quiet mode the microphone stays open only to catch the unmute phrase (everything else is thrown away, never shown or saved). Settings has "Full off" if you prefer the mic completely off while muted (then tap UNMUTE).
+- Speaker phone: turn off "Earbuds mode" in Settings or the mic may hear the tutor. Earbuds mode lets you say "mute" while it talks.
+- Spoken free-form answers are graded by **keywords** (approximate). Tap or say "I was right/wrong" to overrule.
+- Voice quality depends on the phone's built-in voice.
+
+## Hosting (needs HTTPS for the microphone)
+Any static host works; upload this folder as-is. Examples: GitHub Pages, Cloudflare Pages, Netlify (drag the folder onto app.netlify.com/drop).
+Test locally: `python3 -m http.server 8080` then open http://localhost:8080 (localhost counts as secure).
+
+## Tests
+`npm test` (or `node --test tests/engine.test.js`) and `python3 tests/e2e.py` (needs Playwright + Chrome).
+When you change any file, bump `VERSION` in `sw.js` so phones pick up the update.
