@@ -460,6 +460,11 @@ test("lessons: auto-continue ON; the pause between parts is 0.6 s with listen-wh
   const { io, tu } = lessonStarted(); const snap = tu.snapshot(); assert.ok(snap.lesson.count >= 2); assert.equal(snap.lesson.seg, 0);
   assert.equal(tu.lessonGap(), 600); tu.setSetting("bargeIn", false); assert.equal(tu.lessonGap(), 3000);
 });
+test("voice commands unavailable (mic network errors): no 3 s listening gap between parts, buttons still drive everything", () => {
+  const { io, tu } = lessonStarted(); tu.setSetting("bargeIn", false); assert.equal(tu.lessonGap(), 3000);
+  tu.voiceOff = true; assert.equal(tu.lessonGap(), 600);
+  const si = tu.lesson.si; tu.ui("nextpart"); assert.equal(tu.lesson.si, si + 1); tu.ui("pauseaudio"); assert.equal(tu.audioPaused, true); tu.ui("pauseaudio"); assert.equal(tu.audioPaused, false);
+});
 test("PAUSE AUDIO button freezes the audio and any pending advance; RESUME carries on (also by voice)", () => {
   const { io, tu } = lessonStarted(); io.endSpeech(); assert.equal(io.timerCount(), 1);
   tu.ui("pauseaudio"); assert.ok(tu.audioPaused); assert.equal(io.paused, 1); assert.equal(io.timerCount(), 0, "advance timer frozen");
@@ -520,4 +525,29 @@ test("audio files: manifest matches the plan and every clip file exists (mp3, sm
   const root = path.join(__dirname, ".."); global.window = {}; require(path.join(root, "audio-manifest.js")); const man = global.window.AUDIO_MANIFEST.clips; delete global.window;
   let bytes = 0; PLAN.forEach((t, k) => { assert.ok(k in man, "manifest lacks " + t.slice(0, 60)); const f = path.join(root, "audio", k + ".mp3"); const st = fs.statSync(f); assert.ok(st.size > 500, f); bytes += st.size; assert.ok(man[k] > 0.3, "duration " + t); });
   assert.ok(bytes < 60 * 1024 * 1024, "total audio " + bytes);
+});
+
+/* ======================= v3: lesson progress, timing, topic jump ======================= */
+test("lesson progress: a topic is ticked off only when its last part REALLY ends; failures and jumping away do not tick it", () => {
+  const { io, tu } = lessonStarted();
+  assert.deepEqual(Object.keys(tu.progress.done), []); assert.equal(tu.progress.last, "balance");
+  const n = tu.lessonSegs().length;
+  for (let i = 0; i < n - 1; i++) { io.endSpeech(); io.fire(); }
+  assert.equal(tu.lesson.si, n - 1); assert.equal(tu.progress.done.balance, undefined, "not yet");
+  io.failSpeech("dead"); assert.equal(tu.progress.done.balance, undefined, "failed last part: not done");
+  tu.heard(["repeat"], true); io.endSpeech(); assert.equal(tu.phase, "lessonEnd"); assert.ok(tu.progress.done.balance, "ticked");
+  assert.ok(tu.snapshot().lessonProgress.done.includes("balance"));
+});
+test("lesson progress persists across restarts and can be cleared; jumping to any topic works (teach)", () => {
+  const x = lessonStarted(); x.tu.lessonEnd(); const store = x.io.store;
+  const y = makeTutor({ store: JSON.parse(JSON.stringify(store)) }); assert.ok(y.tu.progress.done.balance); assert.equal(y.tu.progress.last, "balance");
+  y.tu.start({ lesson: "balance" }); y.io.endSpeech(); y.tu.ui("teach", "elasticity"); assert.equal(y.tu.topics[y.tu.lesson.ti].key, "elasticity"); assert.equal(y.tu.lesson.si, 0); assert.equal(y.tu.progress.last, "elasticity");
+  y.tu.resetLessonProgress(); assert.deepEqual(Object.keys(y.tu.progress.done), []);
+});
+test("lesson timing: part and topic durations come from the clip durations the io provides", () => {
+  const x = makeTutor({ seed: 4, store: { settings: { schema: 2, introCount: 5 } } }); x.io.clipDuration = t => t.length / 15;
+  const tu = new E.Tutor(x.io, { topics: B.TOPICS, questions: B.QUESTIONS, generators: B.GENERATORS, lessons: LD, subjects: B.SUBJECTS });
+  const plan = tu.plan(); assert.equal(plan.topicSecs.length, B.TOPICS.length); assert.ok(plan.total > 600, "total " + plan.total);
+  tu.running = true; tu.startLesson("balance"); const L = tu.snapshot().lesson; assert.equal(L.partSecs.length, L.count); assert.ok(L.partSecs.every(s => s > 0)); assert.ok(L.titleSecs > 0);
+  const topicSum = L.partSecs.reduce((a, b) => a + b, 0) + L.titleSecs; assert.ok(Math.abs(topicSum - plan.topicSecs[tu.lesson.ti]) < 0.01);
 });

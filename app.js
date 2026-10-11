@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v2";
+  var APP_VERSION = "v3";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -103,7 +103,7 @@
   }
   function prefetch(url) { try { fetch(url).catch(function () {}); } catch (e) {} }
   function cancelSpeech() {
-    P.token++; if (P.abort) P.abort(); P.heldNext = null; P.intentional = false;
+    P.token++; if (P.abort) P.abort(); P.heldNext = null; P.intentional = false; P.curText = ""; P.doneText = "";
     try { audioEl.pause(); audioEl.removeAttribute("src"); audioEl.load(); } catch (e) {}
     if (synth) { try { synth.cancel(); } catch (e) {} }
     setAudioState("idle");
@@ -134,9 +134,10 @@
       if (P.intentional) { P.heldNext = next; return; }
       if (i >= parts.length) return finish(played > 0, played > 0 ? "" : "nothing could be played");
       var p = parts[i++], url = clipUrl(p.t);
+      P.curText = p.t;
       function cont(ok, why) {
         if (tok !== P.token) return;
-        if (ok) { played++; setTimeout(next, 90); }
+        if (ok) { P.doneText = p.t; played++; setTimeout(next, 90); }
         else if (p.soft) { ev("skipped a part: " + why); next(); }
         else finish(false, why);
       }
@@ -151,18 +152,19 @@
     speak: speak, cancelSpeech: cancelSpeech, pauseAudio: pauseAudio, resumeAudio: resumeAudio,
     setTimer: function (fn, ms) { return setTimeout(fn, ms); }, clearTimer: function (id) { clearTimeout(id); },
     now: function () { return Date.now(); }, rng: Math.random,
-    load: storage.load, save: storage.save, emit: function (s) { render(s); }
+    load: storage.load, save: storage.save, emit: function (s) { render(s); },
+    clipDuration: function (text) { return MAN[E.clipKey(text)] || 0; }
   };
   var tutor = new E.Tutor(io, { topics: B.TOPICS, questions: B.QUESTIONS, generators: B.GENERATORS, lessons: LD, subjects: B.SUBJECTS });
   window.__tutor = tutor; window.__E = E;
 
   /* ---------- microphone / speech recognition ---------- */
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var rec = null, recOn = false, consumed = false, micError = "", restartTimer = null, userMicOff = false, lastHeard = "";
+  var netFails = 0, rec = null, recOn = false, consumed = false, micError = "", restartTimer = null, userMicOff = false, lastHeard = "";
   var recStartedAt = 0, recGotResult = false, micHoldUntil = 0, wasSpeaking = false;
   function maxQuick() { return window.__maxQuick || 25; }   // consecutive sessions that ended within 4 s with nothing heard
   function shouldListen() {
-    if (!SR || userMicOff || !tutor.running || micError === "fatal" || micError === "loop") return false;
+    if (!SR || userMicOff || !tutor.running || micError === "fatal" || micError === "loop" || micError === "voice-off") return false;
     if (tutor.muted) return tutor.settings.muteMode !== "off";
     if (tutor.speaking && !tutor.settings.bargeIn) return false;
     return true;
@@ -183,13 +185,17 @@
     if (!SR) return;
     try {
       consumed = false; rec = new SR(); rec.lang = "en-US"; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 3;
-      rec.onstart = function () { recOn = true; consumed = false; recStarts(); if (micError !== "fatal" && micError !== "loop") micError = ""; updateBanner(); };
+      rec.onstart = function () { recOn = true; consumed = false; recStarts(); if (micError !== "fatal" && micError !== "loop" && micError !== "voice-off") micError = ""; updateBanner(); };
       rec.onresult = onResult;
       rec.onerror = function (ev2) {
         var e = ev2 && ev2.error; recStats.errors++; recStats.lastErr = e || "?";
         if (e === "not-allowed" || e === "service-not-allowed") { micError = "fatal"; showAlert("The microphone is blocked. Tap the lock icon in Chrome's address bar, allow Microphone for this site, then reload. You can still use the buttons."); }
         else if (e === "audio-capture") { micError = "fatal"; showAlert("No microphone found. You can still use the buttons."); }
-        else if (e === "network") { micError = "network"; showAlert("Voice listening needs an internet connection. Use the buttons until you are back online."); }
+        else if (e === "network") {
+          // calm handling: retry quietly a couple of times, then give up until the user asks again or the connection returns
+          netFails++; micError = netFails >= 3 ? "voice-off" : "network";
+          if (micError === "voice-off") { tutor.voiceOff = true; ev("voice commands unavailable (network) - stopped retrying"); stopRec(); tutor.emit(); }
+        }
         else if (e === "no-speech" || e === "aborted") { /* normal */ }
         ev("mic error: " + e);
       };
@@ -198,9 +204,9 @@
         var life = Date.now() - recStartedAt;
         if (recGotResult || life > 4000) recStats.quick = 0; else recStats.quick++;
         if (!shouldListen()) return;
-        if (recStats.quick >= maxQuick()) { micError = "loop"; ev("mic gave up after " + recStats.quick + " quick restarts"); showAlert("The microphone keeps stopping, so I paused listening to avoid beeping. Tap RESTART MIC to try again, or use the buttons."); updateBanner(); return; }
+        if (recStats.quick >= maxQuick()) { micError = "loop"; tutor.voiceOff = true; ev("mic gave up after " + recStats.quick + " quick restarts"); tutor.emit(); updateBanner(); return; }
         // exponential backoff: 0.25 s for the first few, then 0.5, 1, 2, 4, max 5 s
-        var delay = micError === "network" ? 3000 : Math.min(5000, 250 * Math.pow(2, Math.max(0, recStats.quick - 3)));
+        var delay = micError === "network" ? 2000 * netFails : Math.min(5000, 250 * Math.pow(2, Math.max(0, recStats.quick - 3)));
         restartTimer = setTimeout(function () { restartTimer = null; syncMic(); }, delay);
       };
       rec.start();
@@ -208,12 +214,12 @@
   }
   function recStarts() { recStats.starts++; recStartedAt = Date.now(); recGotResult = false; }
   function stopRec() { try { if (rec) { rec.onend = null; rec.abort(); } } catch (e) {} rec = null; recOn = false; clearTimeout(restartTimer); restartTimer = null; updateBanner(); }
-  function restartMic() { micError = micError === "fatal" ? "fatal" : ""; recStats.quick = 0; stopRec(); syncMic(); ev("mic restarted by button"); }
+  function restartMic() { micError = micError === "fatal" ? "fatal" : ""; netFails = 0; tutor.voiceOff = micError === "fatal"; recStats.quick = 0; stopRec(); syncMic(); ev("mic restarted by button"); }
   function onResult(ev2) {
     var res = ev2.results[ev2.results.length - 1]; if (!res) return;
     var alts = []; for (var i = 0; i < res.length; i++) if (res[i].transcript) alts.push(res[i].transcript);
     if (!alts.length) return;
-    var isFinal = !!res.isFinal; recGotResult = true; recStats.results++;
+    var isFinal = !!res.isFinal; recGotResult = true; recStats.results++; netFails = 0;
     if (consumed && isFinal) return;                         // rest of an utterance that already did something
     if (tutor.muted) { var r = tutor.heard(alts, isFinal); dbg.heard = "(muted: heard something, ignored" + (r.action === "unmute" ? " - UNMUTE" : "") + ")"; if (r.action === "unmute") { consumed = true; lastHeard = ""; ev("unmuted by voice"); } return; }   // never display or keep anything heard while muted
     if (tutor.speaking) {
@@ -247,17 +253,28 @@
     lastSnap = s || tutor.snapshot(); s = lastSnap;
     updateBanner();
     var running = s.running;
-    $("startCard").hidden = running;
-    $("ctrlCard").hidden = !running;
     var showQuiz = running && s.mode === "quiz" && s.question, showLesson = running && s.mode === "lesson" && s.lesson;
-    $("quizCard").hidden = !showQuiz; $("lessonCard").hidden = !showLesson;
+    $("startCard").hidden = running && s.mode === "quiz";
+    $("quizBar").hidden = !(running && s.mode === "quiz");
+    $("quizCard").hidden = !showQuiz;
+    // lesson playback lives on Learn, quiz on Quiz: follow the mode automatically
+    var tab = activeTab();
+    if (showLesson && !prevShowLesson && tab === "tutor") switchTab("lessons");
+    if (prevShowLesson && s.mode === "quiz" && running && tab === "lessons") switchTab("tutor");
+    prevShowLesson = !!showLesson;
     if (showQuiz) renderQuiz(s);
-    if (showLesson) { $("lName").textContent = s.lesson.name; $("lPart").textContent = "Part " + (s.lesson.seg + 1) + " of " + s.lesson.count; $("lVariant").textContent = s.lesson.variant === "simple" ? "Simple version" : s.lesson.variant === "summary" ? "Short version" : "Full lesson"; $("lText").textContent = s.lesson.text; $("lBar").style.width = Math.round(100 * (s.lesson.seg + (s.speaking ? 0.5 : 1)) / s.lesson.count) + "%"; $("lTopicNo").textContent = "Topic " + (s.lesson.ti + 1) + " of " + s.lesson.tcount; $("lMsg").textContent = s.audioError ? "" : (s.phase === "lessonWait" || s.phase === "lessonEnd" ? (s.message || "") : ""); }
+    if (showLesson) { $("lText").textContent = s.lesson.text; $("lMsg").textContent = s.audioError ? "" : (s.phase === "lessonWait" || s.phase === "lessonEnd" ? (s.message || "") : ""); }
+    if (audioEl.getAttribute("src")) { try { audioEl.playbackRate = window.__testRate || tutor.settings.rate || 1; } catch (e) {} }
     $("sessCount").textContent = s.session.answered; $("sessRight").textContent = s.session.correct;
     $("gymSub").textContent = s.muted ? 'Say "' + tutor.settings.unmuteKeyword + '" or tap the button' : (s.running ? "Tap the button to pause" : "");
     renderGym(s);
     if (!s.running) releaseWake();
+    updateLessonsView(s);
     syncMic();
+    Array.prototype.forEach.call(document.querySelectorAll(".micbtn"), function (b) { b.hidden = !running; b.textContent = s.muted ? "\uD83C\uDFA4 Unmute" : "\uD83C\uDFA4 Mute"; b.classList.toggle("muted", !!s.muted); });
+    var mi = $("menu"); Array.prototype.forEach.call(mi.querySelectorAll(".m-lesson"), function (e) { e.hidden = !(running && s.mode === "lesson"); });
+    Array.prototype.forEach.call(mi.querySelectorAll(".m-quiz"), function (e) { e.hidden = !(running && s.mode === "quiz"); });
+    Array.prototype.forEach.call(mi.querySelectorAll(".m-run"), function (e) { e.hidden = !running; });
     if (!$("tab-progress").hidden && $("tab-progress").classList.contains("active")) renderProgress();
   }
   function renderQuiz(s) {
@@ -306,25 +323,22 @@
 
   function updateBanner() {
     var b = $("statusBanner"), w = $("statusWord"), sub = $("statusSub"), s = tutor;
-    var cls = "ready", word = "READY", text = "Tap START to begin.";
+    var cls = "ready", word = "READY", text = "Tap PLAY to begin.";
+    var voiceMsg = "Voice commands unavailable (no connection) \u2013 use the buttons.";
     if (s.running) {
-      if (s.muted) { cls = "muted"; word = "MUTED"; text = tutor.settings.muteMode === "off" ? "Microphone is OFF. Tap UNMUTE." : 'Ignoring everything. Say "' + tutor.settings.unmuteKeyword + '" or "unmute", or tap UNMUTE.'; }
-      else if (s.audioError) { cls = "error"; word = "NO SOUND"; text = "I couldn't play sound. Tap TEST SOUND."; }
-      else if (s.audioPaused) { cls = "paused"; word = "PAUSED"; text = "Audio is paused. Tap RESUME or say resume."; }
-      else if (!SR || micError === "fatal" || userMicOff) { cls = "micoff"; word = "BUTTONS ONLY"; text = "Voice listening is not available. Tap the buttons."; }
-      else if (micError === "loop") { cls = "micoff"; word = "MIC PAUSED"; text = "The mic kept stopping. Tap RESTART MIC."; }
-      else if (s.speaking) { cls = "speaking"; word = "PLAYING"; text = tutor.settings.bargeIn ? "You can say mute or a command." : "Tap MUTE / PAUSE to stop me, or say mute. I listen again when I finish."; }
-      else { cls = recOn ? "listening" : "micoff"; word = recOn ? "LISTENING" : "STARTING MIC"; text = recOn ? "Go ahead and speak. Say mute to pause me." : "One moment..."; }
-      if (wake) text += "  Screen stays on."; else if (tutor.settings.wakeLock && navigator.wakeLock) text += "";
+      if (s.muted) { cls = "muted"; word = "MUTED"; text = tutor.settings.muteMode === "off" || micError === "voice-off" || micError === "fatal" ? "Tap Unmute to continue." : 'Say "' + tutor.settings.unmuteKeyword + '" or tap Unmute.'; }
+      else if (s.audioError) { cls = "error"; word = "NO SOUND"; text = "I couldn't play sound."; }
+      else if (s.audioPaused) { cls = "paused"; word = "PAUSED"; text = "Tap PLAY to continue."; }
+      else if (!SR || micError === "fatal" || userMicOff) { cls = "micoff"; word = s.speaking ? "PLAYING" : "BUTTONS ONLY"; text = "Voice not available \u2013 use the buttons."; }
+      else if (micError === "voice-off" || micError === "loop") { cls = "voiceoff"; word = s.speaking ? "PLAYING" : (micError === "loop" ? "MIC PAUSED" : "WAITING"); text = micError === "loop" ? "Voice paused \u2013 use the buttons, or Menu > Restart microphone." : voiceMsg; }
+      else if (s.speaking) { cls = "speaking"; word = "PLAYING"; text = tutor.settings.bargeIn ? "You can say mute." : ""; }
+      else { cls = recOn ? "listening" : "micoff"; word = recOn ? "LISTENING" : "STARTING MIC"; text = recOn ? "Go ahead and speak." : ""; }
     }
-    b.className = "banner " + cls; w.textContent = word; sub.textContent = text;
-    $("btnMute").hidden = !(s.running && !s.muted); $("btnUnmute").hidden = !(s.running && s.muted);
+    b.className = "slim " + cls; w.textContent = word; sub.textContent = text;
     $("heardLine").hidden = !(s.running && !s.muted && lastHeard);
     var err = $("audioErr"); var showErr = !!(s.running && s.audioError) || !!soundFail;
     err.hidden = !showErr;
     if (showErr) $("audioErrWhy").textContent = (s.audioError || soundFail || "") + "";
-    $("btnMicRetry").hidden = !(s.running && (micError === "loop" || (SR && !recOn && !s.muted && micError !== "fatal" && false)));
-    var pa = $("btnPauseAudio"); if (pa) { pa.hidden = !(s.running && !s.muted); pa.textContent = s.audioPaused ? "\u25B6 RESUME" : "\u23F8 PAUSE AUDIO"; }
     if (s.muted) { lastHeard = ""; $("heardLine").hidden = true; }
   }
   function showHeard(t) { $("heardLine").hidden = false; $("heardLine").textContent = "I heard: " + t; }
@@ -361,16 +375,84 @@
     d.innerHTML = "<div class='nm'><span></span><span><span class='tag st-" + t.status + "'>" + lab + "</span> " + (t.n ? pct(t.acc) : "-") + "</span></div><div class='bar'><i class='st-" + t.status + "' style='width:" + (t.n ? Math.round(t.acc * 100) : 0) + "%'></i></div><div class='small'>" + t.n + " answered, " + t.correct + " right</div>";
     d.firstChild.firstChild.textContent = t.name; return d;
   }
+  var prevShowLesson = false, topicRows = {};
+  function activeTab() { var t = document.querySelector(".tab.active"); return t ? t.dataset.tab : ""; }
+  function fmtClock(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + ("0" + (sec % 60)).slice(-2); }
+  function fmtLeft(sec) {
+    var m = Math.max(1, Math.round(sec / 60)); if (m < 60) return "about " + m + " min";
+    var h = Math.floor(m / 60); return "about " + h + " h " + (m % 60) + " min";
+  }
+  function sum(arr) { return arr.reduce(function (x, y) { return x + y; }, 0); }
+  // which topic a "Start / Continue" button should open
+  function nextLessonKey(s) {
+    var lp = s.lessonProgress, keys = B.TOPICS.map(function (t) { return t.key; });
+    var k = lp.last && keys.indexOf(lp.last) >= 0 ? lp.last : null;
+    if (k && lp.done.indexOf(k) < 0) return k;
+    var from = k ? keys.indexOf(k) + 1 : 0;
+    for (var n = 0; n < keys.length; n++) { var c = keys[(from + n) % keys.length]; if (lp.done.indexOf(c) < 0) return c; }
+    return keys[0];
+  }
   function renderLessons() {
-    var box = $("lessonList"); box.innerHTML = "";
+    var box = $("lessonList"); box.innerHTML = ""; topicRows = {};
     ["acct", "econ"].forEach(function (sj) {
       var hd = document.createElement("div"); hd.className = "grp"; hd.textContent = B.SUBJECTS[sj]; box.appendChild(hd);
       B.TOPICS.filter(function (t) { return t.subj === sj; }).forEach(function (t) {
-        var r = document.createElement("div"); r.className = "lrow"; var b = document.createElement("button"); b.className = "btn"; b.textContent = "\u25B6  " + t.name; b.dataset.topic = t.key;
-        b.addEventListener("click", function () { startSession({ lesson: t.key }); }); r.appendChild(b); box.appendChild(r);
+        var b = document.createElement("button"); b.className = "trw"; b.dataset.topic = t.key;
+        b.innerHTML = "<span class='tick'></span><span class='tn'></span><span class='tm'></span>"; b.children[1].textContent = t.name;
+        b.addEventListener("click", function () { if (tutor.running) tutor.ui("teach", t.key); else startSession({ lesson: t.key }); });
+        box.appendChild(b); topicRows[t.key] = b;
       });
     });
+    updateLessonsView(lastSnap || tutor.snapshot());
   }
+  // everything on the Lessons tab that depends on progress. Cheap; called on every state change and by the ticker.
+  function updateLessonsView(s) {
+    if (!s || !s.lessonProgress) return;
+    var lp = s.lessonProgress, secs = lp.topicSecs, total = lp.total || 0, doneN = lp.done.length, L = (s.running && s.mode === "lesson") ? s.lesson : null, rate = tutor.settings.rate || 1;
+    var doneSecs = 0; B.TOPICS.forEach(function (t, i) { if (lp.done.indexOf(t.key) >= 0) doneSecs += secs[i] || 0; });
+    // topic list
+    B.TOPICS.forEach(function (t, i) {
+      var r = topicRows[t.key]; if (!r) return;
+      var isDone = lp.done.indexOf(t.key) >= 0, isCur = !!(L && L.topic === t.key);
+      r.classList.toggle("done", isDone); r.classList.toggle("current", isCur);
+      r.children[0].textContent = isCur ? "\u25B6" : isDone ? "\u2713" : "\u25CB";
+      r.children[2].textContent = isCur ? "Part " + (L.seg + 1) + "/" + L.count : fmtClock(secs[i] || 0);
+      r.setAttribute("aria-label", t.name + (isDone ? ", heard" : "") + (isCur ? ", playing now" : ""));
+    });
+    $("lTopicsSummary").textContent = doneN + " of " + B.TOPICS.length + " topics heard all the way through" + (total ? " \u00B7 " + fmtLeft((total - doneSecs) / rate) + " of audio left" : "");
+    // main player (always visible; shows the next lesson when idle)
+    var key = nextLessonKey(s), tp = tutor.topic(key), fresh = doneN === 0 && !lp.last;
+    var ps = L ? (L.partSecs || []) : [], d = L ? (ps[L.seg] || 0) : 0, t = 0;
+    var playing = false;
+    if (L) {
+      if (P.curText === L.text && audioEl.getAttribute("src")) t = audioEl.currentTime || 0; else if (P.doneText === L.text) t = d;
+      if (d) t = Math.min(t, d);
+      playing = !s.muted && !s.audioPaused && !s.audioError && s.phase !== "lessonWait";
+    }
+    var pb = $("btnPlay");
+    pb.innerHTML = playing ? "&#10074;&#10074; PAUSE" : (L && s.audioPaused ? "&#9654; RESUME" : "&#9654; PLAY"); pb.classList.toggle("pausing", playing);
+    $("btnSpeed").textContent = (Math.round(rate * 100) / 100) + "\u00D7";
+    $("btnBack10").disabled = !L; $("btnFwd10").disabled = !L; $("btnBack10").style.opacity = $("btnFwd10").style.opacity = L ? 1 : 0.4;
+    var overallHeard = function (frac) { return doneSecs + frac; };
+    if (!L) {
+      $("lName").textContent = "Lessons"; $("lPos").textContent = fresh ? "Ready to start" : "Up next: " + tp.name; $("lTopicNo").textContent = "";
+      $("lText").textContent = fresh ? "Tap PLAY to start listening." : "Tap PLAY to continue where you left off.";
+      $("lMsg").textContent = ""; $("lVariant").textContent = ""; $("lClipBar").style.width = "0%"; $("lClipTime").textContent = "";
+      $("lBar").style.width = (total ? Math.round(100 * doneSecs / total) : 0) + "%";
+      $("lAllLabel").textContent = doneN + " of " + B.TOPICS.length + " topics done"; $("lAllTime").textContent = total ? fmtLeft((total - doneSecs) / rate) + " left" : "";
+      return;
+    }
+    var topicTotal = (L.titleSecs || 0) + sum(ps), played = (L.seg > 0 ? (L.titleSecs || 0) : 0) + sum(ps.slice(0, L.seg)) + t, topicLeft = Math.max(0, topicTotal - played);
+    $("lName").textContent = L.name; $("lVariant").textContent = L.variant === "simple" ? "Simple version" : L.variant === "summary" ? "Short version" : "";
+    $("lPos").textContent = "Part " + (L.seg + 1) + " of " + L.count;
+    $("lTopicNo").textContent = "\u00B7 Topic " + (L.ti + 1) + " of " + L.tcount + (topicTotal ? " \u00B7 " + fmtLeft(topicLeft / rate) + " left" : "");
+    $("lClipBar").style.width = (d ? Math.round(100 * t / d) : 0) + "%"; $("lClipTime").textContent = fmtClock(t) + " / " + fmtClock(d);
+    var curDone = lp.done.indexOf(L.topic) >= 0, frac = topicTotal ? played / topicTotal : 0;
+    var heard = doneSecs + (curDone ? 0 : frac * (secs[L.ti] || 0));
+    $("lBar").style.width = (total ? Math.min(100, Math.round(100 * heard / total)) : 0) + "%";
+    $("lAllLabel").textContent = doneN + " of " + L.tcount + " topics done"; $("lAllTime").textContent = total ? fmtLeft((total - heard) / rate) + " left" : "";
+  }
+  setInterval(function () { if (lastSnap && lastSnap.running && lastSnap.mode === "lesson" && !$("tab-lessons").hidden) updateLessonsView(lastSnap); }, 250);
   function renderLog() {
     var log = tutor.log, box = $("logList"); box.innerHTML = "";
     $("logInfo").textContent = log.length + " answers saved on this phone.";
@@ -417,7 +499,7 @@
     var f = $("focusSel").value, focus = f === "weak" ? { weak: true } : (f === "acct" || f === "econ") ? { subj: f } : {};
     micError = micError === "fatal" ? "fatal" : ""; recStats.quick = 0; soundFail = "";
     if (!opts.lesson) opts.focus = focus; else opts.focus = {};
-    switchTab("tutor");
+    switchTab(opts.lesson ? "lessons" : "tutor");
     userMicOff = false;
     tutor.start(opts);
     acquireWake();
@@ -425,8 +507,7 @@
   }
   /* ---------- sound check ---------- */
   function openSoundCard(msg) {
-    switchTab("tutor"); $("soundCard").hidden = false; $("startCard").hidden = true; $("scMsg").textContent = msg || ""; $("scAsk").hidden = true; $("scHelp").hidden = true;
-    $("soundCard").scrollIntoView && $("soundCard").scrollIntoView({ block: "center" });
+    $("soundCard").hidden = false; $("scMsg").textContent = msg || ""; $("scAsk").hidden = true; $("scHelp").hidden = true;
   }
   function testSound() {
     // plays a beep and then a spoken sentence. Always a direct result of a tap.
@@ -451,10 +532,15 @@
       $("scHelp").textContent = "No sound. Try this: 1) turn the MEDIA volume up with the volume button, then tap TEST SOUND again; 2) make sure silent or Do Not Disturb is off; 3) if you use Bluetooth earbuds, check they are connected; 4) in Chrome, tap the lock icon near the address bar and make sure Sound is allowed; 5) close the app and open it again. I will not start a lesson until you hear this.";
     }
   }
+  var MAIN_TABS = { lessons: 1, tutor: 1, progress: 1 }, lastMain = "lessons";
   function switchTab(name) {
+    var about = name === "help-about"; if (about) name = "help";
+    if (MAIN_TABS[name]) lastMain = name;
+    $("menu").hidden = true;
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) { b.classList.toggle("active", b.dataset.tab === name); });
     Array.prototype.forEach.call(document.querySelectorAll(".panel"), function (p) { var on = p.id === "tab-" + name; p.classList.toggle("active", on); p.hidden = !on; });
     if (name === "progress") renderProgress(); if (name === "log") renderLog(); if (name === "lessons") renderLessons(); if (name === "settings") renderSettings(); if (name === "help") renderHelp();
+    if (about) { var dd = $("dbgLine").parentNode; dd.open = true; renderDbg(); dd.scrollIntoView && dd.scrollIntoView(); } else window.scrollTo(0, 0);
   }
   function download(name, text, type) {
     var blob = new Blob([text], { type: type }), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
@@ -466,22 +552,48 @@
     function fallback() { var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); showAlert("Copied."); } catch (e) { showAlert("Could not copy. Use Download instead."); } ta.remove(); }
   }
 
+  /* ---------- the big PLAY / PAUSE button and 10-second skips ---------- */
+  function onPlay() {
+    var s = tutor.snapshot();
+    if (!s.running || s.mode !== "lesson") { var k = nextLessonKey(s); if (s.running) tutor.ui("teach", k); else startSession({ lesson: k }); return; }
+    if (s.muted) return tutor.unmute();
+    if (s.audioError) return tutor.ui("repeat");
+    if (s.phase === "lessonWait") return tutor.ui("nextpart");
+    tutor.ui("pauseaudio");
+  }
+  function seek(delta) {
+    var s = lastSnap; if (!s || !s.running || s.mode !== "lesson" || !s.lesson) return;
+    var d = audioEl.duration, t = audioEl.currentTime, L = s.lesson, onPart = P.curText === L.text;
+    if (!audioEl.getAttribute("src") || !(d > 0)) { tutor.ui(delta < 0 ? "back" : "nextpart"); return; }
+    var nt = t + delta;
+    if (nt < 0) { if (onPart && L.seg > 0) tutor.ui("back"); else audioEl.currentTime = 0; return; }
+    if (nt > d - 0.4) { if (onPart) tutor.ui("nextpart"); else audioEl.currentTime = Math.max(0, d - 0.4); return; }
+    audioEl.currentTime = nt; ev("seek " + (delta > 0 ? "+" : "") + delta + "s");
+    updateLessonsView(lastSnap);
+  }
+
   function init() {
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) { b.addEventListener("click", function () { switchTab(b.dataset.tab); }); });
     Array.prototype.forEach.call(document.querySelectorAll(".panel"), function (p) { p.hidden = !p.classList.contains("active"); });
     $("btnStart").addEventListener("click", function () { startSession({}); });
-    $("btnTestSound").addEventListener("click", testSound); $("btnTestSound2").addEventListener("click", testSound); $("btnTestSound3").addEventListener("click", testSound);
+    $("btnTestSound").addEventListener("click", testSound); $("btnTestSound2").addEventListener("click", function () { $("menu").hidden = true; testSound(); });
     $("scPlay").addEventListener("click", testSound); $("scYes").addEventListener("click", function () { soundAnswer(true); }); $("scNo").addEventListener("click", function () { soundAnswer(false); });
     $("scCancel").addEventListener("click", function () { pendingStart = null; $("soundCard").hidden = true; $("startCard").hidden = tutor.running; });
-    $("btnMicRetry").addEventListener("click", restartMic); $("btnMicRetry2").addEventListener("click", restartMic);
-    $("btnPauseAudio").addEventListener("click", function () { tutor.ui("pauseaudio"); });
+    $("btnMicRetry").addEventListener("click", function () { $("menu").hidden = true; restartMic(); showAlert("Trying the microphone again."); });
     $("btnSaveAudio").addEventListener("click", saveAllAudio);
     $("ver").textContent = APP_VERSION; $("ver2").textContent = APP_VERSION;
-    $("btnStartLesson").addEventListener("click", function () { startSession({ lesson: tutor.topics[0].key }); });
-    $("btnMute").addEventListener("click", function () { tutor.mute(); syncMic(); ev("MUTE button"); });
-    $("btnUnmute").addEventListener("click", function () { tutor.unmute(); syncMic(); });
+    $("btnPlay").addEventListener("click", onPlay);
+    $("btnBack10").addEventListener("click", function () { seek(-10); }); $("btnFwd10").addEventListener("click", function () { seek(10); });
+    $("btnSpeed").addEventListener("click", function () { var steps = [0.8, 1, 1.25, 1.5], r = tutor.settings.rate || 1, nx = steps.filter(function (x) { return x > r + 0.001; })[0] || steps[0]; tutor.setSetting("rate", nx); renderSettings(); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-mic]"), function (b) { b.addEventListener("click", function () { if (tutor.muted) tutor.unmute(); else tutor.mute(); syncMic(); ev("mic toggle: " + (tutor.muted ? "muted" : "unmuted")); }); });
+    $("btnMenu").addEventListener("click", function () { $("menu").hidden = false; render(); });
+    $("menuClose").addEventListener("click", function () { $("menu").hidden = true; });
+    $("menu").addEventListener("click", function (e) { if (e.target === $("menu")) $("menu").hidden = true; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-goto]"), function (b) { b.addEventListener("click", function () { switchTab(b.dataset.goto); }); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-back]"), function (b) { b.addEventListener("click", function () { switchTab(lastMain); }); });
+    $("btnResetLessons").addEventListener("click", function () { if (confirm("Clear all lesson check marks?")) tutor.resetLessonProgress(); });
     $("gymMute").addEventListener("click", function () { if (tutor.muted) tutor.unmute(); else tutor.mute(); syncMic(); renderGym(tutor.snapshot()); });
-    $("btnGym").addEventListener("click", function () { $("gym").hidden = false; renderGym(tutor.snapshot()); acquireWake(); });
+    $("btnGym").addEventListener("click", function () { $("menu").hidden = true; $("gym").hidden = false; renderGym(tutor.snapshot()); acquireWake(); });
     $("gymExit").addEventListener("click", function () { $("gym").hidden = true; });
     $("btnSubmit").addEventListener("click", function () { tutor.submitText($("qInput").value); });
     $("qInput").addEventListener("keydown", function (e) { if (e.key === "Enter") tutor.submitText($("qInput").value); });
@@ -490,7 +602,7 @@
     $("btnSkip").addEventListener("click", function () { tutor.ui("skip"); });
     $("btnRight").addEventListener("click", function () { tutor.hardStopSpeech(); tutor.override(true); });
     $("btnWrong").addEventListener("click", function () { tutor.hardStopSpeech(); tutor.override(false); });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-ui]"), function (b) { b.addEventListener("click", function () { tutor.ui(b.dataset.ui); }); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ui]"), function (b) { b.addEventListener("click", function () { $("menu").hidden = true; tutor.ui(b.dataset.ui); }); });
     $("btnPracticeWeak").addEventListener("click", function () { $("focusSel").value = "weak"; if (tutor.running) { tutor.ui("stop"); } switchTab("tutor"); startSession({}); });
     $("btnCsv").addEventListener("click", function () { download("study-tutor-log.csv", E.toCSV(tutor.log), "text/csv"); });
     $("btnJson").addEventListener("click", function () { download("study-tutor-log.json", JSON.stringify(tutor.log, null, 2), "application/json"); });
@@ -514,6 +626,7 @@
     $("fontUp").addEventListener("click", function () { tutor.setSetting("fontScale", Math.min(1.6, +(tutor.settings.fontScale + 0.1).toFixed(2))); renderSettings(); });
     $("fontDown").addEventListener("click", function () { tutor.setSetting("fontScale", Math.max(0.8, +(tutor.settings.fontScale - 0.1).toFixed(2))); renderSettings(); });
     $("btnReset").addEventListener("click", function () { if (confirm("Erase all saved answers on this phone? This cannot be undone. Download a copy first if you want one.")) { tutor.log = []; tutor.saveLog(); tutor.last = null; renderProgress(); renderLog(); render(); } });
+    window.addEventListener("online", function () { if (micError === "voice-off" && tutor.running) restartMic(); });
     window.addEventListener("online", netNote); window.addEventListener("offline", netNote); netNote();
     var dip; window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); dip = e; $("btnInstall").hidden = false; });
     $("btnInstall").addEventListener("click", function () { if (dip) { dip.prompt(); dip = null; $("btnInstall").hidden = true; } });

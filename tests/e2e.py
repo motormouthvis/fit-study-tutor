@@ -1,6 +1,8 @@
 """Headless end-to-end test with fake speech APIs. Run: python3 tests/e2e.py  (needs playwright + google-chrome)"""
 import sys, json, threading, http.server, socketserver, os, time, functools
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import mclick, mid, dbg, goto
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 Handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT)
@@ -52,14 +54,14 @@ with sync_playwright() as p:
     pg.screenshot(path="/workspace/study-tutor/tests/shot-ready.png")
 
     # --- start quiz
-    pg.click("#btnStart"); pg.wait_for_timeout(500)
+    pg.click("[data-tab=tutor]"); pg.click("#btnStart"); pg.wait_for_timeout(500)
     check("intro mentions mute and the resume phrase", any("mute" in s and "resume tutor" in s for s in pg.evaluate("__spokenLog")))
     pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
     check("question visible", len(pg.inner_text("#qText")) > 10)
     check("wake lock requested", pg.evaluate("__wake") >= 1)
     check("mic started", pg.evaluate("__recStarts") >= 1)
     check("banner LISTENING", word() == "LISTENING", word())
-    check("MUTE button visible, UNMUTE hidden", pg.is_visible("#btnMute") and not pg.is_visible("#btnUnmute"))
+    check("small Mute toggle visible and says Mute", pg.is_visible("#tab-tutor .micbtn") and pg.inner_text("#tab-tutor .micbtn").endswith("Mute"))
     pg.screenshot(path="/workspace/study-tutor/tests/shot-quiz.png")
 
     # --- spoken answer (voice) -> logged
@@ -82,7 +84,7 @@ with sync_playwright() as p:
     n = pg.evaluate("__tutor.log.length"); spoken_n = len(pg.evaluate("__spokenLog"))
     pg.evaluate("__hear(['mute'])"); pg.wait_for_timeout(200)
     check("voice mute -> MUTED banner", word() == "MUTED", word())
-    check("UNMUTE button shown", pg.is_visible("#btnUnmute") and not pg.is_visible("#btnMute"))
+    check("toggle now says Unmute", pg.inner_text("#tab-tutor .micbtn").endswith("Unmute"))
     pg.screenshot(path="/workspace/study-tutor/tests/shot-muted.png")
     pg.wait_for_function("__recActive()", timeout=3000)  # quiet mode keeps mic open for the keyword only
     for phrase in ["a", "b", "next", "skip", "stop", "the answer is c", "i was right", "teach me balance sheet", "forty", "help"]:
@@ -99,8 +101,8 @@ with sync_playwright() as p:
     pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
 
     # --- tap mute / unmute buttons
-    pg.click("#btnMute"); pg.wait_for_timeout(100); check("tap MUTE works", word() == "MUTED")
-    pg.click("#btnUnmute"); pg.wait_for_timeout(200); check("tap UNMUTE works", word() != "MUTED")
+    pg.click("#tab-tutor .micbtn"); pg.wait_for_timeout(100); check("tap MUTE works", word() == "MUTED")
+    pg.click("#tab-tutor .micbtn"); pg.wait_for_timeout(200); check("tap UNMUTE works", word() != "MUTED")
     pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
 
     # --- tap answer for MC / typed answers
@@ -142,27 +144,27 @@ with sync_playwright() as p:
     check("previous topic", pg.evaluate("__tutor.topics[__tutor.lesson.ti].key") == "balance")
     r0 = pg.evaluate("__tutor.settings.rate"); pg.wait_for_function("__recActive()", timeout=3000); pg.evaluate("__hear(['slower'])"); pg.wait_for_timeout(200)
     check("slower lowers rate", pg.evaluate("__tutor.settings.rate") < r0)
-    pg.click("#lessonCard [data-ui=restart]"); pg.wait_for_timeout(150)
+    mclick(pg, "restart"); pg.wait_for_timeout(150)
     check("tap 'Repeat that topic' restarts at part 1", pg.evaluate("__tutor.lesson.si") == 0)
-    pg.click("#lessonCard [data-ui=quiz]"); pg.wait_for_timeout(500)
+    mclick(pg, "quiz"); pg.wait_for_timeout(500)
     check("quiz me returns to a question on that topic", pg.evaluate("__tutor.mode") == "quiz" and pg.evaluate("__tutor.cur.topic") == "balance")
 
     # --- other screens
     pg.click("[data-tab=progress]"); check("progress renders", "correct overall" in pg.inner_text("#overall"))
     pg.screenshot(path="/workspace/study-tutor/tests/shot-progress.png", full_page=True)
-    pg.click("[data-tab=log]"); check("log lists answers", pg.locator(".logrow").count() >= 2)
+    goto(pg, "log"); check("log lists answers", pg.locator(".logrow").count() >= 2)
     with pg.expect_download() as dl: pg.click("#btnCsv")
     csv = open(dl.value.path()).read(); check("CSV download has header + rows", csv.startswith("timestamp,question_id") and csv.count("\n") >= 3)
     with pg.expect_download() as dl: pg.click("#btnJson")
     check("JSON download parses", isinstance(json.load(open(dl.value.path())), list))
-    pg.click("[data-tab=help]"); h = pg.inner_text("#cmdList")
+    goto(pg, "help"); h = pg.inner_text("#cmdList")
     for w in ["mute", "repeat that topic", "previous topic", "next topic", "slower", "back", "simpler", "repeat", "teach me"]:
         check("help lists '" + w + "'", w in h.lower())
     check("help explains platform limits", "screen" in pg.inner_text("#tab-help").lower() and "internet" in pg.inner_text("#tab-help").lower())
     pg.screenshot(path="/workspace/study-tutor/tests/shot-help.png", full_page=True)
 
     # --- custom unmute phrase
-    pg.click("[data-tab=settings]"); pg.fill("#setKeyword", "back to work"); pg.click("#btnSaveKeyword")
+    goto(pg, "settings"); pg.fill("#setKeyword", "back to work"); pg.click("#btnSaveKeyword")
     check("keyword saved", pg.evaluate("__tutor.settings.unmuteKeyword") == "back to work" and "Saved" in pg.inner_text("#kwMsg"))
     pg.fill("#setKeyword", "please mute"); pg.click("#btnSaveKeyword"); check("keyword with mute word rejected", pg.evaluate("__tutor.settings.unmuteKeyword") == "back to work")
     pg.click("[data-tab=tutor]"); pg.wait_for_function("__recActive()", timeout=5000); pg.evaluate("__hear(['mute'])"); pg.wait_for_timeout(150)
@@ -179,7 +181,7 @@ with sync_playwright() as p:
     pg.click("#gymExit")
 
     # --- stop
-    pg.click("[data-tab=tutor]"); pg.click("[data-ui=stop]"); pg.wait_for_timeout(300); check("stop returns to READY", word() == "READY")
+    pg.click("[data-tab=tutor]"); mclick(pg, "stop"); pg.wait_for_timeout(300); check("stop returns to READY", word() == "READY")
 
     # --- reload: state persists, PWA assets registered
     pg.reload(); pg.wait_for_timeout(600)

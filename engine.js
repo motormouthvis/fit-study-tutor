@@ -453,7 +453,9 @@
     this.mode = "quiz"; this.phase = "idle"; this.cur = null; this.last = null; this.revealed = false;
     this.recent = []; this.followups = []; this.focus = {}; this.epoch = 0; this.timer = null; this.buffer = ""; this.fails = 0;
     this.session = { answered: 0, correct: 0 }; this.lastLessonAt = {}; this.explainVariant = {};
-    this.lesson = null; this.repeatFn = null; this.message = ""; this.audioPaused = false; this.audioError = ""; this.held = null; this.timerFn = null;
+    this.lesson = null; this.repeatFn = null; this.message = ""; this.audioPaused = false; this.audioError = ""; this.held = null; this.timerFn = null; this.voiceOff = false;
+    var lp = io.load("lessonProgress", null); this.progress = lp && lp.done ? lp : { done: {}, last: null };
+    this._plan = null;
   }
   var P = Tutor.prototype;
   P.topic = function (k) { for (var i = 0; i < this.topics.length; i++) if (this.topics[i].key === k) return this.topics[i]; return null; };
@@ -467,8 +469,8 @@
     var c = this.cur, pub = null;
     if (c) pub = { id: c.id, type: c.type, subj: c.subj, topic: c.topic, topicName: (this.topic(c.topic) || {}).name, diff: c.diff, q: c.q, unit: c.unit, options: c.options ? c.options.map(function (o) { return { letter: o.letter, text: o.text }; }) : null };
     var L = null;
-    if (this.lesson) { var segs = this.lessonSegs(); L = { topic: this.topics[this.lesson.ti].key, name: this.topics[this.lesson.ti].name, seg: this.lesson.si, count: segs.length, variant: this.lesson.variant, text: segs[this.lesson.si] || "", ti: this.lesson.ti, tcount: this.topics.length }; }
-    return { running: this.running, muted: this.muted, speaking: this.speaking, mode: this.mode, phase: this.phase, question: pub, last: this.last ? { correct: this.last.entry.correct, answer: this.last.entry.given, correctAnswer: this.last.entry.correctAnswer, ex: this.last.ex, fuzzy: this.last.fuzzy, detail: this.last.detail, overridden: !!this.last.entry.overridden } : null, lesson: L, session: this.session, focus: this.focus, message: this.message, audioPaused: this.audioPaused, audioError: this.audioError };
+    if (this.lesson) { var segs = this.lessonSegs(); L = { topic: this.topics[this.lesson.ti].key, name: this.topics[this.lesson.ti].name, seg: this.lesson.si, count: segs.length, variant: this.lesson.variant, text: segs[this.lesson.si] || "", ti: this.lesson.ti, tcount: this.topics.length, partSecs: this.partSecs(segs), titleSecs: this.titleSecs(this.lesson.ti, this.lesson.variant) }; }
+    return { running: this.running, muted: this.muted, speaking: this.speaking, mode: this.mode, phase: this.phase, question: pub, last: this.last ? { correct: this.last.entry.correct, answer: this.last.entry.given, correctAnswer: this.last.entry.correctAnswer, ex: this.last.ex, fuzzy: this.last.fuzzy, detail: this.last.detail, overridden: !!this.last.entry.overridden } : null, lesson: L, session: this.session, focus: this.focus, message: this.message, audioPaused: this.audioPaused, audioError: this.audioError, lessonProgress: { done: Object.keys(this.progress.done), last: this.progress.last, topicSecs: this.plan().topicSecs, total: this.plan().total } };
   };
 
   /* Speaking = playing a list of clips (strings, or {t, dyn, soft}). The io layer reports ok=false when
@@ -788,6 +790,20 @@
   };
 
   /* ------------- lesson mode ------------- */
+  /* ---- lesson timing / progress (durations come from the audio manifest through io.clipDuration, if present) ---- */
+  P.clipSecs = function (text) { return this.io.clipDuration ? (this.io.clipDuration(text) || 0) : 0; };
+  P.partSecs = function (segs) { var self = this; return segs.map(function (t) { return self.clipSecs(t); }); };
+  P.titleSecs = function (ti, variant) { return this.clipSecs(sp("Lesson: " + this.topics[ti].name + (variant === "simple" ? ", the simpler version" : "") + ".")); };
+  P.plan = function () {   // seconds of audio per topic (full script version, with its title clip) and in total
+    if (this._plan) return this._plan;
+    var self = this, secs = this.topics.map(function (tp, ti) {
+      var d = self.lessonData[tp.key], segs = (d && d.length ? d.map(sp) : lessonChunks(tp, false));
+      return self.titleSecs(ti, "script") + self.partSecs(segs).reduce(function (a, b) { return a + b; }, 0);
+    });
+    return (this._plan = { topicSecs: secs, total: secs.reduce(function (a, b) { return a + b; }, 0) });
+  };
+  P.saveProgress = function () { this.io.save("lessonProgress", this.progress); };
+  P.resetLessonProgress = function () { this.progress = { done: {}, last: null }; this.saveProgress(); this.emit(); };
   P.lessonSegs = function () {
     var L = this.lesson, tp = this.topics[L.ti];
     if (L.variant === "simple") return lessonChunks(tp, true);
@@ -808,6 +824,7 @@
     var self = this, L = this.lesson; if (!L) return;
     var segs = this.lessonSegs(), tp = this.topics[L.ti], text = segs[L.si] || "";
     this.phase = "lesson"; this.mode = "lesson";
+    if (this.progress.last !== tp.key) { this.progress.last = tp.key; this.saveProgress(); }
     var parts = [];
     if (L.si === 0 && !noTitle) parts.push(sp("Lesson: " + tp.name + (L.variant === "simple" ? ", the simpler version" : "") + "."));
     parts.push(text);
@@ -820,10 +837,13 @@
       } else self.lessonEnd();
     });
   };
-  P.lessonGap = function () { return this.settings.bargeIn ? this.settings.lessonGapMs : Math.max(this.settings.lessonGapMs, this.settings.listenGapMs); };
+  P.lessonGap = function () { return (this.settings.bargeIn || this.voiceOff) ? this.settings.lessonGapMs : Math.max(this.settings.lessonGapMs, this.settings.listenGapMs); };
   P.lessonEnd = function () {
     var self = this, tp = this.topics[this.lesson.ti], last = this.lesson.ti >= this.topics.length - 1;
     this.phase = "lessonEnd";
+    var finishedKey = tp.key, fullVersion = this.lesson.variant === "script";
+    // lessonEnd is only reached after the last part's audio really ended: tick the topic off
+    if (fullVersion && !this.progress.done[finishedKey]) { this.progress.done[finishedKey] = this.io.now(); this.saveProgress(); }
     this.say([sp("That is the end of " + tp.name + "."), last ? "That was the last topic. Say quiz me, or repeat that topic." : "Say quiz me to practice it, or repeat that topic. Otherwise I will move on."], function () {
       if (!last && self.settings.lessonAuto) self.later(self.settings.topicGapMs, function () { self.lessonTopic(1); });
       else if (!last) { self.message = "Topic finished. Say next topic, or tap NEXT TOPIC."; self.emit(); }

@@ -33,3 +33,25 @@ def BROKEN_TTS(mode):
   Object.defineProperty(window,'speechSynthesis',{value:synth});
 })();
 """.replace("MODE", "u.onerror && u.onerror({error:'synthesis-failed'});" if mode == "error" else "u.onend && u.onend();")
+
+
+def mclick(pg, ui):
+    """open the hamburger menu and tap one of its data-ui items"""
+    pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])", timeout=3000)
+    pg.click('#menu [data-ui=%s]' % ui); pg.wait_for_timeout(120)
+
+
+def mid(pg, ident):
+    """open the menu and tap an item by id"""
+    pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])", timeout=3000)
+    pg.click("#menu #" + ident); pg.wait_for_timeout(120)
+
+
+def dbg(pg):
+    return pg.evaluate("document.getElementById('dbgLine').textContent")
+
+
+def goto(pg, name):
+    """open a menu-only page (log, settings, help, help-about)"""
+    pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])", timeout=3000)
+    pg.click("#menu [data-goto=%s]" % name); pg.wait_for_timeout(120)

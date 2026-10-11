@@ -3,7 +3,7 @@ Run: python3 tests/repro_v1_bug.py   (needs playwright + google-chrome; v1 is re
 import os, subprocess, sys, tempfile, time
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import serve, FAKE_REC, BROKEN_TTS
+from common import serve, FAKE_REC, BROKEN_TTS, mclick, mid, dbg, goto
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 V1 = tempfile.mkdtemp(prefix="v1-")
 subprocess.run(f"git -C {ROOT} archive 4b76680 | tar -x -C {V1}", shell=True, check=True)
@@ -40,7 +40,7 @@ with sync_playwright() as p:
         ctx = b.new_context(); ctx.add_init_script(FAKE_REC); ctx.add_init_script(BROKEN_TTS(mode))
         ctx.add_init_script("localStorage.setItem('tutor.v1.settings', JSON.stringify({schema:2, soundOk:true, introCount:5}))")
         pg = ctx.new_page(); pg.goto(f"http://127.0.0.1:{port}/index.html"); pg.wait_for_timeout(300)
-        pg.click("#btnStartLesson"); seq = sample(pg, 5000)
+        pg.click("#btnPlay"); seq = sample(pg, 5000)
         print("v2 [%s] lesson position over 5 s:" % mode, seq[:20])
         check(f"FIXED on v2 ({mode} stub, real mp3 audio): stays on part 1 while the clip plays", max(seq) - min(seq) == 0 and seq[-1] == 0, seq)
         check("v2 never used speechSynthesis for lesson audio", pg.evaluate("__ttsCalls") == 0)
@@ -50,11 +50,11 @@ with sync_playwright() as p:
         ctx.add_init_script("localStorage.setItem('tutor.v1.settings', JSON.stringify({schema:2, soundOk:true, introCount:5}))")
         ctx.route("**/audio/*.mp3", lambda r: r.abort())
         pg = ctx.new_page(); pg.goto(f"http://127.0.0.1:{port}/index.html"); pg.wait_for_timeout(300)
-        pg.click("#btnStartLesson"); seq = sample(pg, 4000, wait_start=False)
+        pg.click("#btnPlay"); seq = sample(pg, 4000, wait_start=False)
         check(f"v2 ({mode}) with ALL audio failing: no advance, waits", set(seq) <= {0, -1} and max(seq) <= 0, seq)
         check("v2 shows the red 'couldn't play sound' message", pg.is_visible("#audioErr") and "couldn't play sound" in pg.inner_text("#audioErr").lower() and pg.inner_text("#statusWord") == "NO SOUND", pg.inner_text("#statusWord"))
         check("TEST SOUND button visible", pg.is_visible("#btnTestSound"))
-        print("   debug line:", pg.inner_text("#dbgLine")[:260])
+        print("   debug line:", dbg(pg)[:260])
         ctx.close(); srv.shutdown()
     b.close()
 print("\nFAILED:", fails) if fails else print("\nALL PASS")
