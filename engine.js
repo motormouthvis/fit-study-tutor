@@ -56,7 +56,19 @@
       .replace(/ \/ /g, " divided by ").replace(/ = /g, " equals ").replace(/ \+ /g, " plus ").replace(/ \* /g, " times ")
       .replace(/ > /g, " greater than ").replace(/ < /g, " less than ")
       .replace(/\$\s?(\d[\d,]*(?:\.\d+)?)/g, "$$$1")
+      .replace(/\s*&\s*/g, " and ")
       .replace(/\s+/g, " ").trim();
+  }
+  // stable key for a spoken text (same function builds the audio manifest and looks clips up in the browser)
+  function clipKey(text) {
+    var t = String(text), h1 = 0xdeadbeef ^ 17, h2 = 0x41c6ce57 ^ 17;
+    for (var i = 0; i < t.length; i++) {
+      var ch = t.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return ("00000000" + (h2 >>> 0).toString(16)).slice(-8) + ("00000000" + (h1 >>> 0).toString(16)).slice(-8);
   }
   function chunkText(text, limit) {
     limit = limit || 300;
@@ -172,13 +184,24 @@
   }
 
   /* ---------------- voice command parsing ---------------- */
-  var MUTE_WORDS = { mute: 1, muted: 1, moot: 1, pause: 1, paused: 1, quiet: 1, silence: 1, shush: 1 };
+  // includes likely mis-hearings of "mute" and "pause"
+  var MUTE_WORDS = { mute: 1, muted: 1, mutes: 1, moot: 1, mood: 1, mutt: 1, mewt: 1, pause: 1, paused: 1, pauses: 1, paws: 1, pawz: 1, quiet: 1, silence: 1, shush: 1 };
+  function isUnmuteWord(a) {
+    var tk = tokens(a);
+    for (var i = 0; i < tk.length; i++) {
+      if (/^(unmute|unmuted|unmuting|unmutes)$/.test(tk[i])) return true;
+      if (/^(mute|muted|moot|mood)$/.test(tk[i]) && i > 0 && /^(un|on|an|in|and|um)$/.test(tk[i - 1]) && tk.length <= 3) return true;
+    }
+    return false;
+  }
+  function hasUnmuteWord(alts) { return asArray(alts).some(isUnmuteWord); }
   var CMD_FILL = { please: 1, tutor: 1, the: 1, now: 1, just: 1, ok: 1, okay: 1, hey: 1, can: 1, you: 1, could: 1 };
   function cmdTokens(s) { return tokens(s).filter(function (t) { return !CMD_FILL[t]; }); }
   var KW_FILL = { please: 1, the: 1, now: 1, just: 1, ok: 1, okay: 1, hey: 1, a: 1, my: 1, um: 1, uh: 1 };
   function kwTokens(s) { return tokens(s).filter(function (t) { return !KW_FILL[t]; }); }
   function isMuteCommand(alts) {
     return asArray(alts).some(function (a) {
+      if (isUnmuteWord(a)) return false;
       var tk = cmdTokens(a); if (!tk.length || tk.length > 4) return false;
       var j = tk.join(" ");
       return tk.some(function (t) { return MUTE_WORDS[t]; }) || /^hold on$|^be quiet$|^shut up$|^wait a second$/.test(j);
@@ -193,12 +216,19 @@
   }
   function keywordMatch(alts, keyword) {
     var kw = kwTokens(keyword); if (!kw.length) return false;
+    var joinedKw = kw.join(""), jtol = joinedKw.length >= 5 ? Math.max(1, Math.floor(joinedKw.length * 0.15)) : 0;
     return asArray(alts).some(function (a) {
       var tk = kwTokens(a);
       for (var i = 0; i + kw.length <= tk.length; i++) {
         var ok = true;
         for (var j = 0; j < kw.length; j++) if (!wordClose(kw[j], tk[i + j])) { ok = false; break; }
         if (ok) return true;
+      }
+      // tolerant: compare with the words glued together ("re some tutor" ~ "resume tutor")
+      if (kw.length > 1 && jtol) {
+        for (var n = Math.max(1, kw.length - 1); n <= kw.length + 1; n++)
+          for (var k = 0; k + n <= tk.length; k++)
+            if (lev(joinedKw, tk.slice(k, k + n).join("")) <= jtol) return true;
       }
       return false;
     });
@@ -220,8 +250,9 @@
 
   // The master command list. Used for the help screen, spoken help and tests.
   var COMMANDS = [
-    { say: "mute  /  pause", does: "I stop talking and ignore everything you say until you say your unmute phrase (default: resume tutor).", group: "Control" },
-    { say: "resume tutor", does: "Unmute (this phrase can be changed in Settings). It is the only thing I listen for while muted.", group: "Control" },
+    { say: "mute  /  pause", does: "I stop talking right away and ignore everything you say until you say your unmute phrase (default: resume tutor, or just unmute). Works while I am talking only if Listen-while-talking is on; otherwise tap the big MUTE button.", group: "Control" },
+    { say: "resume tutor  /  unmute", does: "Unmute (the phrase can be changed in Settings). It is the only thing I listen for while muted.", group: "Control" },
+    { say: "resume  /  play", does: "After you tap PAUSE AUDIO, carry on from the same spot.", group: "Control" },
     { say: "stop", does: "End the session.", group: "Control" },
     { say: "repeat", does: "Say the last question, explanation, or lesson part again.", group: "Quiz and lessons" },
     { say: "skip", does: "Skip this question (or this topic in lesson mode).", group: "Quiz" },
@@ -254,6 +285,7 @@
       if (/^(next topic|skip topic|skip this topic|go to the next topic|next lesson|go to next topic)$/.test(t)) return { cmd: "nexttopic" };
       if (/^(repeat|repeat that|repeat it|repeat question|repeat the question|repeat this|say that again|say it again|again|one more time|come again|what was that|say again|replay)$/.test(t)) return { cmd: "repeat" };
       if (/^(back|go back|back up|previous|previous one|previous part|go back a bit|rewind|last part|go back a little)$/.test(t)) return { cmd: "back" };
+      if (/^(resume|play|play it|unpause|resume lesson|resume audio|play audio|continue playing|keep playing)$/.test(t)) return { cmd: "resumeaudio" };
       if (/^(next|next one|next question|next part|go on|continue|move on|keep going|carry on)$/.test(t)) return { cmd: "next" };
       if (/^(skip|skip it|skip this|skip question|skip this question|pass)$/.test(t)) return { cmd: "skip" };
       if (/^(explain differently|explain it differently|explain that differently|explain this differently|explain simpler|explain it simpler|explain that simpler|explain simply|explain more simply|explain it simply|explain that simply|explain again differently|explain in a different way|explain another way|explain in plain english|explain in simple terms|simpler|more simply|say it differently|say it simply|say it another way|in plain english|differently|make it simpler|simplify|simplify it|dumb it down|i dont understand|i dont get it|i do not understand|im confused|i am confused|say it in plain english|another way|simple version|simple)$/.test(t)) return { cmd: "simpler" };
@@ -376,13 +408,16 @@
     }
     return base;
   }
-  function spokenQuestion(p) {
-    var s = speakable(p.say || p.q);
-    if (p.type === "mc") s += " " + p.options.map(function (o) { return "Option " + o.letter + ": " + speakable(o.text) + "."; }).join(" ");
-    else if (p.type === "num" && p.unit) s += "";
-    else if (p.type === "explain") s += " Take your time. Say done when you finish.";
-    return s;
+  // a question as an array of separately recorded clips (stem, then one clip per option letter + option text)
+  function questionParts(p) {
+    var dyn = !!p.gen;
+    var parts = [{ t: speakable(p.say || p.q), dyn: dyn }];
+    if (p.type === "mc") p.options.forEach(function (o) { parts.push("Option " + o.letter + ".", speakable(o.text)); });
+    else if (p.type === "explain") parts.push("Take your time. Say done when you finish.");
+    return parts;
   }
+  function partText(x) { return typeof x === "string" ? x : x.t; }
+  function spokenQuestion(p) { return questionParts(p).map(partText).join(" "); }
   function correctText(p) {
     if (p.type === "mc") { var o = p.options[p.correctIndex]; return o.letter + ": " + o.text; }
     if (p.type === "num") return String(p.ans) + (p.unit ? " " + p.unit : "");
@@ -401,18 +436,24 @@
   }
 
   /* ---------------- the Tutor (session logic, no DOM) ---------------- */
-  var DEFAULTS = { unmuteKeyword: "resume tutor", rate: 0.95, voiceURI: "", bargeIn: true, autoAdvance: true, wakeLock: true, fontScale: 1, muteMode: "keyword", introCount: 0, explainNotes: 0, explainWaitMs: 3500, lessonGapMs: 600, topicGapMs: 7000 };
+  var DEFAULTS = { unmuteKeyword: "resume tutor", rate: 1, voiceURI: "", bargeIn: true, alsoUnmute: true, autoAdvance: true, lessonAuto: true, soundOk: false, schema: 2, wakeLock: true, fontScale: 1, muteMode: "keyword", introCount: 0, explainNotes: 0, explainWaitMs: 3500, lessonGapMs: 600, listenGapMs: 3000, topicGapMs: 7000 };
   var PRAISE = ["Correct.", "That's right.", "Yes.", "Good.", "Right."];
+  var sp = speakable;
+  function lessonChunks(tp, simple) { return chunkText(simple ? tp.simple : tp.lesson, 260).map(sp); }
 
   function Tutor(io, data) {
     this.io = io; this.topics = data.topics; this.questions = data.questions; this.generators = data.generators || []; this.lessonData = data.lessons || {};
     this.subjects = data.subjects || {};
-    this.log = io.load("log", []); this.settings = Object.assign({}, DEFAULTS, io.load("settings", {}));
+    this.log = io.load("log", []);
+    var saved = io.load("settings", {});
+    this.settings = Object.assign({}, DEFAULTS, saved);
+    // v1 saved a speech-synthesis speed (0.95); v2 uses it as audio playback speed, so reset it once
+    if (!saved.schema || saved.schema < 2) { this.settings.rate = 1; this.settings.schema = 2; io.save("settings", this.settings); }
     this.running = false; this.muted = false; this.speaking = false; this.spokenNow = "";
     this.mode = "quiz"; this.phase = "idle"; this.cur = null; this.last = null; this.revealed = false;
     this.recent = []; this.followups = []; this.focus = {}; this.epoch = 0; this.timer = null; this.buffer = ""; this.fails = 0;
     this.session = { answered: 0, correct: 0 }; this.lastLessonAt = {}; this.explainVariant = {};
-    this.lesson = null; this.repeatFn = null; this.message = "";
+    this.lesson = null; this.repeatFn = null; this.message = ""; this.audioPaused = false; this.audioError = ""; this.held = null; this.timerFn = null;
   }
   var P = Tutor.prototype;
   P.topic = function (k) { for (var i = 0; i < this.topics.length; i++) if (this.topics[i].key === k) return this.topics[i]; return null; };
@@ -427,27 +468,54 @@
     if (c) pub = { id: c.id, type: c.type, subj: c.subj, topic: c.topic, topicName: (this.topic(c.topic) || {}).name, diff: c.diff, q: c.q, unit: c.unit, options: c.options ? c.options.map(function (o) { return { letter: o.letter, text: o.text }; }) : null };
     var L = null;
     if (this.lesson) { var segs = this.lessonSegs(); L = { topic: this.topics[this.lesson.ti].key, name: this.topics[this.lesson.ti].name, seg: this.lesson.si, count: segs.length, variant: this.lesson.variant, text: segs[this.lesson.si] || "", ti: this.lesson.ti, tcount: this.topics.length }; }
-    return { running: this.running, muted: this.muted, speaking: this.speaking, mode: this.mode, phase: this.phase, question: pub, last: this.last ? { correct: this.last.entry.correct, answer: this.last.entry.given, correctAnswer: this.last.entry.correctAnswer, ex: this.last.ex, fuzzy: this.last.fuzzy, detail: this.last.detail, overridden: !!this.last.entry.overridden } : null, lesson: L, session: this.session, focus: this.focus, message: this.message };
+    return { running: this.running, muted: this.muted, speaking: this.speaking, mode: this.mode, phase: this.phase, question: pub, last: this.last ? { correct: this.last.entry.correct, answer: this.last.entry.given, correctAnswer: this.last.entry.correctAnswer, ex: this.last.ex, fuzzy: this.last.fuzzy, detail: this.last.detail, overridden: !!this.last.entry.overridden } : null, lesson: L, session: this.session, focus: this.focus, message: this.message, audioPaused: this.audioPaused, audioError: this.audioError };
   };
 
-  /* speaking with epoch guard (mute/stop cancels pending callbacks) */
-  P.say = function (text, cb) {
-    var self = this, e = this.epoch; this.speaking = true; this.spokenNow = text; this.emit();
-    this.io.speak(speakable(text), function () { if (e !== self.epoch) return; self.speaking = false; self.spokenNow = ""; self.emit(); if (cb) cb(); });
+  /* Speaking = playing a list of clips (strings, or {t, dyn, soft}). The io layer reports ok=false when
+     playback really failed; then we STOP and wait (never advance on a failure). */
+  P.say = function (parts, cb) {
+    var self = this, e = this.epoch;
+    if (!Array.isArray(parts)) parts = [parts];
+    this.speaking = true; this.audioError = ""; this.spokenNow = parts.map(partText).join(" "); this.emit();
+    this.io.speak(parts, function (ok, info) {
+      if (e !== self.epoch) return;
+      self.speaking = false; self.spokenNow = "";
+      if (ok === false) { self.audioError = info || "playback failed"; self.message = "I couldn't play sound. Tap TEST SOUND."; self.emit(); return; }
+      self.emit(); if (cb) cb();
+    });
   };
-  P.later = function (ms, fn) { var self = this, e = this.epoch; this.clearT(); this.timer = this.io.setTimer(function () { self.timer = null; if (e !== self.epoch || self.muted || !self.running) return; fn(); }, ms); };
-  P.clearT = function () { if (this.timer != null) { this.io.clearTimer(this.timer); this.timer = null; } };
-  P.hardStopSpeech = function () { this.epoch++; this.clearT(); this.io.cancelSpeech(); this.speaking = false; this.spokenNow = ""; };
+  P.later = function (ms, fn) {
+    var self = this, e = this.epoch; this.clearT();
+    var run = function () { self.timer = null; self.timerFn = null; if (e !== self.epoch || self.muted || !self.running) return; if (self.audioPaused) { self.held = run; return; } fn(); };
+    this.timerFn = run; this.timer = this.io.setTimer(run, ms);
+  };
+  P.clearT = function () { if (this.timer != null) { this.io.clearTimer(this.timer); this.timer = null; } this.timerFn = null; };
+  P.hardStopSpeech = function () { this.epoch++; this.clearT(); this.held = null; this.audioPaused = false; this.io.cancelSpeech(); this.speaking = false; this.spokenNow = ""; };
+  // tap-controlled pause: just freezes the audio where it is (the mic keeps listening for commands)
+  P.pauseAudio = function () {
+    if (!this.running || this.muted || this.audioPaused) return;
+    this.audioPaused = true;
+    if (this.timer != null) { var fn = this.timerFn; this.io.clearTimer(this.timer); this.timer = null; this.held = fn; }
+    if (this.io.pauseAudio) this.io.pauseAudio();
+    this.emit();
+  };
+  P.resumeAudio = function () {
+    if (!this.audioPaused) return;
+    this.audioPaused = false;
+    var h = this.held; this.held = null;
+    if (h) h(); else if (this.io.resumeAudio) this.io.resumeAudio();
+    this.emit();
+  };
 
   /* ------------- session control ------------- */
   P.start = function (opts) {
     opts = opts || {};
-    this.running = true; this.muted = false; this.session = { answered: 0, correct: 0 }; this.epoch++; this.message = "";
+    this.running = true; this.muted = false; this.audioPaused = false; this.session = { answered: 0, correct: 0 }; this.epoch++; this.message = ""; this.audioError = "";
     if (opts.focus) this.focus = opts.focus;
-    var self = this, kw = this.settings.unmuteKeyword;
+    var self = this, kwp = { t: this.settings.unmuteKeyword, soft: true }, also = this.settings.alsoUnmute;
     var intro = this.settings.introCount < 2
-      ? "Hi Bill. I'll ask questions and listen for your answers. Say mute any time and I will stop talking and ignore everything you say. To bring me back, say " + kw + ". Here we go."
-      : "Ready. Say mute to pause me, or " + kw + " to bring me back.";
+      ? ["Hi Bill. I'll ask questions and listen for your answers. Say mute any time and I will stop talking and ignore everything you say. To bring me back, say", kwp, also ? "or just say unmute. Here we go." : "Here we go."]
+      : ["Ready. Say mute to pause me, or", kwp, "to bring me back."];
     this.settings.introCount++; this.saveSettings();
     this.say(intro, function () { if (opts.lesson) self.startLesson(opts.lesson); else self.ask(); });
   };
@@ -456,10 +524,10 @@
     this.hardStopSpeech(); this.running = false; this.muted = false; this.phase = "idle"; this.mode = "quiz"; this.lesson = null; this.buffer = "";
     this.emit();
     this.running = false;
-    var msg = n ? "Session ended. You answered " + n + " question" + (n === 1 ? "" : "s") + " and got " + c + " right. Nice work." : "Session ended.";
-    this.speakFinal(msg);
+    var parts = n ? ["Session ended.", { t: "You answered " + n + " question" + (n === 1 ? "" : "s") + " and got " + c + " right.", dyn: true, soft: true }, "Nice work."] : ["Session ended."];
+    this.speakFinal(parts);
   };
-  P.speakFinal = function (msg) { var self = this; this.io.speak(msg, function () { self.speaking = false; self.emit(); }); };
+  P.speakFinal = function (parts) { var self = this; this.io.speak(parts, function () { self.speaking = false; self.emit(); }); };
   P.mute = function () {
     if (this.muted) return;
     this.hardStopSpeech(); this.muted = true; this.buffer = ""; this.resumePhase = this.phase; this.emit();
@@ -468,7 +536,7 @@
     if (!this.muted) return;
     this.muted = false; this.epoch++; this.emit();
     var self = this;
-    this.say("Listening again.", function () { self.resume(); });
+    this.say(["Listening again."], function () { self.resume(); });
   };
   P.resume = function () {
     if (!this.running) return;
@@ -482,12 +550,13 @@
     alts = asArray(alts);
     if (!alts.length) return { action: "none" };
     if (this.muted) {
-      if (keywordMatch(alts, this.settings.unmuteKeyword)) { this.unmute(); return { action: "unmute" }; }
+      if (keywordMatch(alts, this.settings.unmuteKeyword) || (this.settings.alsoUnmute && hasUnmuteWord(alts))) { this.unmute(); return { action: "unmute" }; }
       return { action: "ignored-muted" };
     }
     if (!this.running) return { action: "ignored-idle" };
     if (isMuteCommand(alts)) { this.mute(); return { action: "mute" }; }
     if (keywordMatch(alts, this.settings.unmuteKeyword) && kwTokens(alts[0]).length <= kwTokens(this.settings.unmuteKeyword).length + 1) return { action: "ignored-unmute-while-listening" };
+    if (this.settings.alsoUnmute && hasUnmuteWord(alts)) return { action: "ignored-unmute-while-listening" };
     if (!isFinal) return { action: "interim" };
     var cmd = parseCommand(alts, this.topics);
     if (cmd) { this.runCommand(cmd); return { action: "command", cmd: cmd.cmd }; }
@@ -503,7 +572,8 @@
       case "stop": return this.stop();
       case "repeat": return lesson ? this.playSegment() : this.repeatLast();
       case "back": return lesson ? this.lessonBack() : this.repeatLast();
-      case "next": return lesson ? this.lessonNext() : this.nextQuestion();
+      case "resumeaudio": if (this.audioPaused) return this.resumeAudio(); return this.resume();
+      case "next": if (this.audioPaused) return this.resumeAudio(); return lesson ? this.lessonNext() : this.nextQuestion();
       case "skip": return lesson ? this.lessonTopic(1) : this.skipQuestion();
       case "restarttopic": return lesson ? this.lessonRestart() : this.startLesson(this.cur ? this.cur.topic : (this.last && this.last.entry.topic), "script");
       case "prevtopic": return lesson ? this.lessonTopic(-1) : this.startLesson(this.cur ? this.cur.topic : null, "script", -1);
@@ -519,8 +589,8 @@
       case "wrong": return this.override(false);
       case "dashboard": return this.speakDashboard();
       case "help": return this.speakHelp();
-      case "teach": return c.arg ? this.startLesson(c.arg, "script") : (c.raw ? this.say("I don't have a lesson called " + c.raw + ". Try balance sheet, ratios, opportunity cost, or game theory.", function () { self.resume(); }) : this.startLesson(null, "script"));
-      case "quizme": var tk = this.lesson ? this.topics[this.lesson.ti].key : null; this.lesson = null; this.mode = "quiz"; this.focus = tk ? { topic: tk } : {}; this.forced = tk ? 3 : 0; return this.say("Okay, questions.", function () { self.ask(); });
+      case "teach": return c.arg ? this.startLesson(c.arg, "script") : (c.raw ? this.say(["I don't have a lesson with that name. Try balance sheet, ratios, opportunity cost, or game theory."], function () { self.resume(); }) : this.startLesson(null, "script"));
+      case "quizme": var tk = this.lesson ? this.topics[this.lesson.ti].key : null; this.lesson = null; this.mode = "quiz"; this.focus = tk ? { topic: tk } : {}; this.forced = tk ? 3 : 0; return this.say(["Okay, questions."], function () { self.ask(); });
       case "focus": return this.setFocus(c.arg);
     }
   };
@@ -531,12 +601,14 @@
     else if (arg === "acct" || arg === "econ") { f = { subj: arg }; label = arg === "acct" ? "accounting" : "economics"; }
     else if (arg !== "all") { f = { topic: arg }; label = (this.topic(arg) || {}).name || arg; }
     this.focus = f; this.lesson = null; this.mode = "quiz"; this.followups = [];
-    this.say("Okay. Quizzing you on " + label + ".", function () { self.ask(); });
+    this.say(["Okay. Quizzing you on", sp(label) + "."], function () { self.ask(); });
   };
   P.changeRate = function (d) {
     var r = Math.max(0.5, Math.min(1.5, Math.round((this.settings.rate + d) * 100) / 100)); this.settings.rate = r; this.saveSettings();
-    var self = this, msg = (d < 0 ? "Slower. " : "Faster. ") + (r <= 0.5 || r >= 1.5 ? "That is as " + (d < 0 ? "slow" : "fast") + " as I go. " : "");
-    this.say(msg + "How is this?", function () { self.resume(); });
+    var self = this, parts = [d < 0 ? "Slower." : "Faster."];
+    if (r <= 0.5 || r >= 1.5) parts.push("That is as " + (d < 0 ? "slow" : "fast") + " as I go.");
+    parts.push("How is this?");
+    this.say(parts, function () { self.resume(); });
   };
 
   /* ------------- quiz flow ------------- */
@@ -557,20 +629,20 @@
   };
   P.askAgain = function () {
     var p = this.cur, self = this; this.phase = "asking"; this.buffer = "";
-    var lead = this.curFollow && !this.askedLead ? "Here is a similar one. " : ""; this.askedLead = this.curFollow;
-    this.repeatFn = function () { self.say(spokenQuestion(p), function () { self.emit(); }); };
-    this.say(lead + spokenQuestion(p), function () { self.emit(); });
+    var lead = this.curFollow && !this.askedLead ? ["Here is a similar one."] : []; this.askedLead = this.curFollow;
+    this.repeatFn = function () { self.say(questionParts(p), function () { self.emit(); }); };
+    this.say(lead.concat(questionParts(p)), function () { self.emit(); });
   };
   P.repeatLast = function () {
     var self = this;
-    if (this.phase === "asking" && this.cur) { this.phase = "asking"; this.buffer = ""; return this.say(spokenQuestion(this.cur), function () { self.emit(); }); }
-    if (this.lastFeedbackText) return this.say(this.lastFeedbackText, function () { self.afterFeedback(); });
+    if (this.phase === "asking" && this.cur) { this.phase = "asking"; this.buffer = ""; return this.say(questionParts(this.cur), function () { self.emit(); }); }
+    if (this.lastFeedbackParts) return this.say(this.lastFeedbackParts, function () { self.afterFeedback(); });
     return this.ask();
   };
   P.nextQuestion = function () { this.ask(); };
   P.skipQuestion = function () {
     var self = this;
-    if (this.phase === "asking") { this.say("Skipping.", function () { self.ask(); }); } else this.ask();
+    if (this.phase === "asking") { this.say(["Skipping."], function () { self.ask(); }); } else this.ask();
   };
   P.giveUp = function () { this.submit({ correct: false, given: "I don't know", heard: "I don't know", fuzzy: false, detail: null }, "voice"); };
 
@@ -580,7 +652,8 @@
       var idx = matchChoice(alts, q.options);
       if (idx < 0) {
         this.fails++;
-        var msg = this.fails >= 2 ? "Sorry, I still didn't get it. " + q.options.map(function (o) { return o.letter + ": " + speakable(o.text); }).join(". ") + ". Say A, B, C or D." : "I didn't catch that. Say A, B, C or D.";
+        var msg = ["I didn't catch that. Say A, B, C or D."];
+        if (this.fails >= 2) { msg = ["Sorry, I still didn't get it."]; q.options.forEach(function (o) { msg.push("Option " + o.letter + ".", sp(o.text)); }); msg.push("Say A, B, C or D."); }
         return this.say(msg, function () { self.emit(); });
       }
       var o = q.options[idx];
@@ -588,7 +661,7 @@
     }
     if (q.type === "num") {
       g = gradeNum(alts, q);
-      if (!g.heard) { return this.say("I didn't hear a number. Say it again, or say skip.", function () { self.emit(); }); }
+      if (!g.heard) { return this.say(["I didn't hear a number. Say it again, or say skip."], function () { self.emit(); }); }
       return this.submit({ correct: g.correct, given: String(g.given), heard: alts[0], fuzzy: false }, source);
     }
     if (q.type === "short") {
@@ -603,7 +676,7 @@
     var q = this.cur; this.clearT();
     if (!q || q.type !== "explain" || this.phase !== "asking") return;
     var text = this.buffer;
-    if (tokens(text).length < 2) { var self = this; return this.say("I didn't catch an answer. Try again, or say skip.", function () { self.emit(); }); }
+    if (tokens(text).length < 2) { var self = this; return this.say(["I didn't catch an answer. Try again, or say skip."], function () { self.emit(); }); }
     var g = gradeExplain(text, q);
     this.submit({ correct: g.correct, given: text, heard: text, fuzzy: true, detail: g }, "voice");
   };
@@ -632,43 +705,46 @@
     this.session.answered++; if (entry.correct) this.session.correct++;
     this.last = { entry: entry, q: q, ex: q.ex, fuzzy: !!res.fuzzy, detail: res.detail || null };
     this.phase = "feedback"; this.revealed = true;
-    var text = this.feedbackText(q, res);
-    this.lastFeedbackText = text;
+    var text = this.feedbackParts(q, res);
+    this.lastFeedbackParts = text;
     if (!entry.correct) {
       var f = pickFollowup({ missed: { id: q.id, topic: q.topic, diff: q.diff, type: q.type }, questions: this.questions, generators: this.generators, log: this.log, recent: this.recent, rng: this.io.rng });
       if (f) this.followups.push(f);
     }
     this.say(text, function () { self.afterFeedback(); });
   };
-  P.feedbackText = function (q, res) {
-    var t = "", note = "";
-    if (res.fuzzy && this.settings.explainNotes < 3) { note = " I grade this kind of answer by keywords, so if I got it wrong, say: I was right. "; this.settings.explainNotes++; this.saveSettings(); }
+  P.feedbackParts = function (q, res) {
+    var parts = [], gen = !!q.gen;
     if (res.correct) {
-      t = PRAISE[Math.floor(this.io.rng() * PRAISE.length)] + " ";
-      if (q.type === "explain" && res.detail) t += "You covered " + res.detail.matched.length + " of " + res.detail.total + " key ideas. ";
-      t += q.ex;
+      parts.push(PRAISE[Math.floor(this.io.rng() * PRAISE.length)]);
+      parts.push({ t: sp(q.ex), dyn: gen });
     } else {
-      t = res.given === "I don't know" ? "No problem. " : "Not quite. ";
-      if (q.type === "explain" && res.detail) t += "You covered " + res.detail.matched.length + " of " + res.detail.total + " key ideas. You were missing: " + res.detail.missed.join(", ") + ". ";
-      t += "The answer is " + speakable(correctText(q)) + ". " + q.ex;
+      parts.push(res.given === "I don't know" ? "No problem." : "Not quite.");
+      if (q.type === "explain" && res.detail && res.detail.missed.length) parts.push({ t: "You were missing: " + res.detail.missed.join(", ") + ".", dyn: true, soft: true });
+      if (q.type === "mc") { var o = q.options[q.correctIndex]; parts.push("The answer is", "Option " + o.letter + ".", sp(o.text)); }
+      else parts.push({ t: "The answer is " + sp(correctText(q)) + ".", dyn: gen });
+      parts.push({ t: sp(q.ex), dyn: gen });
       var tp = this.topic(q.topic), now = this.io.now();
-      if (tp && !(this.lastLessonAt[tp.key] && now - this.lastLessonAt[tp.key] < 180000)) { t += " Let me teach that. " + tp.lesson; this.lastLessonAt[tp.key] = now; }
-      t += " Let's try a similar one.";
+      if (tp && !(this.lastLessonAt[tp.key] && now - this.lastLessonAt[tp.key] < 180000)) { parts.push("Let me teach that."); parts = parts.concat(lessonChunks(tp, false)); this.lastLessonAt[tp.key] = now; }
+      parts.push("Let's try a similar one.");
     }
-    return t + note;
+    if (res.fuzzy && this.settings.explainNotes < 3) { parts.push("I grade this kind of answer by keywords, so if I got it wrong, say: I was right."); this.settings.explainNotes++; this.saveSettings(); }
+    return parts;
   };
+  // plain-text version of the feedback (for tests / display)
+  P.feedbackText = function (q, res) { return this.feedbackParts(q, res).map(partText).join(" "); };
   P.afterFeedback = function () {
     var self = this; this.phase = "between"; this.emit();
     if (this.settings.autoAdvance) this.later(900, function () { self.ask(); });
-    else this.say("Say next when you're ready.", function () { self.emit(); });
+    else this.say(["Say next when you're ready."], function () { self.emit(); });
   };
   P.override = function (correct) {
-    var self = this; if (!this.last) return this.say("There is nothing to change yet.", function () { self.resume(); });
+    var self = this; if (!this.last) return this.say(["There is nothing to change yet."], function () { self.resume(); });
     var e = this.last.entry; this.hardStopSpeech();
-    if (e.correct === correct) return this.say("It's already marked " + (correct ? "right" : "wrong") + ".", function () { self.afterFeedback(); });
+    if (e.correct === correct) return this.say([correct ? "It's already marked right." : "It's already marked wrong."], function () { self.afterFeedback(); });
     e.correct = correct; e.overridden = true; this.saveLog();
     this.session.correct += correct ? 1 : -1;
-    var txt = correct ? "Okay, marked right. Good for you." : "Okay, marked wrong. Here is the idea. " + (this.topic(e.topic) || {}).lesson;
+    var txt = correct ? ["Okay, marked right. Good for you."] : ["Okay, marked wrong. Here is the idea."].concat(lessonChunks(this.topic(e.topic), false));
     this.emit(); this.say(txt, function () { self.afterFeedback(); });
   };
 
@@ -684,12 +760,12 @@
       var v = this.lesson.variant, nv;
       if (simpler) nv = v === "simple" ? "summary" : "simple"; else nv = v === "script" ? "summary" : v === "summary" ? "simple" : "script";
       this.lesson.variant = nv; this.lesson.si = 0;
-      return this.say(nv === "simple" ? "Here it is in simpler words." : nv === "summary" ? "Here is the short version." : "Here is the full version.", function () { self.playSegment(true); });
+      return this.say([nv === "simple" ? "Here it is in simpler words." : nv === "summary" ? "Here is the short version." : "Here is the full version."], function () { self.playSegment(true); });
     }
     var last = this.explainVariant[key]; var useSimple = simpler ? true : (last === "lesson");
     this.explainVariant[key] = useSimple ? "simple" : "lesson";
-    var text = (useSimple ? "Let me say that more simply. " + tp.simple : tp.lesson);
-    this.say(text, function () { self.afterExplain(); });
+    var parts = useSimple ? ["Let me say that more simply."].concat(lessonChunks(tp, true)) : lessonChunks(tp, false);
+    this.say(parts, function () { self.afterExplain(); });
   };
   P.afterExplain = function () {
     if (this.phase === "asking" && this.cur) return this.askAgain();
@@ -699,25 +775,25 @@
   /* ------------- dashboard / help speech ------------- */
   P.speakDashboard = function () {
     var self = this, ov = overall(this.log);
-    if (!ov.n) return this.say("You haven't answered anything yet. Let's get started.", function () { self.resume(); });
+    if (!ov.n) return this.say(["You haven't answered anything yet. Let's get started."], function () { self.resume(); });
     var ts = this.stats(), arr = Object.keys(ts).map(function (k) { return ts[k]; }).filter(function (t) { return t.n >= 2; }).sort(function (a, b) { return a.acc - b.acc; });
     var msg = "You have answered " + ov.n + " questions and " + Math.round(ov.acc * 100) + " percent are right overall. ";
     if (arr.length) { msg += "Weakest: " + arr.slice(0, 3).map(function (t) { return t.name + ", " + Math.round(t.acc * 100) + " percent"; }).join("; ") + ". ";
       var st = arr.slice().reverse().slice(0, 2); msg += "Strongest: " + st.map(function (t) { return t.name; }).join(" and ") + "."; }
-    this.say(msg, function () { self.resume(); });
+    this.say([{ t: msg, dyn: true }], function () { self.resume(); });
   };
   P.speakHelp = function () {
     var self = this;
-    this.say("Here is what you can say. Mute or pause, and I go quiet until you say " + this.settings.unmuteKeyword + ". Repeat. Skip. Next. Explain. Explain differently, for a simpler version. I don't know. I was right, or I was wrong. Teach me, then a topic, to start a lesson. In a lesson, say back, repeat that topic, previous topic, next topic, slower, or faster. Say quiz me to go back to questions. Say stop to end.", function () { self.resume(); });
+    this.say(["Here is what you can say. Mute or pause, and I go quiet until you say", { t: this.settings.unmuteKeyword, soft: true }, "or unmute. Repeat. Skip. Next. Explain. Explain differently, for a simpler version. I don't know. I was right, or I was wrong. Teach me, then a topic, to start a lesson. In a lesson, say back, repeat that topic, previous topic, next topic, slower, or faster. Say quiz me to go back to questions. Say stop to end."], function () { self.resume(); });
   };
 
   /* ------------- lesson mode ------------- */
   P.lessonSegs = function () {
     var L = this.lesson, tp = this.topics[L.ti];
-    if (L.variant === "simple") return chunkText(tp.simple, 260);
-    if (L.variant === "summary") return chunkText(tp.lesson, 260);
+    if (L.variant === "simple") return lessonChunks(tp, true);
+    if (L.variant === "summary") return lessonChunks(tp, false);
     var d = this.lessonData[tp.key];
-    return d && d.length ? d : chunkText(tp.lesson, 260);
+    return d && d.length ? d.map(sp) : lessonChunks(tp, false);
   };
   P.startLesson = function (key, variant, delta) {
     var ti = 0, self = this;
@@ -732,19 +808,25 @@
     var self = this, L = this.lesson; if (!L) return;
     var segs = this.lessonSegs(), tp = this.topics[L.ti], text = segs[L.si] || "";
     this.phase = "lesson"; this.mode = "lesson";
-    var lead = "";
-    if (L.si === 0 && !noTitle) lead = "Lesson: " + tp.name + (L.variant === "simple" ? ", the simpler version" : "") + ". ";
+    var parts = [];
+    if (L.si === 0 && !noTitle) parts.push(sp("Lesson: " + tp.name + (L.variant === "simple" ? ", the simpler version" : "") + "."));
+    parts.push(text);
     this.repeatFn = function () { self.playSegment(); };
-    this.say(lead + text, function () {
-      if (L.si + 1 < segs.length) self.later(self.settings.lessonGapMs, function () { L.si++; self.playSegment(); });
-      else self.lessonEnd();
+    this.say(parts, function () {
+      // only reached after the audio REALLY finished (the io layer reports failures separately)
+      if (L.si + 1 < segs.length) {
+        if (self.settings.lessonAuto) self.later(self.lessonGap(), function () { L.si++; self.playSegment(); });
+        else { self.phase = "lessonWait"; self.message = "Part finished. Say next, or tap NEXT."; self.emit(); }
+      } else self.lessonEnd();
     });
   };
+  P.lessonGap = function () { return this.settings.bargeIn ? this.settings.lessonGapMs : Math.max(this.settings.lessonGapMs, this.settings.listenGapMs); };
   P.lessonEnd = function () {
     var self = this, tp = this.topics[this.lesson.ti], last = this.lesson.ti >= this.topics.length - 1;
     this.phase = "lessonEnd";
-    this.say("That is the end of " + tp.name + ". " + (last ? "That was the last topic. Say quiz me, or repeat that topic." : "Say quiz me to practice it, or repeat that topic. Otherwise I will move on."), function () {
-      if (!last) self.later(self.settings.topicGapMs, function () { self.lessonTopic(1); });
+    this.say([sp("That is the end of " + tp.name + "."), last ? "That was the last topic. Say quiz me, or repeat that topic." : "Say quiz me to practice it, or repeat that topic. Otherwise I will move on."], function () {
+      if (!last && self.settings.lessonAuto) self.later(self.settings.topicGapMs, function () { self.lessonTopic(1); });
+      else if (!last) { self.message = "Topic finished. Say next topic, or tap NEXT TOPIC."; self.emit(); }
     });
   };
   P.lessonNext = function () { var segs = this.lessonSegs(); if (this.lesson.si + 1 < segs.length) { this.lesson.si++; this.playSegment(); } else this.lessonTopic(1); };
@@ -752,26 +834,29 @@
   P.lessonRestart = function () { this.lesson.si = 0; this.lesson.variant = "script"; this.playSegment(); };
   P.lessonTopic = function (d) {
     var self = this, ti = this.lesson.ti + d;
-    if (ti < 0) return this.say("This is the first topic.", function () { self.playSegment(); });
-    if (ti >= this.topics.length) return this.say("That was the last topic. Say quiz me, or previous topic.", function () { });
+    if (ti < 0) return this.say(["This is the first topic."], function () { self.playSegment(); });
+    if (ti >= this.topics.length) return this.say(["That was the last topic. Say quiz me, or previous topic."], function () { });
     this.hardStopSpeech(); this.lesson = { ti: ti, si: 0, variant: "script" }; this.playSegment();
   };
   // UI-driven lesson buttons
   P.ui = function (name, arg) {
     if (!this.running) return;
     if (this.muted && name !== "stop") return;
+    if (name === "pauseaudio") return this.audioPaused ? this.resumeAudio() : this.pauseAudio();
+    if (name === "resumeaudio") return this.resumeAudio();
     this.hardStopSpeech();
     var map = { back: "back", repeat: "repeat", restart: "restarttopic", prev: "prevtopic", next: "nexttopic", nextpart: "next", slower: "slower", faster: "faster", simpler: "simpler", explain: "explain", skip: "skip", quiz: "quizme", stop: "stop", dashboard: "dashboard", help: "help" };
     if (name === "teach") return this.startLesson(arg, "script");
     if (map[name]) this.runCommand({ cmd: map[name] });
   };
 
+  var SOUND_CLIPS = ["[beep]", "Hi Bill. This is your study tutor. If you can hear my voice, tap Yes.", "Great. The sound is working."];
   return {
-    DEFAULTS: DEFAULTS, COMMANDS: COMMANDS, Tutor: Tutor,
+    SOUND_CLIPS: SOUND_CLIPS, PRAISE: PRAISE, DEFAULTS: DEFAULTS, COMMANDS: COMMANDS, Tutor: Tutor,
     tokens: tokens, stem: stem, lev: lev, kwMatch: kwMatch, speakable: speakable, chunkText: chunkText, mulberry: mulberry, shuffle: shuffle,
     parseNumbers: parseNumbers, matchChoice: matchChoice, gradeNum: gradeNum, gradeShort: gradeShort, gradeExplain: gradeExplain,
     isMuteCommand: isMuteCommand, keywordMatch: keywordMatch, isEcho: isEcho, parseCommand: parseCommand, resolveTopic: resolveTopic,
     questionStates: questionStates, topicStats: topicStats, overall: overall, pickNext: pickNext, pickFollowup: pickFollowup, prepare: prepare,
-    spokenQuestion: spokenQuestion, correctText: correctText, toCSV: toCSV, INTERVALS: INTERVALS
+    spokenQuestion: spokenQuestion, questionParts: questionParts, partText: partText, clipKey: clipKey, lessonChunks: lessonChunks, isUnmuteWord: isUnmuteWord, hasUnmuteWord: hasUnmuteWord, correctText: correctText, toCSV: toCSV, INTERVALS: INTERVALS
   };
 });

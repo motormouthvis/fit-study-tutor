@@ -1,4 +1,6 @@
-# MBA Study Tutor (Bill's hands-free voice tutor)
+# MBA Study Tutor (Bill's hands-free voice tutor) - v2
+
+**v2 change:** sound now comes from pre-recorded MP3 clips (edge-tts voice en-US-AndrewNeural) played through a normal `<audio>` element, not the phone's text-to-speech (which silently failed on Bill's Android and made lessons race ahead). A lesson only moves on after a clip *really* finished playing; any failure stops with a red "I couldn't play sound. Tap TEST SOUND" message.
 
 A single web page (no server, no accounts, no cost) that quizzes you by voice, teaches you out loud, logs every answer on your phone, and finds your weak spots.
 Covers BUS 5601 (accounting and finance basics) and BUS 5421 (managerial economics).
@@ -9,14 +11,15 @@ Covers BUS 5601 (accounting and finance basics) and BUS 5421 (managerial economi
 - `questions.js`: 217 questions in 24 topics + 18 "endless" number-problem generators, and the topic lessons
 - `lessons-data.js`: the Episode 1 audio script cut into short spoken lesson parts (made by `build_lessons.py`)
 - `manifest.webmanifest`, `sw.js`, `icons/`: lets Chrome install it as an app and run it offline
-- `tests/`: `engine.test.js` (47 logic tests) and `e2e.py` (headless browser test with fake microphone and voice)
+- `audio/` (1,536 small MP3 clips, ~31 MB) and `audio-manifest.js` (clip key -> length): every fixed sentence the tutor can say. Built by `tools/build-audio-plan.js` (lists every sentence by running the real tutor) and `tools/gen_audio.py` (edge-tts, 32 kbps mono). Clip file name = `clipKey(text)` from `engine.js`.
+- `tests/`: `engine.test.js` (63 logic tests incl. audio-coverage checks), `e2e.py` + `e2e_audio.py` (headless Chrome, real audio playback, fake microphone), `repro_v1_bug.py` (reproduces the v1 bug on the old commit)
 
 ## How to use it (on the phone, in Chrome)
 1. Open the web address once (needs internet the first time). Chrome will ask for the microphone: tap Allow.
 2. Menu (three dots) > Add to Home screen / Install app. After that it opens like an app and the questions work offline.
-3. Plug the phone in, put in earbuds, tap **START QUIZ** (or **START LESSONS**). Keep the screen on.
+3. Plug the phone in, put in earbuds, tap **START QUIZ** (or **START LESSONS**). The first time you get a **sound check** (beep, then my voice, then "Did you hear that? Yes / No"). Keep the screen on. **TEST SOUND** is always on the screen if something seems silent. The tiny grey line at the bottom (tap it) is a diagnostics line: last event, audio state, microphone state, last phrase heard.
 4. Answer out loud: "B", or "forty percent", or "balance sheet". For "explain" questions, talk for as long as you like, then say "done".
-5. **Mute:** say "mute" or "pause" (or tap the big red MUTE). I stop talking and ignore everything you say, including what you say to other people. **Unmute:** say "resume tutor" (you can change that phrase in Settings) or tap the green UNMUTE.
+5. **Mute:** tap the big red **MUTE / PAUSE** (stops the audio instantly), or say "mute" / "pause" (also catches "mood", "moot", "paws"). I ignore everything you say, including what you say to other people. **Unmute:** say "resume tutor" (changeable in Settings) or just "unmute", or tap the green UNMUTE. **PAUSE AUDIO** (yellow) only freezes the audio in place; tap RESUME or say "resume".
 6. **Gym mode** makes the screen nearly black with one huge MUTE/UNMUTE button.
 
 ### Voice commands
@@ -35,9 +38,10 @@ Every answer is saved on the phone (question, topic, subject, what you said, rig
 - Listening needs **internet** (Chrome sends audio to Google). Offline you can still read and tap.
 - Chrome may make a small **beep/tone** each time the microphone restarts.
 - **Mute is software:** in Quiet mode the microphone stays open only to catch the unmute phrase (everything else is thrown away, never shown or saved). Settings has "Full off" if you prefer the mic completely off while muted (then tap UNMUTE).
-- Speaker phone: turn off "Earbuds mode" in Settings or the mic may hear the tutor. Earbuds mode lets you say "mute" while it talks.
+- **Voice while audio plays:** by default the mic stays open while a clip plays, so "mute" / "pause" / "back" / "next" work while I talk (best with earbuds; on the phone speaker turn Settings > "Listen while I talk" off). Some Android phones pause audio when the mic opens; if that happens the app detects it, turns that setting off by itself, shows a message, and leaves a 3-second quiet gap after each lesson part for voice commands. The big MUTE / PAUSE button always works instantly. This phone-specific behaviour could not be tested on a real phone.
 - Spoken free-form answers are graded by **keywords** (approximate). Tap or say "I was right/wrong" to overrule.
-- Voice quality depends on the phone's built-in voice.
+- The random number problems ("endless" generators) are not recorded; they use the phone's built-in voice as a backup. If that fails you get the red message and the question is still on screen.
+- Audio is fetched the first time each clip plays and then cached on the phone (Settings > "Save all audio for offline" saves all ~31 MB at once).
 
 ## Hosting (needs HTTPS for the microphone)
 Any static host works; upload this folder as-is. Examples: GitHub Pages, Cloudflare Pages, Netlify (drag the folder onto app.netlify.com/drop).
@@ -45,4 +49,4 @@ Test locally: `python3 -m http.server 8080` then open http://localhost:8080 (loc
 
 ## Tests
 `npm test` (or `node --test tests/engine.test.js`) and `python3 tests/e2e.py` (needs Playwright + Chrome).
-When you change any file, bump `VERSION` in `sw.js` so phones pick up the update.
+When you change any file, bump `VERSION` in `sw.js` (and `APP_VERSION` in `app.js`) so phones pick up the update. After changing any spoken text: `node tools/build-audio-plan.js && /workspace/ttsenv/bin/python tools/gen_audio.py` (only new clips are generated; the unit tests fail if any spoken sentence has no clip). `python3 tests/repro_v1_bug.py` reproduces the old bug against git commit 4b76680.

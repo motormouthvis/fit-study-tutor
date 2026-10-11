@@ -11,12 +11,12 @@ threading.Thread(target=srv.serve_forever, daemon=True).start()
 
 FAKE = r"""
 (() => {
-  window.__spoken = []; window.__recStarts = 0; window.__wake = 0; let cur = null; const uq = [];
+  window.__spokenLog = []; window.__recStarts = 0; window.__wake = 0; let cur = null; const uq = [];
   class U { constructor(t){ this.text=t; } }
   window.SpeechSynthesisUtterance = U;
   const synth = { speaking:false, getVoices(){ return [{name:'Fake',voiceURI:'fake',lang:'en-US'}]; }, addEventListener(){},
     cancel(){ uq.length=0; clearTimeout(window.__utt); this.speaking=false; },
-    speak(u){ window.__spoken.push(u.text); this.speaking=true; clearTimeout(window.__utt); window.__utt=setTimeout(()=>{ this.speaking=false; u.onend&&u.onend(); }, 15); } };
+    speak(u){ window.__spokenLog.push(u.text); this.speaking=true; clearTimeout(window.__utt); window.__utt=setTimeout(()=>{ this.speaking=false; u.onend&&u.onend(); }, 15); } };
   Object.defineProperty(window,'speechSynthesis',{value:synth});
   class R { constructor(){ this.onresult=null; this.onend=null; this.onstart=null; this.onerror=null; }
     start(){ window.__recStarts++; cur=this; setTimeout(()=>this.onstart&&this.onstart(),5); }
@@ -41,9 +41,9 @@ def check(name, cond, extra=""):
     if not cond: fails.append(name)
 
 with sync_playwright() as p:
-    b = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True, args=["--no-sandbox"])
+    b = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True, args=["--no-sandbox", "--autoplay-policy=no-user-gesture-required"])
     ctx = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2)
-    ctx.add_init_script(FAKE)
+    ctx.add_init_script(FAKE); ctx.add_init_script("window.__testRate=16; if(!localStorage.getItem('tutor.v1.settings')) localStorage.setItem('tutor.v1.settings', JSON.stringify({schema:2, soundOk:true, bargeIn:true, lessonGapMs:300, listenGapMs:300, topicGapMs:1500}));")
     pg = ctx.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
     pg.goto(f"http://127.0.0.1:{PORT}/index.html"); pg.wait_for_timeout(300)
@@ -53,8 +53,8 @@ with sync_playwright() as p:
 
     # --- start quiz
     pg.click("#btnStart"); pg.wait_for_timeout(500)
-    check("intro mentions mute and the resume phrase", any("mute" in s and "resume tutor" in s for s in pg.evaluate("__spoken")))
-    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking", timeout=8000)
+    check("intro mentions mute and the resume phrase", any("mute" in s and "resume tutor" in s for s in pg.evaluate("__spokenLog")))
+    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
     check("question visible", len(pg.inner_text("#qText")) > 10)
     check("wake lock requested", pg.evaluate("__wake") >= 1)
     check("mic started", pg.evaluate("__recStarts") >= 1)
@@ -77,9 +77,9 @@ with sync_playwright() as p:
     check("log persisted in localStorage", len(json.loads(pg.evaluate("localStorage.getItem('tutor.v1.log')"))) == 1)
 
     # --- MUTE by voice
-    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking", timeout=8000)
+    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
     pg.wait_for_function("__recActive()", timeout=3000)
-    n = pg.evaluate("__tutor.log.length"); spoken_n = len(pg.evaluate("__spoken"))
+    n = pg.evaluate("__tutor.log.length"); spoken_n = len(pg.evaluate("__spokenLog"))
     pg.evaluate("__hear(['mute'])"); pg.wait_for_timeout(200)
     check("voice mute -> MUTED banner", word() == "MUTED", word())
     check("UNMUTE button shown", pg.is_visible("#btnUnmute") and not pg.is_visible("#btnMute"))
@@ -90,22 +90,22 @@ with sync_playwright() as p:
     pg.wait_for_timeout(400)
     check("muted: nothing logged", pg.evaluate("__tutor.log.length") == n)
     check("muted: still muted & running", word() == "MUTED" and pg.evaluate("__tutor.running"))
-    check("muted: tutor said nothing new", len(pg.evaluate("__spoken")) == spoken_n, pg.evaluate("__spoken")[spoken_n:])
+    check("muted: tutor said nothing new", len(pg.evaluate("__spokenLog")) == spoken_n, pg.evaluate("__spokenLog")[spoken_n:])
     check("muted: heard line hidden (nothing shown)", not pg.is_visible("#heardLine"))
     # --- UNMUTE by voice keyword
     pg.wait_for_function("__recActive()", timeout=3000); pg.evaluate("__hear(['resume tutor'])"); pg.wait_for_timeout(300)
-    check("keyword unmutes", word() in ("SPEAKING", "LISTENING"), word())
-    check("says listening again", any("Listening again" in s for s in pg.evaluate("__spoken")))
-    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking", timeout=8000)
+    check("keyword unmutes", word() in ("PLAYING", "LISTENING"), word())
+    check("says listening again", any("Listening again" in s for s in pg.evaluate("__spokenLog")))
+    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
 
     # --- tap mute / unmute buttons
     pg.click("#btnMute"); pg.wait_for_timeout(100); check("tap MUTE works", word() == "MUTED")
     pg.click("#btnUnmute"); pg.wait_for_timeout(200); check("tap UNMUTE works", word() != "MUTED")
-    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking", timeout=8000)
+    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
 
     # --- tap answer for MC / typed answers
     for _ in range(40):
-        pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking", timeout=8000)
+        pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
         t = pg.evaluate("__tutor.cur.type")
         if t == "mc": break
         pg.click("#btnSkip"); pg.wait_for_timeout(150)
@@ -120,12 +120,12 @@ with sync_playwright() as p:
     check("override flips grade and flags it", pg.evaluate("__tutor.log[__tutor.log.length-1].correct") != was and pg.evaluate("__tutor.log[__tutor.log.length-1].overridden"))
 
     # --- voice commands: repeat / explain / simpler
-    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking", timeout=10000)
-    k = len(pg.evaluate("__spoken")); pg.wait_for_function("__recActive()", timeout=3000); pg.evaluate("__hear(['repeat'])"); pg.wait_for_timeout(250)
-    check("repeat re-speaks the question", len(pg.evaluate("__spoken")) > k)
-    pg.wait_for_function("!__tutor.speaking", timeout=5000); pg.wait_for_function("__recActive()", timeout=3000)
+    pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
+    k = len(pg.evaluate("__spokenLog")); pg.wait_for_function("__recActive()", timeout=3000); pg.evaluate("__hear(['repeat'])"); pg.wait_for_timeout(250)
+    check("repeat re-speaks the question", len(pg.evaluate("__spokenLog")) > k)
+    pg.wait_for_function("!__tutor.speaking", timeout=15000); pg.wait_for_function("__recActive()", timeout=3000)
     pg.evaluate("__hear(['explain differently'])"); pg.wait_for_timeout(250)
-    check("explain differently speaks simpler version", any("more simply" in s for s in pg.evaluate("__spoken")))
+    check("explain differently speaks simpler version", any("more simply" in s for s in pg.evaluate("__spokenLog")))
 
     # --- lesson mode by voice
     pg.wait_for_function("!__tutor.speaking", timeout=15000); pg.wait_for_function("__recActive()", timeout=3000)

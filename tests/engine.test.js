@@ -10,8 +10,11 @@ function makeIO(opts) {
   let t = 1760000000000, id = 0; const timers = {};
   const io = {
     spoken: [], pending: null, cancels: 0, store,
-    speak(text, cb) { io.spoken.push(text); io.pending = cb; if (opts.auto) { const c = cb; io.pending = null; c && c(); } },
+    spokenParts: [], paused: 0, resumed: 0,
+    speak(parts, cb) { assert.ok(Array.isArray(parts), "speak gets a clip list"); io.spokenParts.push(parts); io.spoken.push(parts.map(E.partText).join(" ")); io.pending = cb; if (opts.auto) { const c = cb; io.pending = null; c && c(true); } },
     cancelSpeech() { io.cancels++; io.pending = null; },
+    pauseAudio() { io.paused++; }, resumeAudio() { io.resumed++; },
+    failSpeech(info) { const c = io.pending; io.pending = null; if (c) c(false, info || "test failure"); },
     setTimer(fn, ms) { const k = ++id; timers[k] = { fn, ms }; return k; },
     clearTimer(k) { delete timers[k]; },
     now() { return t; }, advance(ms) { t += ms; },
@@ -384,8 +387,8 @@ test("teach me X works from quiz mode, and explain/simpler work during a questio
 });
 test("repeat during feedback repeats the explanation; during a question repeats the question", () => {
   const { io, tu } = startAsked({ seed: 6 }); io.endSpeech();
-  tu.heard(["repeat"], true); assert.equal(io.spoken[io.spoken.length - 1], E.speakable(E.spokenQuestion(tu.cur)));
-  tu.heard(["I don't know"], true); const fb = io.spoken[io.spoken.length - 1]; io.endSpeech(); tu.heard(["repeat"], true); assert.equal(io.spoken[io.spoken.length - 1], E.speakable(tu.lastFeedbackText)); assert.equal(E.speakable(fb), io.spoken[io.spoken.length - 1]);
+  tu.heard(["repeat"], true); assert.equal(io.spoken[io.spoken.length - 1], E.spokenQuestion(tu.cur));
+  tu.heard(["I don't know"], true); const fb = io.spoken[io.spoken.length - 1]; io.endSpeech(); tu.heard(["repeat"], true); assert.equal(io.spoken[io.spoken.length - 1], tu.lastFeedbackParts.map(E.partText).join(' ')); assert.equal(fb, io.spoken[io.spoken.length - 1]);
 });
 test("stop ends the session and speaks a summary; heard() afterwards is ignored", () => {
   const { io, tu } = startAsked({ seed: 6 }); tu.heard(["stop"], true);
@@ -414,4 +417,107 @@ test("fuzz: thousands of random utterances never throw; nothing is logged while 
   }
   assert.ok(tu.log.length > 20);
   const st = E.topicStats(tu.log, B.TOPICS); Object.values(st).forEach(s => assert.ok(s.acc >= 0 && s.acc <= 1));
+});
+
+/* ======================= v2: real audio playback state machine, mute, manifest ======================= */
+const fs = require("fs"), path = require("path");
+function lessonStarted(opts) { const x = makeTutor(Object.assign({ seed: 4, store: { settings: { schema: 2, introCount: 5 } } }, opts)); x.tu.start({ lesson: "balance" }); x.io.endSpeech(); return x; }
+
+test("BUG REGRESSION: a failed/zero-length playback NEVER advances a lesson; it stops, shows the red message, and waits", () => {
+  const { io, tu } = lessonStarted();
+  assert.equal(tu.mode, "lesson"); assert.equal(tu.lesson.si, 0); assert.ok(tu.speaking);
+  io.failSpeech("clip ended without really playing");
+  assert.equal(tu.speaking, false); assert.equal(tu.lesson.si, 0, "did not advance");
+  assert.match(tu.audioError, /without really playing/); assert.match(tu.message, /couldn't play sound.*TEST SOUND/);
+  assert.equal(io.timerCount(), 0, "no timer that could advance the lesson");
+  for (let i = 0; i < 20; i++) { io.fire(); io.endSpeech(); }
+  assert.equal(tu.lesson.si, 0, "still waiting after any amount of time");
+  assert.equal(tu.snapshot().audioError.length > 0, true);
+});
+test("after a failure, Repeat tries the same part again and a success clears the error and carries on", () => {
+  const { io, tu } = lessonStarted(); io.failSpeech("x");
+  tu.heard(["repeat"], true); assert.equal(tu.audioError, ""); assert.ok(tu.speaking); assert.equal(tu.lesson.si, 0);
+  io.endSpeech(); assert.equal(io.timerCount(), 1, "now (and only now) the next part is scheduled"); io.fire(); assert.equal(tu.lesson.si, 1);
+});
+test("a question whose audio fails waits for the user (mic stays available), and a quiz answer after that still works", () => {
+  const x = makeTutor({ seed: 3, store: { settings: { schema: 2, introCount: 5 } } }); x.tu.start(); x.io.endSpeech(); x.io.failSpeech("boom");
+  assert.equal(x.tu.phase, "asking"); assert.equal(x.tu.speaking, false); assert.ok(x.tu.audioError);
+  const q = x.tu.cur; if (q.type === "mc") x.tu.tapChoice("A"); else x.tu.heard(["12"], true);
+  assert.equal(x.tu.log.length, 1);
+});
+test("audio failure during feedback does not auto-advance to the next question", () => {
+  const x = makeTutor({ seed: 3, store: { settings: { schema: 2, introCount: 5 } } }); x.tu.start(); x.io.endSpeech(); x.io.endSpeech();
+  if (x.tu.cur.type === "mc") x.tu.tapChoice("A"); else x.tu.heard(["12"], true);
+  const qid = x.tu.cur.id; x.io.failSpeech("dead"); assert.equal(x.io.timerCount(), 0);
+  for (let i = 0; i < 10; i++) x.io.fire(); assert.equal(x.tu.cur.id, qid);
+});
+test("lessons: auto-continue OFF waits for the user after a part genuinely finishes", () => {
+  const { io, tu } = lessonStarted({ store: { settings: { schema: 2, introCount: 5, lessonAuto: false } } });
+  io.endSpeech(); assert.equal(io.timerCount(), 0); assert.equal(tu.lesson.si, 0); assert.equal(tu.phase, "lessonWait");
+  tu.heard(["next"], true); assert.equal(tu.lesson.si, 1);
+});
+test("lessons: auto-continue ON; the pause between parts is 0.6 s with listen-while-talking, 3 s (a listening window) without; shows part x of y", () => {
+  const { io, tu } = lessonStarted(); const snap = tu.snapshot(); assert.ok(snap.lesson.count >= 2); assert.equal(snap.lesson.seg, 0);
+  assert.equal(tu.lessonGap(), 600); tu.setSetting("bargeIn", false); assert.equal(tu.lessonGap(), 3000);
+});
+test("PAUSE AUDIO button freezes the audio and any pending advance; RESUME carries on (also by voice)", () => {
+  const { io, tu } = lessonStarted(); io.endSpeech(); assert.equal(io.timerCount(), 1);
+  tu.ui("pauseaudio"); assert.ok(tu.audioPaused); assert.equal(io.paused, 1); assert.equal(io.timerCount(), 0, "advance timer frozen");
+  assert.equal(tu.lesson.si, 0); tu.heard(["resume"], true); assert.equal(tu.audioPaused, false); assert.equal(tu.lesson.si, 1, "advance resumed");
+  tu.ui("pauseaudio"); assert.equal(io.paused, 2); tu.ui("pauseaudio"); assert.equal(io.resumed, 1, "toggle resumes the audio where it was");
+});
+test("mute (voice, even interim) while a clip plays stops audio at once and nothing continues", () => {
+  const { io, tu } = lessonStarted(); const c = io.cancels; assert.ok(tu.speaking);
+  assert.equal(tu.heard(["mute"], false).action, "mute"); assert.ok(io.cancels > c); assert.equal(tu.speaking, false); assert.ok(tu.muted);
+  io.endSpeech(); for (let i = 0; i < 5; i++) io.fire(); assert.equal(tu.lesson.si, 0);
+});
+test("tolerant mute: likely mis-hearings of mute and pause stop the tutor", () => {
+  ["mute", "mood", "moot", "mutt", "pause", "paws", "paused", "mute please", "pause tutor", "ok mute", "hey pause", "muted"].forEach(w => {
+    const { tu } = lessonStarted(); assert.equal(tu.heard([w], true).action, "mute", w); assert.ok(tu.muted, w);
+  });
+  ["the mood of the market is rising slowly today", "pause for two weeks and then restart", "unmute", "un mute", "on mute"].forEach(w => { const { tu } = lessonStarted(); assert.notEqual(tu.heard([w], true).action, "mute", w); });
+});
+test("tolerant unmute: keyword mis-hearings and plain 'unmute' bring it back", () => {
+  ["resume tutor", "resume tudor", "re some tutor", "reasume tutor", "resumed tutor", "resume tutors", "unmute", "un mute", "on mute", "ok unmute please"].forEach(w => {
+    const { tu } = lessonStarted(); tu.heard(["mute"], true); assert.equal(tu.heard([w], true).action, "unmute", w); assert.equal(tu.muted, false);
+  });
+  ["resume", "assume the tutor", "tutor", "next", "mute", "balance sheet"].forEach(w => { const { tu } = lessonStarted(); tu.heard(["mute"], true); assert.equal(tu.heard([w], true).action, "ignored-muted", w); });
+  const { tu } = lessonStarted(); tu.setSetting("alsoUnmute", false); tu.heard(["mute"], true); assert.equal(tu.heard(["unmute"], true).action, "ignored-muted");
+});
+test("saying unmute while already listening is ignored (it is not a mute and not an answer)", () => {
+  const { tu } = lessonStarted(); assert.equal(tu.heard(["unmute"], true).action, "ignored-unmute-while-listening"); assert.equal(tu.muted, false);
+});
+test("settings saved by v1 are migrated: custom keyword kept, playback speed reset to 1", () => {
+  const { tu } = makeTutor({ store: { settings: { unmuteKeyword: "go go", bargeIn: true, rate: 0.95 } } });
+  assert.equal(tu.settings.unmuteKeyword, "go go"); assert.equal(tu.settings.schema, 2); assert.equal(tu.settings.rate, 1);
+});
+test("clipKey is stable and distinct", () => {
+  assert.equal(E.clipKey("Hello."), E.clipKey("Hello.")); assert.notEqual(E.clipKey("Hello."), E.clipKey("Hello")); assert.match(E.clipKey("x"), /^[0-9a-f]{16}$/);
+});
+
+const PLAN = require("../tools/build-audio-plan.js").collect();
+test("audio plan: every fixed text the tutor can speak is planned (~1500 clips) and keys never collide", () => {
+  assert.ok(PLAN.size > 1000, "plan size " + PLAN.size);
+  assert.ok(E.SOUND_CLIPS.every(t => PLAN.get(E.clipKey(t)) === t));
+});
+test("PROPERTY: during random sessions every non-random clip the tutor speaks is in the audio plan (no silent gaps)", () => {
+  const missing = new Set(); let spokenN = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const { io, tu } = makeTutor({ seed, auto: true, store: { settings: { schema: 2, introCount: seed % 3 * 2 } } });
+    io.speak = (parts, cb) => { spokenN++; parts.forEach(p => { if (typeof p !== "string" && p.dyn) return; const t = E.partText(p); if (!PLAN.has(E.clipKey(t))) missing.add(t.slice(0, 80)); }); cb(true); };
+    const rng = E.mulberry(seed * 77); tu.start(seed % 2 ? {} : { lesson: "ratios" });
+    const words = ["a", "b", "c", "d", "mute", "resume tutor", "next", "skip", "repeat", "explain", "explain differently", "back", "slower", "faster", "banana", "forty", "12", "i don't know", "done", "i was right", "i was wrong", "teach me game theory", "teach me zzz", "quiz me on economics", "quiz me on my weak areas", "previous topic", "next topic", "repeat that topic", "help", "how am i doing", "quiz me", "pause", "unmute"];
+    for (let i = 0; i < 1500; i++) {
+      if (!tu.running) tu.start({});
+      tu.heard([words[Math.floor(rng() * words.length)]], true); if (rng() < 0.5) io.fire();
+      if (tu.phase === "asking" && tu.cur && rng() < 0.4) { if (tu.cur.type === "mc") tu.tapChoice("ABCD"[Math.floor(rng() * 4)]); else tu.submitText(["zero", "42", "profit and loss and cash", "x"][Math.floor(rng() * 4)]); }
+      if (rng() < 0.1) tu.ui(["pauseaudio", "back", "nextpart", "simpler", "explain"][Math.floor(rng() * 5)]);
+    }
+  }
+  assert.ok(spokenN > 2000); assert.deepEqual([...missing], []);
+});
+test("audio files: manifest matches the plan and every clip file exists (mp3, small)", () => {
+  const root = path.join(__dirname, ".."); global.window = {}; require(path.join(root, "audio-manifest.js")); const man = global.window.AUDIO_MANIFEST.clips; delete global.window;
+  let bytes = 0; PLAN.forEach((t, k) => { assert.ok(k in man, "manifest lacks " + t.slice(0, 60)); const f = path.join(root, "audio", k + ".mp3"); const st = fs.statSync(f); assert.ok(st.size > 500, f); bytes += st.size; assert.ok(man[k] > 0.3, "duration " + t); });
+  assert.ok(bytes < 60 * 1024 * 1024, "total audio " + bytes);
 });
