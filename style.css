@@ -249,3 +249,4 @@ body.dev-phone .kbd, body.dev-phone .fckeys { display:none; }
   .fcq.big { font-size:1.35rem; }
 }
 @media (min-width: 900px) { #tab-cards { max-width:900px; margin:0 auto; } }
+.inststeps li { margin:10px 0; font-size:1.15rem; line-height:1.4; } #btnInstall { margin:4px 0 10px; }

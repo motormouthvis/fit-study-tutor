@@ -21,7 +21,7 @@ with sync_playwright() as p:
 
     # ---------------- desktop ----------------
     ctx, pg = newpage(1440, 900)
-    check("v4.2 label", "v4.2" in pg.inner_text("#ver"))
+    check("v4.x label", "v4." in pg.inner_text("#ver"))
     pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])")
     check("Flash Cards is in the menu", pg.is_visible("#menu [data-goto=cards]") and "Flash Cards" in pg.inner_text("#mCards"))
     pg.click("#menu [data-goto=cards]"); pg.wait_for_timeout(200)

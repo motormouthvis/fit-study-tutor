@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.2";
+  var APP_VERSION = "v4.3";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -924,8 +924,45 @@
     $("btnReset").addEventListener("click", function () { if (confirm("Erase all saved answers on this phone? This cannot be undone. Download a copy first if you want one.")) { tutor.log = []; tutor.saveLog(); tutor.last = null; renderProgress(); renderLog(); render(); } });
     window.addEventListener("online", function () { if (micError === "voice-off" && tutor.running) restartMic(); });
     window.addEventListener("online", netNote); window.addEventListener("offline", netNote); netNote();
-    var dip; window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); dip = e; $("btnInstall").hidden = false; });
-    $("btnInstall").addEventListener("click", function () { if (dip) { dip.prompt(); dip = null; $("btnInstall").hidden = true; } });
+    var dip = null; window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); dip = e; });
+    window.addEventListener("appinstalled", function () { dip = null; showAlert("Installed. Open it from your home screen or apps list."); });
+    function isInstalled() { return (window.matchMedia && (matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: window-controls-overlay)").matches || matchMedia("(display-mode: minimal-ui)").matches)) || navigator.standalone === true; }
+    function installPlatform() {
+      var ua = navigator.userAgent || "", iOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      if (iOS) return /CriOS|FxiOS|EdgiOS/.test(ua) ? "ios-other" : "ios";
+      if (/Android/.test(ua)) return /SamsungBrowser/.test(ua) ? "samsung" : /Firefox/.test(ua) ? "android-firefox" : "android";
+      if (/Edg\//.test(ua)) return "edge"; if (/Chrome\//.test(ua)) return "chrome"; if (/Safari\//.test(ua) && /Macintosh/.test(ua)) return "mac-safari"; return "other";
+    }
+    var INSTALL_STEPS = {
+      android: ["Tap the <b>&#8942;</b> menu (three dots, top right of Chrome).", "Tap <b>Install app</b> (or <b>Add to Home screen</b>).", "Tap <b>Install</b>. The icon appears on your home screen."],
+      samsung: ["Tap the <b>&#9776;</b> menu at the bottom.", "Tap <b>Add page to</b> &gt; <b>Home screen</b>."],
+      "android-firefox": ["Tap the <b>&#8942;</b> menu.", "Tap <b>Install</b> (or <b>Add to Home screen</b>)."],
+      ios: ["Tap the <b>Share</b> button (square with an arrow, bottom of Safari).", "Scroll down and tap <b>Add to Home Screen</b>.", "Tap <b>Add</b>. The icon appears on your home screen."],
+      "ios-other": ["Open this page in <b>Safari</b> (installing works best there).", "Tap <b>Share</b> &gt; <b>Add to Home Screen</b> &gt; <b>Add</b>."],
+      chrome: ["Click the <b>install icon</b> at the right end of the address bar (a screen with a down arrow).", "Or click <b>&#8942;</b> &gt; <b>Cast, save and share</b> &gt; <b>Install page as app</b> (older Chrome: <b>&#8942;</b> &gt; <b>Install MBA Study Tutor</b>).", "Click <b>Install</b>."],
+      edge: ["Click the <b>App available</b> icon in the address bar.", "Or click <b>&#8943;</b> &gt; <b>Apps</b> &gt; <b>Install this site as an app</b>.", "Click <b>Install</b>."],
+      "mac-safari": ["In Safari's menu bar choose <b>File</b> &gt; <b>Add to Dock</b>.", "Click <b>Add</b>."],
+      other: ["Open this page in <b>Chrome</b> or <b>Edge</b> on a computer or Android phone, or <b>Safari</b> on an iPhone.", "Then use the browser's <b>Install</b> or <b>Add to Home Screen</b> option."]
+    };
+    var INSTALL_NAMES = { android: "Android (Chrome)", samsung: "Android (Samsung Internet)", "android-firefox": "Android (Firefox)", ios: "iPhone / iPad (Safari)", "ios-other": "iPhone / iPad", chrome: "Computer (Chrome)", edge: "Computer (Edge)", "mac-safari": "Mac (Safari)", other: "This browser" };
+    function showInstallSheet(state) {
+      var h;
+      if (state === "installed") { $("instTitle").textContent = "Already installed \u2713"; h = "<p style='font-size:1.3rem'><b>Already installed &#10003;</b></p><p>You are using the installed app. Open it any time from your home screen or apps list.</p>"; }
+      else { var pf = installPlatform(); $("instTitle").textContent = "Install on my Phone or Computer";
+        h = "<p class='small'>Detected: <b id='instPlat' data-plat='" + pf + "'>" + INSTALL_NAMES[pf] + "</b></p><ol class='inststeps'>" + INSTALL_STEPS[pf].map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ol>" +
+          "<p class='small'>Once installed it opens full-screen like a normal app and works offline (voice listening still needs internet).</p>"; }
+      $("instBody").innerHTML = h; $("menu").hidden = true; $("installSheet").hidden = false; $("instClose").focus();
+    }
+    function doInstall() {
+      if (isInstalled()) return showInstallSheet("installed");
+      if (dip) { var ev = dip; dip = null; $("menu").hidden = true; ev.prompt(); if (ev.userChoice) ev.userChoice.then(function (r) { if (r && r.outcome === "accepted") showAlert("Installing..."); }); return; }
+      showInstallSheet("steps");
+    }
+    $("btnInstall").addEventListener("click", doInstall); $("btnInstall2").addEventListener("click", doInstall);
+    $("instClose").addEventListener("click", function () { $("installSheet").hidden = true; });
+    $("installSheet").addEventListener("click", function (e) { if (e.target === $("installSheet")) $("installSheet").hidden = true; });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("installSheet").hidden) $("installSheet").hidden = true; });
+    window.__install = { isInstalled: isInstalled, platform: installPlatform, hasPrompt: function () { return !!dip; } };
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
     initFlash(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
