@@ -29,8 +29,8 @@ with sync_playwright() as p:
 
     # ===== 1. first-run sound check blocks the session until Bill hears the sound
     ctx, pg = newpage(preset=False, rate=8)
-    check("version label v3 visible", "v3" in pg.inner_text(".top"))
-    check("diagnostics line is NOT on the main screen, but exists in About", not pg.is_visible("#dbgLine") and "v3" in dbg(pg) and "audio:" in dbg(pg) and "mic:" in dbg(pg))
+    check("version label v4 visible", "v4" in pg.inner_text(".top"))
+    check("diagnostics line is NOT on the main screen, but exists in About", not pg.is_visible("#dbgLine") and "v4" in dbg(pg) and "audio:" in dbg(pg) and "mic:" in dbg(pg))
     pg.click("#btnMenu"); check("Test sound is in the menu", pg.is_visible("#btnTestSound2")); pg.click("#menuClose")
     check("main screen has only the simple controls", [pg.is_visible(x) for x in ("#btnPlay","#btnBack10","#btnFwd10","#btnSpeed")] == [True]*4 and pg.locator("#lessonCard button:visible").count() == 4, pg.locator("#lessonCard button:visible").count())
     check("3 tabs only", pg.locator(".tab").count() == 3)
@@ -142,9 +142,9 @@ with sync_playwright() as p:
     pg.wait_for_function("navigator.serviceWorker.ready.then(()=>true)", timeout=8000); pg.reload(); pg.wait_for_timeout(800)
     pg.click("#btnPlay"); pg.wait_for_function("__tutor.lesson && __tutor.lesson.si>=1", timeout=15000)
     mclick(pg, "stop"); pg.wait_for_timeout(600)
-    caches = pg.evaluate("caches.keys()"); check("service worker caches: app v3 + audio", "study-tutor-v3" in caches and "study-tutor-audio-v1" in caches, caches)
+    caches = pg.evaluate("caches.keys()"); check("service worker caches: app v4 + audio", "study-tutor-v4" in caches and "study-tutor-audio-v1" in caches, caches)
     ctx.set_offline(True); pg.reload(); pg.wait_for_timeout(800)
-    check("offline: app loads from cache and shows v3", word(pg) == "READY" and "v3" in pg.inner_text(".top"))
+    check("offline: app loads from cache and shows v4", word(pg) == "READY" and "v4" in pg.inner_text(".top"))
     pg.evaluate("window.__spokenLog=[]"); pg.click("#btnPlay"); pg.wait_for_function("__tutor.lesson && __tutor.lesson.si>=1", timeout=15000)
     log = pg.evaluate("__player.log()"); check("offline: cached clips really played (ended ok, no failure)", any("ended ok" in l for l in log) and not any("FAILED" in l for l in log), log[-6:])
     ctx.set_offline(False); ctx.close()

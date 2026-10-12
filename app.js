@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v3";
+  var APP_VERSION = "v4";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -270,6 +270,7 @@
     renderGym(s);
     if (!s.running) releaseWake();
     updateLessonsView(s);
+    if (window.__v4ready) updateLearnLayout();
     syncMic();
     Array.prototype.forEach.call(document.querySelectorAll(".micbtn"), function (b) { b.hidden = !running; b.textContent = s.muted ? "\uD83C\uDFA4 Unmute" : "\uD83C\uDFA4 Mute"; b.classList.toggle("muted", !!s.muted); });
     var mi = $("menu"); Array.prototype.forEach.call(mi.querySelectorAll(".m-lesson"), function (e) { e.hidden = !(running && s.mode === "lesson"); });
@@ -399,7 +400,7 @@
       B.TOPICS.filter(function (t) { return t.subj === sj; }).forEach(function (t) {
         var b = document.createElement("button"); b.className = "trw"; b.dataset.topic = t.key;
         b.innerHTML = "<span class='tick'></span><span class='tn'></span><span class='tm'></span>"; b.children[1].textContent = t.name;
-        b.addEventListener("click", function () { if (tutor.running) tutor.ui("teach", t.key); else startSession({ lesson: t.key }); });
+        b.addEventListener("click", function () { var s = lastSnap || tutor.snapshot(); if (learnView() === "read" && !(s.running && s.mode === "lesson")) { rd.key = t.key; rd.si = 0; updateLearnLayout(); window.scrollTo(0, 0); return; } if (tutor.running) tutor.ui("teach", t.key); else startSession({ lesson: t.key }); });
         box.appendChild(b); topicRows[t.key] = b;
       });
     });
@@ -552,6 +553,165 @@
     function fallback() { var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); showAlert("Copied."); } catch (e) { showAlert("Could not copy. Use Download instead."); } ta.remove(); }
   }
 
+  /* ================= v4: device type, Read mode, sample statements ================= */
+  var ST = window.Statements, device = "phone", rd = { key: null, si: 0 }, stmtShown = "bs", stmtFocusSig = "", stmtUserPick = false;
+  function deviceInfo() {
+    var mm = function (q) { try { return window.matchMedia(q).matches; } catch (e) { return false; } };
+    return { width: window.innerWidth, coarse: mm("(pointer: coarse)"), fine: mm("(any-pointer: fine)"), touch: (navigator.maxTouchPoints || 0) > 0 || "ontouchstart" in window };
+  }
+  function applyDevice() {
+    var d = E.detectDevice(deviceInfo(), tutor.settings.deviceMode);
+    var changed = d !== device; device = d;
+    document.body.classList.toggle("dev-desktop", d === "desktop"); document.body.classList.toggle("dev-phone", d !== "desktop");
+    if ($("devDetected")) $("devDetected").textContent = E.detectDevice(deviceInfo(), "auto") === "desktop" ? "desktop" : "phone / tablet";
+    placeStatements();
+    if (changed) ev("device: " + d);
+    updateLearnLayout();
+  }
+  function learnView() { return device === "desktop" ? (tutor.settings.learnView || "listen") : "listen"; }
+  // the lesson part the screen is "about": the playing part, else the part open in Read mode
+  function focusPart() {
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && s.lesson) return { key: s.lesson.topic, si: s.lesson.seg, text: s.lesson.text, live: true };
+    if (learnView() === "read" && rd.key) { var segs = tutor.readSegs(rd.key); return { key: rd.key, si: rd.si, text: segs[rd.si] || "", live: false }; }
+    return { key: nextLessonKey(s), si: -1, text: "", live: false };
+  }
+  function placeStatements() {
+    var panel = $("stmtPanel"), want = device === "desktop" ? $("stmtCol") : $("stmtSlot");
+    if (panel.parentNode !== want) want.appendChild(panel);
+    if (device === "desktop") $("stmtSheet").hidden = true;
+  }
+  function updateLearnLayout() {
+    var f = focusPart(), rel = ST.relevant(f.key), desk = device === "desktop", wrap = $("learnWrap");
+    var split = desk && rel;
+    $("stmtCol").hidden = !split; $("splitBar").hidden = !split;
+    wrap.classList.toggle("split", split);
+    if (split) wrap.style.gridTemplateColumns = (tutor.settings.splitPct || 50) + "% 10px minmax(0, 1fr)"; else wrap.style.gridTemplateColumns = "";
+    $("viewToggle").hidden = !desk;
+    var v = learnView();
+    Array.prototype.forEach.call(document.querySelectorAll(".segbtn"), function (b) { var on = b.dataset.view === v; b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
+    $("lessonCard").hidden = v === "read"; $("readCard").hidden = v !== "read";
+    var s = lastSnap || tutor.snapshot();
+    $("btnStmt").hidden = !(device !== "desktop" && s.running && s.mode === "lesson" && rel);
+    if (v === "read") renderReader();
+    renderStatements(false);
+  }
+  // ---- Read mode
+  function renderReader() {
+    var s = lastSnap || tutor.snapshot(), live = s.running && s.mode === "lesson" && s.lesson;
+    if (live) { rd.key = s.lesson.topic; rd.si = s.lesson.seg; }
+    if (!rd.key) rd.key = nextLessonKey(s);
+    var tp = tutor.topic(rd.key), segs = tutor.readSegs(rd.key), box = $("rText");
+    rd.si = Math.max(0, Math.min(rd.si, segs.length - 1));
+    $("rName").textContent = tp.name;
+    $("rPos").textContent = "Part " + (rd.si + 1) + " of " + segs.length;
+    var playingNow = live && !s.audioPaused && !s.muted && s.speaking;
+    $("rHint").textContent = live ? (playingNow ? "\u00B7 reading along with the audio" : "\u00B7 audio paused") : "\u00B7 read at your own pace";
+    $("rListen").innerHTML = live ? (s.audioPaused ? "&#9654; Resume audio" : "&#10074;&#10074; Pause audio") : "&#128266; Listen from here";
+    if (box.dataset.key !== rd.key) {
+      box.dataset.key = rd.key; box.innerHTML = "";
+      segs.forEach(function (t, i) {
+        var p = document.createElement("p"); p.dataset.si = i; p.textContent = t; p.tabIndex = 0;
+        p.addEventListener("click", function () { readGo(i); });
+        box.appendChild(p);
+      });
+      box.dataset.cur = "";
+    }
+    Array.prototype.forEach.call(box.children, function (p, i) { p.classList.toggle("cur", i === rd.si); p.classList.toggle("playing", i === rd.si && !!playingNow); });
+    if (box.dataset.cur !== String(rd.si)) {
+      box.dataset.cur = String(rd.si);
+      var el = box.children[rd.si]; if (el) { var top = Math.max(0, el.offsetTop - box.clientHeight / 4); if (box.scrollTo) box.scrollTo({ top: top, behavior: live ? "smooth" : "auto" }); else box.scrollTop = top; }
+    }
+    $("rPrev").disabled = rd.si <= 0 && !live; $("rNext").disabled = rd.si >= segs.length - 1 && !live;
+  }
+  function readGo(si) {
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && s.lesson && s.lesson.topic === rd.key) { tutor.ui("teachat", { key: rd.key, si: si }); return; }
+    rd.si = si; stmtUserPick = false; updateLearnLayout();
+  }
+  function readStep(d) {
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && s.lesson) { tutor.ui(d > 0 ? "nextpart" : "back"); return; }
+    var n = tutor.readSegs(rd.key).length, si = rd.si + d;
+    if (si >= n) return readTopic(1); if (si < 0) return readTopic(-1, true);
+    rd.si = si; stmtUserPick = false; updateLearnLayout();
+  }
+  function readTopic(d, toEnd) {
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && s.lesson) { tutor.ui(d > 0 ? "next" : "prev"); return; }
+    var keys = B.TOPICS.map(function (t) { return t.key; }), i = keys.indexOf(rd.key) + d;
+    if (i < 0 || i >= keys.length) return;
+    rd.key = keys[i]; rd.si = toEnd ? tutor.readSegs(rd.key).length - 1 : 0; stmtUserPick = false; updateLearnLayout();
+    window.scrollTo(0, 0);
+  }
+  function readListen() {
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && s.lesson) return onPlay();
+    if (s.running) tutor.ui("teachat", { key: rd.key, si: rd.si }); else startSession({ lesson: rd.key, si: rd.si });
+  }
+  // ---- statements
+  function money(x) { var a = Math.abs(x), t = a.toLocaleString("en-US"); return x < 0 ? "(" + t + ")" : t; }
+  function pct(x) { return (Math.round(x * 1000) / 10).toFixed(1) + "%"; }
+  function fmtRatio(r, x) { return r.fmt === "%" ? pct(x) : r.fmt === "$" ? money(x) : (Math.round(x * 100) / 100).toFixed(2); }
+  function stmtTable(code) {
+    var yrs = ST.YEARS, h = "";
+    if (code === "ratios") {
+      h += "<table class='stmt'><thead><tr><th>Ratio</th>" + yrs.map(function (y) { return "<th>" + y + "</th>"; }).join("") + "</tr></thead><tbody>";
+      ST.RATIOS.forEach(function (r) {
+        h += "<tr data-r='" + r.k + "'><td><b>" + r.label + "</b><div class='f'>" + r.f + "</div></td>" + yrs.map(function (y, i) { return "<td>" + fmtRatio(r, r.calc(i)) + "</td>"; }).join("") + "</tr>";
+      });
+      h += "</tbody></table><p class='small'>Year-end balances, as in the lesson. Altman uses market value of equity of $" + ST.MARKET_EQUITY.join("K, $") + "K. Above 2.99 = safe zone.</p>";
+      return h;
+    }
+    var st = ST.STATEMENTS[code];
+    h += "<div class='stitle'>" + st.title + "</div><table class='stmt'><thead><tr><th></th>" + yrs.map(function (y, i) { return "<th>" + y + "</th><th class='cs y" + i + "'>%</th>"; }).join("") + "</tr></thead><tbody>";
+    st.rows.forEach(function (r) {
+      if (r.h) { h += "<tr class='sh'><td colspan='" + (1 + yrs.length * 2) + "'>" + r.h + "</td></tr>"; return; }
+      h += "<tr data-k='" + r.k + "' class='" + (r.total === 2 ? "t2" : r.total ? "t1" : "") + (r.sub ? " sub" : "") + "'><td>" + r.label.trim() + "</td>" +
+        yrs.map(function (y, i) { return "<td>" + money(r.v[i]) + "</td><td class='cs y" + i + "'>" + pct(ST.commonSize(st, r.k, i)) + "</td>"; }).join("") + "</tr>";
+    });
+    h += "</tbody></table><p class='small'>% column = " + st.baseLabel + " (common-size).</p>";
+    return h;
+  }
+  function renderStatements(force) {
+    var f = focusPart(), sig = f.key + ":" + f.si, rel = ST.relevant(f.key);
+    var link = rel && f.text ? ST.linesFor(f.text, f.key) : { stmt: ST.TOPIC_STMT[f.key] || "bs", keys: [], ratios: [] };
+    if (sig !== stmtFocusSig) { stmtFocusSig = sig; if (!stmtUserPick) { stmtShown = link.ratios.length && link.stmt === "bs" && f.key === "altman" ? "bs" : link.stmt; } stmtUserPick = false; force = true; }
+    var body = $("stmtBody");
+    if (force || body.dataset.code !== stmtShown) { body.dataset.code = stmtShown; body.innerHTML = stmtTable(stmtShown); }
+    Array.prototype.forEach.call(document.querySelectorAll(".stab"), function (b) { b.classList.toggle("active", b.dataset.stmt === stmtShown); });
+    var first = null;
+    Array.prototype.forEach.call(body.querySelectorAll("tr[data-k]"), function (tr) { var on = link.keys.indexOf(tr.dataset.k) >= 0; tr.classList.toggle("hl", on); if (on && !first) first = tr; });
+    Array.prototype.forEach.call(body.querySelectorAll("tr[data-r]"), function (tr) { var on = link.ratios.indexOf(tr.dataset.r) >= 0; tr.classList.toggle("hl", on); if (on && !first) first = tr; });
+    var names = link.keys.filter(function (k) { return ST.WHERE[k] === stmtShown; }).length;
+    $("stmtNote").textContent = !rel ? "These statements go with the accounting lessons." :
+      link.keys.length ? (stmtShown === "ratios" ? "Highlighted: the ratio this part is about." : names ? "Highlighted: the lines this part is talking about." : "This part's lines are on another tab (" + link.keys.map(function (k) { return { bs: "Balance sheet", is: "Income", cf: "Cash flow" }[ST.WHERE[k]]; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(", ") + ").") : "";
+    if (first && force && first.scrollIntoView) { var sc = device === "desktop" ? $("stmtCol") : $("stmtSheet").querySelector(".sheetbox"); if (sc) { var r1 = first.getBoundingClientRect(), r0 = sc.getBoundingClientRect(); if (r1.bottom > r0.bottom - 10 || r1.top < r0.top + 110) sc.scrollTop = Math.max(0, sc.scrollTop + (r1.top - r0.top) - 140); } }
+    window.__stmtState = { shown: stmtShown, keys: link.keys, ratios: link.ratios, focus: f };
+  }
+  function openStatements() { $("menu").hidden = true; if (device === "desktop") { switchTab("lessons"); renderStatements(true); return; } $("stmtSheet").hidden = false; renderStatements(true); }
+  function initV4() {
+    Array.prototype.forEach.call(document.querySelectorAll(".segbtn"), function (b) { b.addEventListener("click", function () { tutor.setSetting("learnView", b.dataset.view); if (b.dataset.view === "read" && !rd.key) { var f = focusPart(); rd.key = f.key; rd.si = Math.max(0, f.si); } updateLearnLayout(); }); });
+    Array.prototype.forEach.call(document.querySelectorAll(".stab"), function (b) { b.addEventListener("click", function () { stmtShown = b.dataset.stmt; stmtUserPick = true; renderStatements(true); stmtUserPick = false; }); });
+    $("rPrev").addEventListener("click", function () { readStep(-1); }); $("rNext").addEventListener("click", function () { readStep(1); });
+    $("rPrevTopic").addEventListener("click", function () { readTopic(-1); }); $("rNextTopic").addEventListener("click", function () { readTopic(1); });
+    $("rListen").addEventListener("click", readListen);
+    $("btnStmt").addEventListener("click", openStatements); $("mStmt").addEventListener("click", openStatements);
+    $("stmtClose").addEventListener("click", function () { $("stmtSheet").hidden = true; });
+    $("stmtSheet").addEventListener("click", function (e) { if (e.target === $("stmtSheet")) $("stmtSheet").hidden = true; });
+    Array.prototype.forEach.call(document.getElementsByName("deviceMode"), function (r) { r.checked = r.value === tutor.settings.deviceMode; r.addEventListener("change", function () { if (this.checked) { tutor.setSetting("deviceMode", this.value); applyDevice(); } }); });
+    // resizable split
+    var bar = $("splitBar"), drag = false;
+    function setPct(p) { p = Math.max(30, Math.min(72, p)); tutor.settings.splitPct = Math.round(p); $("learnWrap").style.gridTemplateColumns = p + "% 10px minmax(0, 1fr)"; }
+    bar.addEventListener("pointerdown", function (e) { drag = true; try { bar.setPointerCapture(e.pointerId); } catch (x) {} e.preventDefault(); });
+    bar.addEventListener("pointermove", function (e) { if (!drag) return; var r = $("learnWrap").getBoundingClientRect(); setPct(100 * (e.clientX - r.left) / r.width); });
+    bar.addEventListener("pointerup", function () { if (drag) { drag = false; tutor.setSetting("splitPct", tutor.settings.splitPct); } });
+    bar.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { setPct((tutor.settings.splitPct || 50) + (e.key === "ArrowLeft" ? -3 : 3)); tutor.setSetting("splitPct", tutor.settings.splitPct); } });
+    var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(applyDevice, 150); });
+    applyDevice();
+  }
+  window.__v4 = { device: function () { return device; }, rd: rd, focus: function () { return focusPart(); } };
+
   /* ---------- the big PLAY / PAUSE button and 10-second skips ---------- */
   function onPlay() {
     var s = tutor.snapshot();
@@ -631,6 +791,7 @@
     var dip; window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); dip = e; $("btnInstall").hidden = false; });
     $("btnInstall").addEventListener("click", function () { if (dip) { dip.prompt(); dip = null; $("btnInstall").hidden = true; } });
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
+    initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       navigator.serviceWorker.register("sw.js").then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});

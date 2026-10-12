@@ -436,7 +436,7 @@
   }
 
   /* ---------------- the Tutor (session logic, no DOM) ---------------- */
-  var DEFAULTS = { unmuteKeyword: "resume tutor", rate: 1, voiceURI: "", bargeIn: true, alsoUnmute: true, autoAdvance: true, lessonAuto: true, soundOk: false, schema: 2, wakeLock: true, fontScale: 1, muteMode: "keyword", introCount: 0, explainNotes: 0, explainWaitMs: 3500, lessonGapMs: 600, listenGapMs: 3000, topicGapMs: 7000 };
+  var DEFAULTS = { unmuteKeyword: "resume tutor", rate: 1, voiceURI: "", bargeIn: true, alsoUnmute: true, autoAdvance: true, lessonAuto: true, soundOk: false, schema: 2, wakeLock: true, fontScale: 1, muteMode: "keyword", introCount: 0, explainNotes: 0, explainWaitMs: 3500, lessonGapMs: 600, listenGapMs: 3000, topicGapMs: 7000, deviceMode: "auto", learnView: "listen", splitPct: 50 };
   var PRAISE = ["Correct.", "That's right.", "Yes.", "Good.", "Right."];
   var sp = speakable;
   function lessonChunks(tp, simple) { return chunkText(simple ? tp.simple : tp.lesson, 260).map(sp); }
@@ -519,7 +519,7 @@
       ? ["Hi Bill. I'll ask questions and listen for your answers. Say mute any time and I will stop talking and ignore everything you say. To bring me back, say", kwp, also ? "or just say unmute. Here we go." : "Here we go."]
       : ["Ready. Say mute to pause me, or", kwp, "to bring me back."];
     this.settings.introCount++; this.saveSettings();
-    this.say(intro, function () { if (opts.lesson) self.startLesson(opts.lesson); else self.ask(); });
+    this.say(intro, function () { if (opts.lesson) self.startLesson(opts.lesson, "script", 0, opts.si); else self.ask(); });
   };
   P.stop = function () {
     var n = this.session.answered, c = this.session.correct;
@@ -811,13 +811,19 @@
     var d = this.lessonData[tp.key];
     return d && d.length ? d.map(sp) : lessonChunks(tp, false);
   };
-  P.startLesson = function (key, variant, delta) {
+  // script parts for any topic, without starting a session (Read mode)
+  P.readSegs = function (key) {
+    var tp = this.topic(key) || this.topics[0], d = this.lessonData[tp.key];
+    return d && d.length ? d.map(sp) : lessonChunks(tp, false);
+  };
+  P.startLesson = function (key, variant, delta, si) {
     var ti = 0, self = this;
     if (key) { ti = this.topics.findIndex(function (t) { return t.key === key; }); if (ti < 0) ti = 0; }
     else if (this.last) ti = Math.max(0, this.topics.findIndex(function (t) { return t.key === self.last.entry.topic; }));
     if (delta) ti = Math.max(0, Math.min(this.topics.length - 1, ti + delta));
     this.hardStopSpeech(); this.mode = "lesson"; this.phase = "lesson"; this.cur = null;
     this.lesson = { ti: ti, si: 0, variant: variant || "script" };
+    if (si > 0) this.lesson.si = Math.min(si, this.lessonSegs().length - 1);
     this.playSegment();
   };
   P.playSegment = function (noTitle) {
@@ -867,16 +873,26 @@
     this.hardStopSpeech();
     var map = { back: "back", repeat: "repeat", restart: "restarttopic", prev: "prevtopic", next: "nexttopic", nextpart: "next", slower: "slower", faster: "faster", simpler: "simpler", explain: "explain", skip: "skip", quiz: "quizme", stop: "stop", dashboard: "dashboard", help: "help" };
     if (name === "teach") return this.startLesson(arg, "script");
+    if (name === "teachat") return this.startLesson(arg.key, "script", 0, arg.si);
     if (map[name]) this.runCommand({ cmd: map[name] });
   };
 
   var SOUND_CLIPS = ["[beep]", "Hi Bill. This is your study tutor. If you can hear my voice, tap Yes.", "Great. The sound is working."];
+  // phone/tablet vs desktop: narrow screens, or touch-only (coarse pointer, no fine pointer) devices are "phone"
+  function detectDevice(o, override) {
+    if (override === "phone" || override === "desktop") return override;
+    o = o || {};
+    if ((o.width || 0) < 820) return "phone";
+    if (o.coarse && !o.fine && o.touch) return "phone";
+    if (!o.fine && o.touch && (o.width || 0) < 1100) return "phone";
+    return "desktop";
+  }
   return {
     SOUND_CLIPS: SOUND_CLIPS, PRAISE: PRAISE, DEFAULTS: DEFAULTS, COMMANDS: COMMANDS, Tutor: Tutor,
     tokens: tokens, stem: stem, lev: lev, kwMatch: kwMatch, speakable: speakable, chunkText: chunkText, mulberry: mulberry, shuffle: shuffle,
     parseNumbers: parseNumbers, matchChoice: matchChoice, gradeNum: gradeNum, gradeShort: gradeShort, gradeExplain: gradeExplain,
     isMuteCommand: isMuteCommand, keywordMatch: keywordMatch, isEcho: isEcho, parseCommand: parseCommand, resolveTopic: resolveTopic,
     questionStates: questionStates, topicStats: topicStats, overall: overall, pickNext: pickNext, pickFollowup: pickFollowup, prepare: prepare,
-    spokenQuestion: spokenQuestion, questionParts: questionParts, partText: partText, clipKey: clipKey, lessonChunks: lessonChunks, isUnmuteWord: isUnmuteWord, hasUnmuteWord: hasUnmuteWord, correctText: correctText, toCSV: toCSV, INTERVALS: INTERVALS
+    spokenQuestion: spokenQuestion, questionParts: questionParts, partText: partText, clipKey: clipKey, lessonChunks: lessonChunks, isUnmuteWord: isUnmuteWord, hasUnmuteWord: hasUnmuteWord, correctText: correctText, toCSV: toCSV, INTERVALS: INTERVALS, detectDevice: detectDevice
   };
 });

@@ -14,7 +14,7 @@
 </head>
 <body>
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v3</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -39,6 +39,12 @@
 <main>
   <!-- LEARN: the one main screen -->
   <section id="tab-lessons" class="panel active">
+   <div id="learnWrap" class="learnwrap">
+    <div id="learnMain" class="learnmain">
+    <div id="viewToggle" class="seg" role="tablist" aria-label="Read or listen" hidden>
+      <button class="segbtn" data-view="listen" role="tab">&#127911; Listen</button>
+      <button class="segbtn" data-view="read" role="tab">&#128214; Read</button>
+    </div>
     <div id="lessonCard" class="card player">
       <div id="lName" class="ptitle">Lessons</div>
       <div class="lprog"><b id="lPos">Ready</b> <span id="lTopicNo" class="small"></span></div>
@@ -52,6 +58,7 @@
       <div class="ctlrow2">
         <button id="btnSpeed" class="pill" aria-label="Playback speed">1.0&times;</button>
         <button class="pill micbtn" data-mic>&#127908; Mute</button>
+        <button id="btnStmt" class="pill" hidden>&#128202; Statements</button>
       </div>
       <div id="lText" class="qtext lesson">Tap PLAY to start listening.</div>
       <div id="lMsg" class="small"></div>
@@ -59,10 +66,37 @@
       <div class="bar"><i id="lBar" class="st-ok" style="width:0"></i></div>
     </div>
 
+    <div id="readCard" class="card reader" hidden>
+      <div id="rName" class="ptitle"></div>
+      <div class="lprog"><b id="rPos"></b> <span id="rHint" class="small"></span></div>
+      <div class="rnav">
+        <button id="rPrev" class="btn">&#9664; Previous part</button>
+        <button id="rListen" class="btn go">&#128266; Listen from here</button>
+        <button id="rNext" class="btn">Next part &#9654;</button>
+      </div>
+      <div id="rText" class="article" aria-live="polite"></div>
+      <div class="rnav">
+        <button id="rPrevTopic" class="btn">&#9664;&#9664; Previous topic</button>
+        <button id="rNextTopic" class="btn">Next topic &#9654;&#9654;</button>
+      </div>
+    </div>
     <div class="card"><h2>Topics</h2>
       <div id="lTopicsSummary" class="small"></div>
       <div id="lessonList"></div>
     </div>
+    </div>
+    <div id="splitBar" class="splitbar" role="separator" aria-orientation="vertical" aria-label="Drag to resize" tabindex="0" hidden></div>
+    <aside id="stmtCol" class="stmtcol" hidden>
+      <div id="stmtPanel" class="stmtpanel">
+        <div class="stmthead"><b>Skyline Avionics</b> <span class="small">sample statements, $ thousands (made-up company from the lesson)</span></div>
+        <div id="stmtTabs" class="stabs" role="tablist">
+          <button class="stab" data-stmt="bs">Balance sheet</button><button class="stab" data-stmt="is">Income</button><button class="stab" data-stmt="cf">Cash flow</button><button class="stab" data-stmt="ratios">Ratios</button>
+        </div>
+        <div id="stmtNote" class="small stmtnote"></div>
+        <div id="stmtBody" class="stmtbody"></div>
+      </div>
+    </aside>
+   </div>
   </section>
 
   <!-- QUIZ -->
@@ -167,6 +201,12 @@
       <button id="btnSaveAudio" class="btn go">Save all audio for offline</button>
       <div id="saveAudioMsg" class="small"></div>
     </div>
+    <div class="card"><h2>Screen type</h2>
+      <p class="small">I picked <b id="devDetected"></b> for this screen. Desktop adds Read mode and the statements side by side.</p>
+      <label class="check"><input type="radio" name="deviceMode" value="auto"> Automatic</label>
+      <label class="check"><input type="radio" name="deviceMode" value="phone"> Phone or tablet (simple)</label>
+      <label class="check"><input type="radio" name="deviceMode" value="desktop"> Desktop or laptop</label>
+    </div>
     <div class="card"><h2>Text size</h2>
       <div class="row"><button id="fontDown" class="btn">A&minus; smaller</button><button id="fontUp" class="btn">A+ bigger</button></div>
     </div>
@@ -226,6 +266,7 @@
     <button class="btn warn wide m-run" data-ui="stop" id="mStop">Stop session</button>
     <div class="msec">Other</div>
     <div class="mgrid">
+      <button class="btn" id="mStmt">&#128202; Show statements</button>
       <button class="btn" data-goto="log">Answer log &amp; export</button>
       <button class="btn" data-goto="settings">Settings</button>
       <button class="btn" data-goto="help">Voice commands &amp; help</button>
@@ -235,6 +276,14 @@
       <button class="btn" data-goto="help-about">About &amp; diagnostics</button>
       <button class="btn" id="btnInstall" hidden>Install app</button>
     </div>
+  </div>
+</div>
+
+<!-- statements bottom sheet (phone) -->
+<div id="stmtSheet" class="sheet" role="dialog" aria-label="Sample statements" hidden>
+  <div class="sheetbox wide">
+    <div class="sheethead"><b>Statements</b><button id="stmtClose" class="btn">Close &#10005;</button></div>
+    <div id="stmtSlot"></div>
   </div>
 </div>
 
@@ -265,6 +314,7 @@
 <script src="audio-manifest.js"></script>
 <script src="questions.js"></script>
 <script src="lessons-data.js"></script>
+<script src="statements.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
