@@ -104,3 +104,32 @@ test("Read mode helpers: readSegs gives a topic's parts without a session; 'teac
   tu.start({ lesson: "liquidity" }); tu.ui("teachat", { key: "liquidity", si: 8 });
   assert.equal(tu.topics[tu.lesson.ti].key, "liquidity"); assert.equal(tu.lesson.si, 8);
 });
+test("every accounting lesson part opens the correct statement tab (audited table)", () => {
+  const EXPECT = {
+    equation: "bs bs", balance: "bs ".repeat(16).trim(), income: "is ".repeat(8).trim(),
+    cashflow: "cf cf cf cf cf cf cf cf cf cf cf bs", accrual: "is is is is",
+    liquidity: "bs bs bs bs bs bs is bs bs bs bs bs bs", leverage: "bs bs bs is", profit: "is is is is is is",
+    efficiency: "is is is is ratios is is", hv: "is is is is is is bs is",
+    altman: "bs bs bs bs bs bs bs bs ratios ratios ratios bs bs bs bs bs bs ratios bs bs",
+    tenk: "bs bs bs bs bs bs bs is bs bs bs bs"
+  };
+  assert.deepEqual(Object.keys(EXPECT).sort(), Object.keys(S.TOPIC_STMT).sort());
+  for (const [topic, want] of Object.entries(EXPECT)) {
+    const tabs = want.split(" "); assert.equal(LD[topic].length, tabs.length, topic + " part count");
+    LD[topic].forEach((t, i) => {
+      const x = S.partLink(topic, i, E.speakable ? E.speakable(t) : t, "script");
+      assert.equal(x.stmt, tabs[i], `${topic} part ${i + 1}: "${t.slice(0, 50)}"`);
+      // highlighted lines must exist; when the tab is a statement, the main highlighted lines are on it (or none)
+      for (const k of x.keys) assert.ok(S.WHERE[k], k);
+      if (x.stmt === "ratios") assert.ok(x.ratios.length, topic + " " + i + " ratio highlighted");
+      else if (x.keys.length) assert.ok(x.keys.some((k) => S.WHERE[k] === x.stmt), `${topic} part ${i + 1}: some highlight is on the ${x.stmt} tab (${x.keys})`);
+    });
+  }
+  // the weak spots that are now explicit
+  assert.equal(S.partLink("cashflow", 0, LD.cashflow[0]).stmt, "cf");
+  assert.deepEqual(S.partLink("balance", 15, LD.balance[15]).keys.sort(), ["paid", "re", "te"]);
+  assert.deepEqual(S.partLink("tenk", 11, LD.tenk[11]).keys, []);   // "interesting" is not interest expense
+  assert.equal(S.partLink("altman", 17, LD.altman[17]).stmt, "ratios");
+  // simpler / summary variants have different parts: no explicit index mapping, rules only
+  assert.equal(S.partLink("cashflow", 0, "Revenue is money from customers.", "simple").stmt, "is");
+});

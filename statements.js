@@ -112,7 +112,7 @@
     [/total assets/i, ["ta"]], [/total liabilities|liabilities of two hundred/i, ["tl"]], [/retained earnings/i, ["re"]], [/equity/i, ["te"]],
     [/assets equal liabilities plus equity|it balances/i, ["ta", "tl", "te", "tle"]],
     [/revenue|\bsales\b/i, ["rev"]], [/cost of goods|C-O-G-S/i, ["cogs"]], [/gross profit/i, ["gp"]], [/operating expenses/i, ["opex"]],
-    [/operating income|E-B-I-T/i, ["ebit"]], [/interest/i, ["int"]], [/before taxes|taxes/i, ["ebt", "tax"]], [/net income/i, ["ni"]],
+    [/operating income|E-B-I-T/i, ["ebit"]], [/\binterest( expense)?\b/i, ["int"]], [/before taxes|taxes/i, ["ebt", "tax"]], [/net income/i, ["ni"]],
     [/depreciation/i, ["dep", "cf_dep"]], [/cash from operations|operating activit|^operating\b/i, ["cfo"]], [/investing/i, ["capex", "cfi"]],
     [/financing|paid down|to the owners/i, ["cf_loan", "div", "cff"]], [/cash grew|cash only grew|net change in cash/i, ["netcash", "cash1"]],
     [/\bcash\b/i, ["cash"]]
@@ -132,6 +132,25 @@
     var stmt = count[pref] > 0 || !keys.length ? pref : best;
     return { stmt: stmt, keys: keys, ratios: ratios };
   }
-  return { YEARS: YEARS, OPEN: OPEN, BS: BS, IS: IS, CF: CF, STATEMENTS: { bs: BS, is: IS, cf: CF }, RATIOS: RATIOS, MARKET_EQUITY: MARKET_EQUITY, WHERE: WHERE,
+  // Explicit per-part links where the keyword rules are weak (audited part by part against lessons-data.js, script variant).
+  // index = part number - 1. stmt: which tab opens; keys/ratios: what is highlighted (omitted = use the rules' result).
+  var PART_LINKS = {
+    balance: { 15: { stmt: "bs", keys: ["re", "paid", "te"], ratios: [] } },
+    cashflow: { 0: { stmt: "cf", keys: [] }, 1: { stmt: "cf", keys: ["cf_ni", "netcash"] }, 2: { stmt: "cf", keys: ["cfo", "cfi", "cff"] },
+      11: { stmt: "bs", keys: ["re", "cash"] } },
+    accrual: { 0: { stmt: "is", keys: ["dep", "opex"] }, 2: { stmt: "is", keys: ["rev"] } },
+    liquidity: { 1: { stmt: "bs", keys: [] }, 6: { stmt: "is", keys: ["ebit", "int", "ni"] } },
+    efficiency: { 4: { stmt: "ratios", keys: [], ratios: ["current", "de", "tie", "nm", "roa", "at"] } },
+    altman: { 8: { stmt: "ratios", keys: [], ratios: ["z"] }, 9: { stmt: "ratios", keys: [], ratios: ["z"] }, 10: { stmt: "ratios", keys: [], ratios: ["z"] },
+      11: { stmt: "bs", keys: ["tl"], ratios: [] }, 17: { stmt: "ratios", keys: [], ratios: ["z"] } },
+    tenk: { 8: { stmt: "bs", keys: [], ratios: [] }, 11: { stmt: "bs", keys: [], ratios: [] } }
+  };
+  // the link for one lesson part: explicit mapping first, otherwise the keyword rules
+  function partLink(topicKey, index, text, variant) {
+    var base = linesFor(text, topicKey), o = (!variant || variant === "script") && PART_LINKS[topicKey] && PART_LINKS[topicKey][index];
+    if (!o) return base;
+    return { stmt: o.stmt, keys: o.keys || base.keys, ratios: o.ratios || base.ratios, explicit: true };
+  }
+  return { PART_LINKS: PART_LINKS, partLink: partLink, YEARS: YEARS, OPEN: OPEN, BS: BS, IS: IS, CF: CF, STATEMENTS: { bs: BS, is: IS, cf: CF }, RATIOS: RATIOS, MARKET_EQUITY: MARKET_EQUITY, WHERE: WHERE,
     val: val, commonSize: commonSize, prevBS: prevBS, ratio: ratio, altman: altman, growth: growth, linesFor: linesFor, relevant: relevant, TOPIC_STMT: TOPIC_STMT };
 });

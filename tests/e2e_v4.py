@@ -70,6 +70,7 @@ with sync_playwright() as p:
     pg.click("#rNext"); pg.wait_for_function("__tutor.lesson.si===9", timeout=5000); pg.wait_for_timeout(400)
     check("Next part while playing moves the audio, and the article follows", pg.inner_text("#rText p.cur").startswith(pg.evaluate("__tutor.snapshot().lesson.text")[:20]) and pg.inner_text("#rPos").startswith("Part 10"))
     pg.click("#rListen"); pg.wait_for_timeout(300); check("in Read mode the button pauses the audio", pg.evaluate("__tutor.audioPaused"))
+    pg.mouse.move(700, 10); pg.wait_for_timeout(450)   # v4.1: Read mode hides the top rows until the mouse nears the top
     pg.click("[data-view=listen]"); pg.wait_for_timeout(200)
     check("Listen mode = the audio player, statements still beside it", pg.is_visible("#lessonCard") and pg.is_visible("#btnPlay") and pg.is_visible("#stmtCol"))
     pg.evaluate("__tutor.ui('teachat', {key:'liquidity', si:8})"); pg.wait_for_timeout(400)

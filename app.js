@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4";
+  var APP_VERSION = "v4.1";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -541,6 +541,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) { b.classList.toggle("active", b.dataset.tab === name); });
     Array.prototype.forEach.call(document.querySelectorAll(".panel"), function (p) { var on = p.id === "tab-" + name; p.classList.toggle("active", on); p.hidden = !on; });
     if (name === "progress") renderProgress(); if (name === "log") renderLog(); if (name === "lessons") renderLessons(); if (name === "settings") renderSettings(); if (name === "help") renderHelp();
+    if (window.__v4ready) updateLearnLayout();
     if (about) { var dd = $("dbgLine").parentNode; dd.open = true; renderDbg(); dd.scrollIntoView && dd.scrollIntoView(); } else window.scrollTo(0, 0);
   }
   function download(name, text, type) {
@@ -568,11 +569,35 @@
     if (changed) ev("device: " + d);
     updateLearnLayout();
   }
+  // v4.1: desktop Read mode hides the top rows; they slide back when the mouse nears the top edge or keyboard focus enters them
+  var immersive = false, chromeTimer = null;
+  function setImmersive(on) {
+    if (on === immersive) return; immersive = on;
+    document.body.classList.toggle("immersive", on);
+    if (!on) { clearTimeout(chromeTimer); $("chrome").classList.remove("show"); }
+  }
+  function showChrome() { if (!immersive) return; clearTimeout(chromeTimer); $("chrome").classList.add("show"); }
+  function hideChromeSoon(ms) {
+    if (!immersive) return; clearTimeout(chromeTimer);
+    chromeTimer = setTimeout(function () {
+      var c = $("chrome");
+      if (c.querySelector(":focus-visible") || c.matches(":hover") || !$("audioErr").hidden || !$("alert").hidden) return;
+      c.classList.remove("show");
+    }, ms == null ? 700 : ms);
+  }
+  function initChrome() {
+    var c = $("chrome");
+    document.addEventListener("mousemove", function (e) { if (!immersive) return; if (e.clientY <= 40) showChrome(); else if (c.classList.contains("show") && e.clientY > c.getBoundingClientRect().bottom + 20) hideChromeSoon(); });
+    c.addEventListener("mouseleave", function () { hideChromeSoon(); });
+    c.addEventListener("focusin", function () { if (c.querySelector(":focus-visible")) showChrome(); });
+    c.addEventListener("focusout", function () { hideChromeSoon(300); });
+    $("chromeHot").addEventListener("mouseenter", showChrome);
+  }
   function learnView() { return device === "desktop" ? (tutor.settings.learnView || "listen") : "listen"; }
   // the lesson part the screen is "about": the playing part, else the part open in Read mode
   function focusPart() {
     var s = lastSnap || tutor.snapshot();
-    if (s.running && s.mode === "lesson" && s.lesson) return { key: s.lesson.topic, si: s.lesson.seg, text: s.lesson.text, live: true };
+    if (s.running && s.mode === "lesson" && s.lesson) return { key: s.lesson.topic, si: s.lesson.seg, text: s.lesson.text, live: true, variant: s.lesson.variant };
     if (learnView() === "read" && rd.key) { var segs = tutor.readSegs(rd.key); return { key: rd.key, si: rd.si, text: segs[rd.si] || "", live: false }; }
     return { key: nextLessonKey(s), si: -1, text: "", live: false };
   }
@@ -587,10 +612,11 @@
     $("stmtCol").hidden = !split; $("splitBar").hidden = !split;
     wrap.classList.toggle("split", split);
     if (split) wrap.style.gridTemplateColumns = (tutor.settings.splitPct || 50) + "% 10px minmax(0, 1fr)"; else wrap.style.gridTemplateColumns = "";
-    $("viewToggle").hidden = !desk;
-    var v = learnView();
+    var v = learnView(), onLearn = activeTab() === "lessons";
+    $("viewToggle").hidden = !desk || !onLearn;
+    setImmersive(desk && v === "read" && onLearn);
     Array.prototype.forEach.call(document.querySelectorAll(".segbtn"), function (b) { var on = b.dataset.view === v; b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
-    $("lessonCard").hidden = v === "read"; $("readCard").hidden = v !== "read";
+    $("lessonCard").hidden = v === "read"; $("readCard").hidden = v !== "read"; $("rNav").hidden = v !== "read";
     var s = lastSnap || tutor.snapshot();
     $("btnStmt").hidden = !(device !== "desktop" && s.running && s.mode === "lesson" && rel);
     if (v === "read") renderReader();
@@ -604,7 +630,8 @@
     var tp = tutor.topic(rd.key), segs = tutor.readSegs(rd.key), box = $("rText");
     rd.si = Math.max(0, Math.min(rd.si, segs.length - 1));
     $("rName").textContent = tp.name;
-    $("rPos").textContent = "Part " + (rd.si + 1) + " of " + segs.length;
+    $("rPos").textContent = "Part " + (rd.si + 1) + " of " + segs.length; $("rPartTitle").textContent = partTitle(segs[rd.si] || "");
+    $("rPrevTopic").disabled = !live && B.TOPICS[0].key === rd.key; $("rNextTopic").disabled = !live && B.TOPICS[B.TOPICS.length - 1].key === rd.key;
     var playingNow = live && !s.audioPaused && !s.muted && s.speaking;
     $("rHint").textContent = live ? (playingNow ? "\u00B7 reading along with the audio" : "\u00B7 audio paused") : "\u00B7 read at your own pace";
     $("rListen").innerHTML = live ? (s.audioPaused ? "&#9654; Resume audio" : "&#10074;&#10074; Pause audio") : "&#128266; Listen from here";
@@ -623,6 +650,12 @@
       var el = box.children[rd.si]; if (el) { var top = Math.max(0, el.offsetTop - box.clientHeight / 4); if (box.scrollTo) box.scrollTo({ top: top, behavior: live ? "smooth" : "auto" }); else box.scrollTop = top; }
     }
     $("rPrev").disabled = rd.si <= 0 && !live; $("rNext").disabled = rd.si >= segs.length - 1 && !live;
+  }
+  // short title for a part: its first sentence, trimmed
+  function partTitle(t) {
+    var m = String(t).trim().match(/^(.+?[.?!])(\s|$)/), s = (m ? m[1] : String(t)).replace(/[.]$/, "");
+    if (s.length < 14 && m) { var m2 = String(t).trim().slice(m[0].length).match(/^(.+?[.?!])(\s|$)/); if (m2) s += ". " + m2[1].replace(/[.]$/, ""); }
+    return s.length > 64 ? s.slice(0, 61).replace(/\s+\S*$/, "") + "\u2026" : s;
   }
   function readGo(si) {
     var s = lastSnap || tutor.snapshot();
@@ -674,9 +707,9 @@
     return h;
   }
   function renderStatements(force) {
-    var f = focusPart(), sig = f.key + ":" + f.si, rel = ST.relevant(f.key);
-    var link = rel && f.text ? ST.linesFor(f.text, f.key) : { stmt: ST.TOPIC_STMT[f.key] || "bs", keys: [], ratios: [] };
-    if (sig !== stmtFocusSig) { stmtFocusSig = sig; if (!stmtUserPick) { stmtShown = link.ratios.length && link.stmt === "bs" && f.key === "altman" ? "bs" : link.stmt; } stmtUserPick = false; force = true; }
+    var f = focusPart(), sig = f.key + ":" + f.si + ":" + (f.variant || "script"), rel = ST.relevant(f.key);
+    var link = rel && f.text ? ST.partLink(f.key, f.si, f.text, f.variant) : { stmt: ST.TOPIC_STMT[f.key] || "bs", keys: [], ratios: [] };
+    if (sig !== stmtFocusSig) { stmtFocusSig = sig; stmtShown = link.stmt; force = true; }
     var body = $("stmtBody");
     if (force || body.dataset.code !== stmtShown) { body.dataset.code = stmtShown; body.innerHTML = stmtTable(stmtShown); }
     Array.prototype.forEach.call(document.querySelectorAll(".stab"), function (b) { b.classList.toggle("active", b.dataset.stmt === stmtShown); });
@@ -707,6 +740,7 @@
     bar.addEventListener("pointermove", function (e) { if (!drag) return; var r = $("learnWrap").getBoundingClientRect(); setPct(100 * (e.clientX - r.left) / r.width); });
     bar.addEventListener("pointerup", function () { if (drag) { drag = false; tutor.setSetting("splitPct", tutor.settings.splitPct); } });
     bar.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { setPct((tutor.settings.splitPct || 50) + (e.key === "ArrowLeft" ? -3 : 3)); tutor.setSetting("splitPct", tutor.settings.splitPct); } });
+    initChrome();
     var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(applyDevice, 150); });
     applyDevice();
   }

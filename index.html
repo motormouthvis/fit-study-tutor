@@ -13,8 +13,9 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.1</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -35,16 +36,19 @@
   <button data-tab="tutor" class="tab">Quiz</button>
   <button data-tab="progress" class="tab">My Stats</button>
 </nav>
+<div id="viewToggle" class="seg" role="tablist" aria-label="Read or listen" hidden>
+      <button class="segbtn" data-view="listen" role="tab">&#127911; Listen</button>
+      <button class="segbtn" data-view="read" role="tab">&#128214; Read</button>
+    </div>
+</div>
+<div id="chromeHot" class="chromehot" aria-hidden="true"></div>
 
 <main>
   <!-- LEARN: the one main screen -->
   <section id="tab-lessons" class="panel active">
    <div id="learnWrap" class="learnwrap">
     <div id="learnMain" class="learnmain">
-    <div id="viewToggle" class="seg" role="tablist" aria-label="Read or listen" hidden>
-      <button class="segbtn" data-view="listen" role="tab">&#127911; Listen</button>
-      <button class="segbtn" data-view="read" role="tab">&#128214; Read</button>
-    </div>
+
     <div id="lessonCard" class="card player">
       <div id="lName" class="ptitle">Lessons</div>
       <div class="lprog"><b id="lPos">Ready</b> <span id="lTopicNo" class="small"></span></div>
@@ -66,19 +70,21 @@
       <div class="bar"><i id="lBar" class="st-ok" style="width:0"></i></div>
     </div>
 
+      <div id="rNav" class="rstick" hidden>
+        <div class="rrow">
+          <button id="rPrevTopic" class="navbtn" aria-label="Previous topic">&#8592;</button>
+          <div id="rName" class="rtitle"></div>
+          <button id="rNextTopic" class="navbtn" aria-label="Next topic">&#8594;</button>
+        </div>
+        <div class="rrow">
+          <button id="rPrev" class="navbtn" aria-label="Previous part">&#8592;</button>
+          <div class="rpart"><b id="rPos"></b>: <span id="rPartTitle"></span></div>
+          <button id="rNext" class="navbtn" aria-label="Next part">&#8594;</button>
+        </div>
+      </div>
     <div id="readCard" class="card reader" hidden>
-      <div id="rName" class="ptitle"></div>
-      <div class="lprog"><b id="rPos"></b> <span id="rHint" class="small"></span></div>
-      <div class="rnav">
-        <button id="rPrev" class="btn">&#9664; Previous part</button>
-        <button id="rListen" class="btn go">&#128266; Listen from here</button>
-        <button id="rNext" class="btn">Next part &#9654;</button>
-      </div>
+      <div class="rlisten"><button id="rListen" class="btn go">&#128266; Listen from here</button> <span id="rHint" class="small"></span></div>
       <div id="rText" class="article" aria-live="polite"></div>
-      <div class="rnav">
-        <button id="rPrevTopic" class="btn">&#9664;&#9664; Previous topic</button>
-        <button id="rNextTopic" class="btn">Next topic &#9654;&#9654;</button>
-      </div>
     </div>
     <div class="card"><h2>Topics</h2>
       <div id="lTopicsSummary" class="small"></div>
