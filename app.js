@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.1";
+  var APP_VERSION = "v4.2";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -540,7 +540,7 @@
     $("menu").hidden = true;
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) { b.classList.toggle("active", b.dataset.tab === name); });
     Array.prototype.forEach.call(document.querySelectorAll(".panel"), function (p) { var on = p.id === "tab-" + name; p.classList.toggle("active", on); p.hidden = !on; });
-    if (name === "progress") renderProgress(); if (name === "log") renderLog(); if (name === "lessons") renderLessons(); if (name === "settings") renderSettings(); if (name === "help") renderHelp();
+    if (name === "progress") { renderProgress(); renderFcStats(); } if (name === "cards") renderFlash(); if (name === "log") renderLog(); if (name === "lessons") renderLessons(); if (name === "settings") renderSettings(); if (name === "help") renderHelp();
     if (window.__v4ready) updateLearnLayout();
     if (about) { var dd = $("dbgLine").parentNode; dd.open = true; renderDbg(); dd.scrollIntoView && dd.scrollIntoView(); } else window.scrollTo(0, 0);
   }
@@ -552,6 +552,108 @@
     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function () { showAlert("Copied " + tutor.log.length + " answers to the clipboard."); }, fallback);
     fallback();
     function fallback() { var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); showAlert("Copied."); } catch (e) { showAlert("Could not copy. Use Download instead."); } ta.remove(); }
+  }
+
+
+  /* ================= v4.2: Flash Cards ================= */
+  var FL = window.Flash, fc = null;
+  function fcEsc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function fcSave() { storage.save("fc", fc.st); storage.save("fcFilter", fc.filter); storage.save("fcShuffle", fc.shuffle); }
+  function fcNum(v) { var a = Math.abs(v).toLocaleString("en-US"); return v < 0 ? "(" + a + ")" : a; }
+  function fcTable(t) {
+    var h = "<table class='fctbl'><caption>" + fcEsc(t.title) + "</caption>";
+    t.rows.forEach(function (r) { h += "<tr" + (r[2] ? " class='" + r[2] + "'" : "") + "><td>" + fcEsc(r[0]) + "</td><td class='n'>" + fcNum(r[1]) + "</td></tr>"; });
+    return h + "</table>";
+  }
+  function fcFilterOptions() {
+    var sel = $("fcFilter"), h = "<option value='all'>All cards</option><option value='course:acct'>BUS 5601 Accounting (all)</option><option value='course:econ'>BUS 5421 Economics (all)</option>" +
+      "<option value='sa'>Statement Analysis</option><option value='restudy'>Restudy only</option><option value='unseen'>Unseen</option>";
+    ["acct", "econ"].forEach(function (co) {
+      h += "<optgroup label='" + (co === "acct" ? "BUS 5601 topics" : "BUS 5421 topics") + "'>";
+      FL.TOPICS.filter(function (t) { return t.course === co; }).forEach(function (t) { h += "<option value='topic:" + t.key + "'>" + fcEsc(t.name) + "</option>"; });
+      h += "</optgroup>";
+    });
+    sel.innerHTML = h; sel.value = fc.filter; if (sel.value !== fc.filter) { fc.filter = "all"; sel.value = "all"; }
+  }
+  function fcStart() {
+    var cards = FL.filterCards(fc.filter, fc.st);
+    fc.queue = FL.buildQueue(cards, fc.st, Date.now() & 0x7fffffff, fc.shuffle);
+    fc.sess = { got: 0, miss: 0, total: cards.length }; fc.flipped = false;
+    if (cards.length) { fc.st.sessions = (fc.st.sessions || 0) + 1; fcSave(); }
+    fcRender();
+  }
+  function fcCard(id) { for (var i = 0; i < FL.ALL.length; i++) if (FL.ALL[i].id === id) return FL.ALL[i]; return null; }
+  function fcRender() {
+    var st = FL.stats(fc.st), id = fc.queue[0], c = id && fcCard(id);
+    $("fcScore").innerHTML = "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
+      "<br><b>Lifetime:</b> " + st.got + " got, " + st.miss + " missed" + (st.got + st.miss ? " (" + Math.round(st.acc * 100) + "%)" : "") + " &middot; " + st.restudy + " marked Restudy";
+    $("fcStage").hidden = !c; $("fcEmpty").hidden = !!c;
+    if (!c) {
+      var none = !fc.sess.total;
+      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button>"
+        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
+      var b; if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
+      if ((b = $("fcAgain"))) b.onclick = fcStart; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
+      return;
+    }
+    var s = fc.st.cards[c.id] || {};
+    $("fcTopic").textContent = (c.course === "sa" ? "Statement Analysis · " + c.health : (c.course === "acct" ? "BUS 5601 · " : "BUS 5421 · ") + FL.topicName(c.topic)) + (s.seen ? "" : " · new");
+    $("fcStar").innerHTML = s.restudy ? "&#9733; Restudy" : "&#9734; Restudy"; $("fcStar").setAttribute("aria-pressed", s.restudy ? "true" : "false"); $("fcStar").classList.toggle("on", !!s.restudy);
+    if (c.kind === "statement") {
+      $("fcFront").innerHTML = "<div class='fcq'>" + fcEsc(c.company) + ": " + fcEsc(c.q) + "</div><div class='fctbls'>" + c.tables.map(fcTable).join("") + "</div>";
+      $("fcBack").innerHTML = "<div class='fcans'>" + fcEsc(c.answer) + "</div><div class='fcwork'><b>Working:</b> " + fcEsc(c.work) + "</div><div class='fcint'><b>What it means:</b> " + fcEsc(c.interp) + "</div>";
+    } else {
+      $("fcFront").innerHTML = "<div class='fcq big'>" + fcEsc(c.f) + "</div>";
+      $("fcBack").innerHTML = "<div class='fcbacktxt'>" + fcEsc(c.b) + "</div>";
+    }
+    $("fcCard").classList.toggle("statement", c.kind === "statement");
+    $("fcBack").hidden = !fc.flipped; $("fcCard").classList.toggle("flipped", fc.flipped);
+    $("fcHint").textContent = fc.flipped ? (device === "desktop" ? "Did you get it? G or → got it, M or ← missed" : "Did you get it?") : (device === "desktop" ? "Click the card or press Space to flip" : "Tap the card to flip");
+    $("fcGot").disabled = $("fcMissed").disabled = !fc.flipped;
+  }
+  function fcFlip() { if (!fc.queue.length) return; fc.flipped = !fc.flipped; fcRender(); if (fc.flipped && device !== "desktop") { var b = $("fcBack"); b.scrollIntoView && b.scrollIntoView({ block: "nearest" }); } }
+  function fcAnswer(got) {
+    if (!fc.queue.length || !fc.flipped) return;
+    fc.queue = FL.answer(fc.st, fc.queue, fc.queue[0], got); fc.sess[got ? "got" : "miss"]++; fc.flipped = false; fcSave(); fcRender();
+    if (device !== "desktop") window.scrollTo(0, 0);
+  }
+  function fcSkip() { if (fc.queue.length > 1) { fc.queue.push(fc.queue.shift()); fc.flipped = false; fcRender(); } }
+  function fcStar() { var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}; FL.setRestudy(fc.st, id, !s.restudy); fcSave(); fcRender(); }
+  function fcSetFilter(v) { fc.filter = v; $("fcFilter").value = v; fcSave(); fcStart(); }
+  function renderFlash() { if (!fc.queue) fcStart(); else fcRender(); }
+  function renderFcStats() {
+    var box = $("fcStats"); if (!box || !FL) return;
+    var s = FL.stats(fc.st), h = "<div style='font-size:1.6rem;font-weight:900'>" + s.seen + " of " + s.total + " <span class='small'>cards seen</span></div>" +
+      "<div class='small'>Lifetime: " + s.got + " got it, " + s.miss + " missed" + (s.got + s.miss ? " (" + Math.round(s.acc * 100) + "%)" : "") + " &middot; " + s.mastered + " mastered &middot; " + s.restudy + " marked Restudy &middot; " + s.sessions + " sessions</div>";
+    Object.keys(FL.COURSES).forEach(function (k) { var b = s.byCourse[k]; if (!b) return; var n = b.got + b.miss;
+      h += "<div class='small'>" + fcEsc(FL.COURSES[k]) + ": seen " + b.seen + "/" + b.total + (n ? ", " + Math.round(b.got / n * 100) + "% got" : "") + "</div>"; });
+    h += "<button class='btn' id='fcGoStats'>Open flash cards</button>"; box.innerHTML = h; $("fcGoStats").onclick = function () { switchTab("cards"); };
+  }
+  function initFlash() {
+    if (!FL) return;
+    fc = { st: storage.load("fc", null) || FL.newState(), filter: storage.load("fcFilter", "all"), shuffle: storage.load("fcShuffle", true), queue: null, sess: null, flipped: false };
+    if (!fc.st.cards) fc.st = FL.newState(); if (!fc.st.life) fc.st.life = { got: 0, miss: 0 };
+    fcFilterOptions();
+    var sh = $("fcShuffle"); function shLabel() { sh.innerHTML = fc.shuffle ? "&#128256; Shuffle on" : "&#10145; In order"; sh.setAttribute("aria-pressed", fc.shuffle ? "true" : "false"); } shLabel();
+    sh.addEventListener("click", function () { fc.shuffle = !fc.shuffle; shLabel(); fcSave(); fcStart(); });
+    $("fcFilter").addEventListener("change", function () { fcSetFilter($("fcFilter").value); });
+    $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar")) return; fcFlip(); });
+    $("fcStar").addEventListener("click", function (e) { e.stopPropagation(); fcStar(); });
+    $("fcGot").addEventListener("click", function () { fcAnswer(true); });
+    $("fcMissed").addEventListener("click", function () { fcAnswer(false); });
+    document.addEventListener("keydown", function (e) {
+      if (!$("tab-cards").classList.contains("active") || e.ctrlKey || e.metaKey || e.altKey) return;
+      var tg = e.target, tag = tg && tg.tagName; if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
+      if (!$("menu").hidden || (document.querySelector(".sheet:not([hidden])"))) return;
+      var k = e.key;
+      if (k === " ") { e.preventDefault(); fcFlip(); }
+      else if (k === "Enter" && tg === $("fcCard")) { e.preventDefault(); fcFlip(); }
+      else if (k === "g" || k === "G" || k === "ArrowRight") { e.preventDefault(); fcAnswer(true); }
+      else if (k === "m" || k === "M" || k === "ArrowLeft") { e.preventDefault(); fcAnswer(false); }
+      else if (k === "r" || k === "R") { e.preventDefault(); fcStar(); }
+      else if (k === "n" || k === "N") { e.preventDefault(); fcSkip(); }
+    });
+    window.__fc = fc;
   }
 
   /* ================= v4: device type, Read mode, sample statements ================= */
@@ -825,7 +927,7 @@
     var dip; window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); dip = e; $("btnInstall").hidden = false; });
     $("btnInstall").addEventListener("click", function () { if (dip) { dip.prompt(); dip = null; $("btnInstall").hidden = true; } });
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
-    initV4(); window.__v4ready = true;
+    initFlash(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       navigator.serviceWorker.register("sw.js").then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});

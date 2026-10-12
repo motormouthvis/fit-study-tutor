@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.1</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.2</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -157,8 +157,34 @@
     <div class="card"><h2>My Stats: quiz performance</h2><div id="overall"></div></div>
     <div class="card"><h2>Weakest topics</h2><div id="weakList"></div>
       <button id="btnPracticeWeak" class="bigbtn go">PRACTICE MY WEAK AREAS</button></div>
+    <div class="card"><h2>Flash cards</h2><div id="fcStats"></div></div>
     <div class="card"><h2>All topics</h2><div id="topicList"></div>
       <p class="small">Score is recency-weighted: your last answers count most. Under 3 answers shows as New.</p></div>
+  </section>
+
+  <!-- FLASH CARDS (v4.2) -->
+  <section id="tab-cards" class="panel" hidden>
+    <div class="card fchead">
+      <div class="fcrow">
+        <select id="fcFilter" aria-label="Which cards"></select>
+        <button id="fcShuffle" class="btn" aria-pressed="true">&#128256; Shuffle on</button>
+      </div>
+      <div class="fcscore" id="fcScore" aria-live="polite"></div>
+    </div>
+    <div id="fcEmpty" class="card" hidden></div>
+    <div id="fcStage">
+      <div id="fcCard" class="fccard" role="button" tabindex="0" aria-label="Flash card. Press space or tap to flip.">
+        <div class="fcmeta"><span id="fcTopic"></span><button id="fcStar" class="fcstar" aria-pressed="false" title="Mark for restudy (R)">&#9734; Restudy</button></div>
+        <div id="fcFront" class="fcface"></div>
+        <div id="fcBack" class="fcface fcback" hidden></div>
+        <div id="fcHint" class="fchint">Tap the card or press Space to flip</div>
+      </div>
+      <div class="fcbtns">
+        <button id="fcMissed" class="bigbtn fcmiss" disabled>&#10007; Missed <span class="kbd">M / &larr;</span></button>
+        <button id="fcGot" class="bigbtn go" disabled>&#10003; Got it <span class="kbd">G / &rarr;</span></button>
+      </div>
+      <p class="small fckeys">Keys: Space flip &middot; G or &rarr; got it &middot; M or &larr; missed &middot; R restudy star &middot; N skip. Missed cards come back a few cards later and are marked Restudy.</p>
+    </div>
   </section>
 
   <!-- LOG -->
@@ -272,6 +298,7 @@
     <button class="btn warn wide m-run" data-ui="stop" id="mStop">Stop session</button>
     <div class="msec">Other</div>
     <div class="mgrid">
+      <button class="btn" data-goto="cards" id="mCards">&#127183; Flash Cards</button>
       <button class="btn" id="mStmt">&#128202; Show statements</button>
       <button class="btn" data-goto="log">Answer log &amp; export</button>
       <button class="btn" data-goto="settings">Settings</button>
@@ -321,6 +348,7 @@
 <script src="questions.js"></script>
 <script src="lessons-data.js"></script>
 <script src="statements.js"></script>
+<script src="flashcards.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
