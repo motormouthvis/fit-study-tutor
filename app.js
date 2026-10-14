@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.7";
+  var APP_VERSION = "v4.8";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -607,6 +607,7 @@
       $("fcFront").innerHTML = "<div class='fcq big'>" + fcEsc(c.f) + "</div>";
       $("fcBack").innerHTML = "<div class='fcbacktxt'>" + fcEsc(c.b) + "</div>";
     }
+    ["fcFront", "fcBack"].forEach(function (fid) { var qb = askButton(function () { openAskCard(c); }, "Ask Grok to explain this card in more depth"); qb.classList.add("fcask"); qb.title = "Ask Grok to explain this card"; $(fid).insertBefore(qb, $(fid).firstChild); });
     $("fcCard").classList.toggle("statement", c.kind === "statement");
     $("fcBack").hidden = !fc.flipped; $("fcCard").classList.toggle("flipped", fc.flipped);
     $("fcHint").textContent = fc.flipped ? (device === "desktop" ? "Did you get it? G or → got it, M or ← missed" : "Did you get it?") : (device === "desktop" ? "Click the card or press Space to flip" : "Tap the card to flip");
@@ -673,7 +674,7 @@
   function askThread() { var all = askStore(); return (ASK.cur && all[ASK.cur.id]) || { msgs: [] }; }
   function askRender() {
     var th = askThread(), box = $("askLog"), h = "";
-    $("askPart").textContent = ASK.cur ? ASK.cur.topicName + " \u00B7 Part " + (ASK.cur.si + 1) : "";
+    $("askPart").textContent = ASK.cur ? (ASK.cur.label || ASK.cur.topicName + " \u00B7 Part " + (ASK.cur.si + 1)) : "";
     $("askQuote").textContent = ASK.cur ? ASK.cur.text : "";
     if (!ASK.url) h = "<div class='asknote'><b>Ask Grok is coming soon.</b><br>This button will send this part to Grok and explain it further in plain English, and you will be able to ask follow-up questions. It is being set up now.</div>";
     th.msgs.forEach(function (m, i) {
@@ -699,14 +700,29 @@
     var th = askThread();
     if (ASK.url && !th.msgs.length) askSend(null); else $("askInput").focus();
   }
-  function closeAsk() { if (ASK.ctrl) try { ASK.ctrl.abort(); } catch (e) {} $("askPanel").hidden = true; document.body.classList.remove("asking"); fitArticleSoon(); }
+  function askCardText(c) {
+    if (c.kind === "statement") {
+      var tb = (c.tables || []).map(function (t) { return t.title + ": " + t.rows.map(function (r) { return r[0] + " " + fcNum(r[1]); }).join("; "); }).join("\n");
+      return ("Front: " + c.company + ": " + c.q + "\n" + tb + "\n\nBack: " + c.answer + "\nWorking: " + c.work + "\nWhat it means: " + c.interp).slice(0, 4000);
+    }
+    return ("Front: " + c.f + "\n\nBack: " + c.b).slice(0, 4000);
+  }
+  function openAskCard(c) {
+    var name = c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic);
+    ASK.cur = { id: "card:" + c.id, key: "card:" + c.id, si: 0, kind: "card", text: askCardText(c), topicName: name, label: "Flash card \u00B7 " + name };
+    $("menu").hidden = true; $("askPanel").hidden = false; document.body.classList.add("asking");
+    askRender();
+    if (ASK.url && !askThread().msgs.length) askSend(null); else $("askInput").focus();
+  }
+  function closeAsk() { if (ASK.ctrl) try { ASK.ctrl.abort(); } catch (e) {} var ae = document.activeElement; if (ae && $("askPanel").contains(ae)) { ae.blur(); if (ASK.cur && ASK.cur.kind === "card" && $("tab-cards").classList.contains("active")) try { $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
+    $("askPanel").hidden = true; document.body.classList.remove("asking"); fitArticleSoon(); }
   function askSend(question) {
     if (!ASK.url || ASK.busy || !ASK.cur) return;
     var all = askStore(), id = ASK.cur.id, th = all[id] || { msgs: [] };
     if (question != null) { question = String(question).trim().slice(0, 1500); if (!question) return; th.msgs.push({ role: "user", content: question }); }
     else if (!th.msgs.length) th.msgs.push({ role: "user", content: "Explain further" });
     th.ts = Date.now(); th.topic = ASK.cur.key; th.si = ASK.cur.si; all[id] = th; askSave(all);
-    var payload = { topic: ASK.cur.topicName, partText: ASK.cur.text.slice(0, 4000), messages: th.msgs.slice(1).map(function (m) { return { role: m.role, content: m.content }; }) };
+    var payload = { kind: ASK.cur.kind || "part", topic: ASK.cur.topicName, partText: ASK.cur.text.slice(0, 4000), messages: th.msgs.slice(1).map(function (m) { return { role: m.role, content: m.content }; }) };
     ASK.busy = true; $("askInput").value = ""; askRender();
     var log = $("askLog"), out = document.createElement("div"); out.className = "askmsg ai streaming"; out.innerHTML = "<span class='askdots'>Grok is thinking\u2026</span>"; log.appendChild(out); log.scrollTop = log.scrollHeight;
     var text = "", ctrl = window.AbortController ? new AbortController() : null; ASK.ctrl = ctrl;
@@ -761,7 +777,7 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("askPanel").hidden) closeAsk(); });
     $("lText").parentNode.insertBefore(askButton(function () { var p = askListenPart(); if (p) openAsk(p.key, p.si, p.text); }, "Ask Grok to explain this part"), $("lText")).id = "lAsk";
     $("lAsk").hidden = true;
-    window.__ask = ASK; window.__openAsk = openAsk;
+    window.__ask = ASK; window.__openAsk = openAsk; window.__openAskCard = openAskCard;
   }
 
   /* ================= v4: device type, Read mode, sample statements ================= */

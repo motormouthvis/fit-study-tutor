@@ -74,3 +74,10 @@ A circled **?** on each part (Read and Listen) opens a chat (side panel on deskt
 that explains the part in plain English for an MBA beginner, streams the answer and allows 6 follow-ups.
 Conversations are kept on the device. Calls go through the Cloudflare Worker in `worker/` (see worker/README.md);
 until `ask-config.js` has its URL, the panel shows "coming soon". Tests: `python3 tests/e2e_v46.py` (REAL=1 for one real question).
+
+## v4.7 — Ask Grok live
+Worker `fit-tutor-ask` deployed at https://fit-tutor-ask.motormouthvis.workers.dev (KV rate limit, key stored as a Worker secret).
+
+## v4.8 — Ask Grok on flash cards
+A circled **?** on the front and back of each flash card opens the same chat, asking Grok to explain the card (front + back) in more depth.
+It does not flip the card, and card shortcuts are paused while the chat is open. Test: `python3 tests/e2e_v48.py`.

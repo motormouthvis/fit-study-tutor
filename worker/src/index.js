@@ -35,6 +35,10 @@ export function buildMessages(body) {
     msgs.push({ role: m.role, content: m.content });
   }
   if (msgs.length && msgs[msgs.length - 1].role !== "user") return { error: "last_must_be_user" };
+  if (body.kind === "card") {
+    const card = { role: "user", content: "Flash card topic: " + (title || "MBA flash card") + "\n\nFlash card (front and back):\n\"\"\"\n" + part + "\n\"\"\"\n\nExplain this card in more depth, in plain English, for an MBA beginner." };
+    return { messages: [{ role: "system", content: SYSTEM }, card].concat(msgs) };
+  }
   const first = { role: "user", content: "Lesson topic: " + (title || "MBA lesson") + "\n\nLesson part:\n\"\"\"\n" + part + "\n\"\"\"\n\nExplain this further, in plain English, for an MBA beginner." };
   return { messages: [{ role: "system", content: SYSTEM }, first].concat(msgs) };
 }

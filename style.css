@@ -281,3 +281,6 @@ body.dev-desktop .askpanel { inset:0 0 0 auto; width:min(460px, 38vw); backgroun
 body.dev-desktop .askpanel .askbox { height:100vh; max-height:100vh; border-radius:0; border-width:0 0 0 3px; max-width:none; }
 body.dev-desktop.asking main { margin-right:min(460px, 38vw); }
 @media (max-width:480px) { .askpanel .askbox { height:86vh; max-height:86vh; } }
+
+/* v4.8: Ask Grok on flash cards */
+.fcface > .askq.fcask { float: right; margin: 0 0 6px 10px; position: relative; z-index: 2; }

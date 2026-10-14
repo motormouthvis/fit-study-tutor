@@ -76,3 +76,11 @@ test("health endpoint does not reveal the key", async () => {
   assert.deepEqual(j, { ok: true, model: MODEL, configured: true });
 });
 test.after(() => { globalThis.fetch = realFetch; });
+
+test("flash card kind uses the 'explain in more depth' instruction with front+back", async () => {
+  const { buildMessages } = await import("../src/index.js");
+  const r = buildMessages({ kind: "card", topic: "Liquidity", partText: "Front: Current ratio\n\nBack: Current assets / current liabilities" });
+  assert.match(r.messages[1].content, /Flash card \(front and back\)/);
+  assert.match(r.messages[1].content, /Explain this card in more depth, in plain English, for an MBA beginner\./);
+  assert.match(r.messages[1].content, /Current assets \/ current liabilities/);
+});
