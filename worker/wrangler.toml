@@ -11,8 +11,8 @@ PER_DAY = "100"
 # Per-visitor rate limit storage (free plan). Create with:
 #   npx wrangler kv namespace create RATE_KV
 # then paste the printed id below and uncomment.
-# [[kv_namespaces]]
-# binding = "RATE_KV"
-# id = "PASTE_ID_HERE"
+[[kv_namespaces]]
+binding = "RATE_KV"
+id = "759b029d08ee4e00acf81c77526241d2"
 
 # Secret (never in this file):  npx wrangler secret put XAI_API_KEY

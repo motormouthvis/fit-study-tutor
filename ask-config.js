@@ -1,2 +1,1 @@
-/* Ask Grok: address of the fit-tutor-ask Cloudflare Worker. Empty = feature shows "coming soon". */
-window.ASK_CONFIG = { url: "" };
+window.ASK_CONFIG = { url: "https://fit-tutor-ask.motormouthvis.workers.dev" };
