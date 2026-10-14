@@ -1,4 +1,7 @@
-# MBA Study Tutor (Bill's hands-free voice tutor) - v4.3
+# MBA Study Tutor (Bill's hands-free voice tutor) - v4.4
+
+**v4.4 change:** keyboard controls in desktop Read mode. ← / → move to the previous / next part (the statements panel follows), Shift+← / → move to the previous / next topic, ↑ / ↓ scroll the article smoothly about three lines, and PgUp / PgDn scroll a page. The keys only work in desktop Read mode on the Learn screen, never while typing in a field or with the menu or a popup open, so the Flash Cards arrow keys are unaffected. A small hint line sits next to "Listen from here". Tests: `tests/e2e_v44.py`.
+
 
 **v4.3 change:** the first item in the menu is **"Install on my Phone or Computer"** (also in Settings). If the browser offers its own install prompt (`beforeinstallprompt`), tapping the item opens it. If the app is already running installed (display-mode standalone), it says "Already installed ✓". Otherwise a short popup shows steps for the detected platform (Android Chrome, Samsung Internet, iPhone Safari, desktop Chrome or Edge, Mac Safari). The manifest now has an `id` and no portrait lock, so desktop installs work properly. `tests/e2e_v43.py` checks the label and position, the prompt / installed / steps paths for each platform, and Chrome's own installability report (no errors).
 

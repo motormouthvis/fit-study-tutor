@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.3";
+  var APP_VERSION = "v4.4";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -779,6 +779,20 @@
     rd.key = keys[i]; rd.si = toEnd ? tutor.readSegs(rd.key).length - 1 : 0; stmtUserPick = false; updateLearnLayout();
     window.scrollTo(0, 0);
   }
+  // v4.4: desktop Read mode keyboard
+  function readModeActive() { return device === "desktop" && learnView() === "read" && $("tab-lessons").classList.contains("active") && !$("readCard").hidden; }
+  function readKeys(e) {
+    if (!readModeActive() || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable) || (t && t.id === "splitBar")) return;
+    if (!$("menu").hidden || document.querySelector(".sheet:not([hidden])")) return;
+    var art = $("rText"), line = 36, k = e.key;
+    if (k === "ArrowRight" || k === "ArrowLeft") { var d = k === "ArrowRight" ? 1 : -1; if (e.shiftKey) readTopic(d); else readStep(d); }
+    else if (k === "ArrowDown" || k === "ArrowUp") { if (e.shiftKey) return; art.scrollBy({ top: (k === "ArrowDown" ? 1 : -1) * line * 3, behavior: "smooth" }); }
+    else if (k === "PageDown" || k === "PageUp") art.scrollBy({ top: (k === "PageDown" ? 1 : -1) * Math.max(120, art.clientHeight * 0.85), behavior: "smooth" });
+    else return;
+    e.preventDefault();
+  }
   function readListen() {
     var s = lastSnap || tutor.snapshot();
     if (s.running && s.mode === "lesson" && s.lesson) return onPlay();
@@ -842,7 +856,7 @@
     bar.addEventListener("pointermove", function (e) { if (!drag) return; var r = $("learnWrap").getBoundingClientRect(); setPct(100 * (e.clientX - r.left) / r.width); });
     bar.addEventListener("pointerup", function () { if (drag) { drag = false; tutor.setSetting("splitPct", tutor.settings.splitPct); } });
     bar.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { setPct((tutor.settings.splitPct || 50) + (e.key === "ArrowLeft" ? -3 : 3)); tutor.setSetting("splitPct", tutor.settings.splitPct); } });
-    initChrome();
+    initChrome(); document.addEventListener("keydown", readKeys);
     var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(applyDevice, 150); });
     applyDevice();
   }

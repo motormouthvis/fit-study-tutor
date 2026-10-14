@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.3</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.4</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -83,8 +83,9 @@
         </div>
       </div>
     <div id="readCard" class="card reader" hidden>
-      <div class="rlisten"><button id="rListen" class="btn go">&#128266; Listen from here</button> <span id="rHint" class="small"></span></div>
-      <div id="rText" class="article" aria-live="polite"></div>
+      <div class="rlisten"><button id="rListen" class="btn go">&#128266; Listen from here</button> <span id="rHint" class="small"></span>
+        <span id="rKeys" class="rkeys small" aria-hidden="true">&#9000; &larr; &rarr; part &middot; Shift+&larr; &rarr; topic &middot; &uarr; &darr; scroll &middot; PgUp/PgDn page</span></div>
+      <div id="rText" class="article" aria-live="polite" tabindex="-1"></div>
     </div>
     <div class="card"><h2>Topics</h2>
       <div id="lTopicsSummary" class="small"></div>
@@ -162,7 +163,7 @@
       <p class="small">Score is recency-weighted: your last answers count most. Under 3 answers shows as New.</p></div>
   </section>
 
-  <!-- FLASH CARDS (v4.3) -->
+  <!-- FLASH CARDS (v4.4) -->
   <section id="tab-cards" class="panel" hidden>
     <div class="card fchead">
       <div class="fcrow">
@@ -312,7 +313,7 @@
   </div>
 </div>
 
-<!-- v4.3 install help -->
+<!-- v4.4 install help -->
 <div id="installSheet" class="sheet" role="dialog" aria-label="Install the app" aria-modal="true" hidden>
   <div class="sheetbox">
     <div class="sheethead"><b id="instTitle">Install on my Phone or Computer</b><button id="instClose" class="btn">Close &#10005;</button></div>

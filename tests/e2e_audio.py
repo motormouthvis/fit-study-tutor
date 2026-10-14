@@ -142,7 +142,7 @@ with sync_playwright() as p:
     pg.wait_for_function("navigator.serviceWorker.ready.then(()=>true)", timeout=8000); pg.reload(); pg.wait_for_timeout(800)
     pg.click("#btnPlay"); pg.wait_for_function("__tutor.lesson && __tutor.lesson.si>=1", timeout=15000)
     mclick(pg, "stop"); pg.wait_for_timeout(600)
-    caches = pg.evaluate("caches.keys()"); check("service worker caches: app v4 + audio", "study-tutor-v4.3" in caches and "study-tutor-audio-v1" in caches, caches)
+    caches = pg.evaluate("caches.keys()"); check("service worker caches: app v4 + audio", "study-tutor-v4.4" in caches and "study-tutor-audio-v1" in caches, caches)
     ctx.set_offline(True); pg.reload(); pg.wait_for_timeout(800)
     check("offline: app loads from cache and shows v4", word(pg) == "READY" and "v4" in pg.inner_text(".top"))
     pg.evaluate("window.__spokenLog=[]"); pg.click("#btnPlay"); pg.wait_for_function("__tutor.lesson && __tutor.lesson.si>=1", timeout=15000)
