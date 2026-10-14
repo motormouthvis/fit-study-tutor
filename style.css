@@ -251,3 +251,6 @@ body.dev-phone .kbd, body.dev-phone .fckeys { display:none; }
 @media (min-width: 900px) { #tab-cards { max-width:900px; margin:0 auto; } }
 .inststeps li { margin:10px 0; font-size:1.15rem; line-height:1.4; } #btnInstall { margin:4px 0 10px; }
 .rkeys { color:var(--mut); margin-left:auto; padding-left:10px; } body.dev-phone .rkeys { display:none; }
+/* v4.5: the last line of the article/part can always be scrolled fully into view */
+.article { padding-bottom:2.2em; scroll-padding-top:12px; scroll-padding-bottom:2.2em; overscroll-behavior:contain; }
+.article p:last-child { margin-bottom:0; }

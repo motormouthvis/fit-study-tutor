@@ -1,4 +1,7 @@
-# MBA Study Tutor (Bill's hands-free voice tutor) - v4.4
+# MBA Study Tutor (Bill's hands-free voice tutor) - v4.5
+
+**v4.5 fix:** in desktop Read mode the article box could extend about 50 px below the bottom of the window, so the last line of a part or topic could never be scrolled fully into view. The box height is now worked out from the space actually left in the window (recalculated on layout changes, window resize and font load), the article has bottom padding and scroll-padding, and ↑/↓/PgUp/PgDn scrolling stops exactly at the real bottom. `tests/e2e_v45.py` checks every topic and the 12 tallest parts at 1366x768 and 1440x900.
+
 
 **v4.4 change:** keyboard controls in desktop Read mode. ← / → move to the previous / next part (the statements panel follows), Shift+← / → move to the previous / next topic, ↑ / ↓ scroll the article smoothly about three lines, and PgUp / PgDn scroll a page. The keys only work in desktop Read mode on the Learn screen, never while typing in a field or with the menu or a popup open, so the Flash Cards arrow keys are unaffected. A small hint line sits next to "Listen from here". Tests: `tests/e2e_v44.py`.
 

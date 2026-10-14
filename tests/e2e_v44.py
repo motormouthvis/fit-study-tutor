@@ -17,7 +17,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True, args=["--no-sandbox"])
     ctx = b.new_context(viewport={"width": 1440, "height": 900}); ctx.add_init_script(FAKE_REC); ctx.add_init_script(PRESET)
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e))); pg.goto(URL); pg.wait_for_timeout(500)
-    check("v4.4 label", "v4.4" in pg.inner_text("#ver"))
+    check("v4.x label", "v4." in pg.inner_text("#ver"))
     # Listen mode: arrows do nothing to the reader
     pg.mouse.move(700, 400); start = pg.evaluate(POS); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(100)
     check("Listen mode: → does nothing", pg.evaluate(POS) == start)

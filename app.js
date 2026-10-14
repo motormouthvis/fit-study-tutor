@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.4";
+  var APP_VERSION = "v4.5";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -708,6 +708,19 @@
     if (panel.parentNode !== want) want.appendChild(panel);
     if (device === "desktop") $("stmtSheet").hidden = true;
   }
+  // v4.5: the article box must end above the bottom of the window so its last line can always be scrolled fully into view
+  var ART_GAP = 14;
+  function fitArticle() {
+    var a = $("rText"); if (!a) return;
+    if (!readModeActive()) { a.style.maxHeight = ""; return; }
+    var top = a.getBoundingClientRect().top + window.scrollY;
+    a.style.maxHeight = Math.max(220, Math.floor(window.innerHeight - top - ART_GAP)) + "px";
+  }
+  function fitArticleSoon() { requestAnimationFrame(function () { fitArticle(); setTimeout(fitArticle, 350); }); }
+  function articleScroll(dy) {
+    var a = $("rText"), max = Math.max(0, a.scrollHeight - a.clientHeight), to = Math.min(max, Math.max(0, a.scrollTop + dy));
+    if (a.scrollTo) a.scrollTo({ top: to, behavior: "smooth" }); else a.scrollTop = to;
+  }
   function updateLearnLayout() {
     var f = focusPart(), rel = ST.relevant(f.key), desk = device === "desktop", wrap = $("learnWrap");
     var split = desk && rel;
@@ -722,7 +735,7 @@
     var s = lastSnap || tutor.snapshot();
     $("btnStmt").hidden = !(device !== "desktop" && s.running && s.mode === "lesson" && rel);
     if (v === "read") renderReader();
-    renderStatements(false);
+    renderStatements(false); fitArticleSoon();
   }
   // ---- Read mode
   function renderReader() {
@@ -788,8 +801,8 @@
     if (!$("menu").hidden || document.querySelector(".sheet:not([hidden])")) return;
     var art = $("rText"), line = 36, k = e.key;
     if (k === "ArrowRight" || k === "ArrowLeft") { var d = k === "ArrowRight" ? 1 : -1; if (e.shiftKey) readTopic(d); else readStep(d); }
-    else if (k === "ArrowDown" || k === "ArrowUp") { if (e.shiftKey) return; art.scrollBy({ top: (k === "ArrowDown" ? 1 : -1) * line * 3, behavior: "smooth" }); }
-    else if (k === "PageDown" || k === "PageUp") art.scrollBy({ top: (k === "PageDown" ? 1 : -1) * Math.max(120, art.clientHeight * 0.85), behavior: "smooth" });
+    else if (k === "ArrowDown" || k === "ArrowUp") { if (e.shiftKey) return; articleScroll((k === "ArrowDown" ? 1 : -1) * line * 3); }
+    else if (k === "PageDown" || k === "PageUp") articleScroll((k === "PageDown" ? 1 : -1) * Math.max(120, art.clientHeight * 0.85));
     else return;
     e.preventDefault();
   }
@@ -857,7 +870,8 @@
     bar.addEventListener("pointerup", function () { if (drag) { drag = false; tutor.setSetting("splitPct", tutor.settings.splitPct); } });
     bar.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { setPct((tutor.settings.splitPct || 50) + (e.key === "ArrowLeft" ? -3 : 3)); tutor.setSetting("splitPct", tutor.settings.splitPct); } });
     initChrome(); document.addEventListener("keydown", readKeys);
-    var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(applyDevice, 150); });
+    var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { applyDevice(); fitArticle(); }, 150); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitArticle);
     applyDevice();
   }
   window.__v4 = { device: function () { return device; }, rd: rd, focus: function () { return focusPart(); } };
