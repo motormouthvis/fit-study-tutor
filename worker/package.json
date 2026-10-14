@@ -1,0 +1,2 @@
+{ "name": "fit-tutor-ask", "private": true, "type": "module",
+  "scripts": { "test": "node --test test/worker.test.js", "dev": "wrangler dev", "deploy": "wrangler deploy" } }

@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.5";
+  var APP_VERSION = "v4.6";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -263,6 +263,7 @@
     if (prevShowLesson && s.mode === "quiz" && running && tab === "lessons") switchTab("tutor");
     prevShowLesson = !!showLesson;
     if (showQuiz) renderQuiz(s);
+    if ($("lAsk")) $("lAsk").hidden = !(showLesson && s.lesson && s.lesson.text);
     if (showLesson) { $("lText").textContent = s.lesson.text; $("lMsg").textContent = s.audioError ? "" : (s.phase === "lessonWait" || s.phase === "lessonEnd" ? (s.message || "") : ""); }
     if (audioEl.getAttribute("src")) { try { audioEl.playbackRate = window.__testRate || tutor.settings.rate || 1; } catch (e) {} }
     $("sessCount").textContent = s.session.answered; $("sessRight").textContent = s.session.correct;
@@ -656,6 +657,113 @@
     window.__fc = fc;
   }
 
+
+  /* ================= v4.6: Ask Grok ("?" on each part -> explain further + follow-ups) ================= */
+  var ASK = { url: ((window.ASK_CONFIG && window.ASK_CONFIG.url) || "").replace(/\/+$/, ""), cur: null, busy: false, ctrl: null };
+  var ASK_MAX_FOLLOWUPS = 6, ASK_MAX_THREADS = 80;
+  function askStore() { return storage.load("ask", {}) || {}; }
+  function askSave(all) {
+    var keys = Object.keys(all); if (keys.length > ASK_MAX_THREADS) { keys.sort(function (a, b) { return (all[a].ts || 0) - (all[b].ts || 0); }); keys.slice(0, keys.length - ASK_MAX_THREADS).forEach(function (k) { delete all[k]; }); }
+    storage.save("ask", all);
+  }
+  function askEsc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function askFormat(t) {
+    return askEsc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").split(/\n{2,}/).map(function (p) { return "<p>" + p.replace(/\n/g, "<br>") + "</p>"; }).join("");
+  }
+  function askThread() { var all = askStore(); return (ASK.cur && all[ASK.cur.id]) || { msgs: [] }; }
+  function askRender() {
+    var th = askThread(), box = $("askLog"), h = "";
+    $("askPart").textContent = ASK.cur ? ASK.cur.topicName + " \u00B7 Part " + (ASK.cur.si + 1) : "";
+    $("askQuote").textContent = ASK.cur ? ASK.cur.text : "";
+    if (!ASK.url) h = "<div class='asknote'><b>Ask Grok is coming soon.</b><br>This button will send this part to Grok and explain it further in plain English, and you will be able to ask follow-up questions. It is being set up now.</div>";
+    th.msgs.forEach(function (m, i) {
+      if (i === 0 && m.role === "user") return; // the automatic "explain further" request
+      h += "<div class='askmsg " + (m.role === "user" ? "me" : "ai") + "'>" + (m.role === "user" ? askEsc(m.content) : askFormat(m.content)) + "</div>";
+    });
+    box.innerHTML = h;
+    var fu = th.msgs.filter(function (m) { return m.role === "user"; }).length - 1, left = ASK_MAX_FOLLOWUPS - Math.max(0, fu);
+    var can = !!ASK.url && !ASK.busy && th.msgs.length > 0 && left > 0;
+    $("askInput").disabled = !can; $("askSend").disabled = !can;
+    $("askInput").placeholder = !ASK.url ? "Coming soon" : left <= 0 ? "Follow-up limit reached for this part" : "Ask a follow-up question\u2026";
+    $("askLeft").textContent = ASK.url && th.msgs.length ? (left > 0 ? left + " follow-up" + (left === 1 ? "" : "s") + " left for this part" : "") : "";
+    $("askRetry").hidden = !(ASK.url && !ASK.busy && th.msgs.length && th.msgs[th.msgs.length - 1].role === "user");
+    box.scrollTop = box.scrollHeight;
+  }
+  function openAsk(topicKey, si, text) {
+    var tp = tutor.topic(topicKey);
+    ASK.cur = { id: topicKey + ":" + si, key: topicKey, si: si, text: text, topicName: tp ? tp.name : topicKey };
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && !s.audioPaused && !s.muted && s.speaking) tutor.ui("pauseaudio");
+    $("menu").hidden = true; $("askPanel").hidden = false; document.body.classList.add("asking"); fitArticleSoon();
+    askRender();
+    var th = askThread();
+    if (ASK.url && !th.msgs.length) askSend(null); else $("askInput").focus();
+  }
+  function closeAsk() { if (ASK.ctrl) try { ASK.ctrl.abort(); } catch (e) {} $("askPanel").hidden = true; document.body.classList.remove("asking"); fitArticleSoon(); }
+  function askSend(question) {
+    if (!ASK.url || ASK.busy || !ASK.cur) return;
+    var all = askStore(), id = ASK.cur.id, th = all[id] || { msgs: [] };
+    if (question != null) { question = String(question).trim().slice(0, 1500); if (!question) return; th.msgs.push({ role: "user", content: question }); }
+    else if (!th.msgs.length) th.msgs.push({ role: "user", content: "Explain further" });
+    th.ts = Date.now(); th.topic = ASK.cur.key; th.si = ASK.cur.si; all[id] = th; askSave(all);
+    var payload = { topic: ASK.cur.topicName, partText: ASK.cur.text.slice(0, 4000), messages: th.msgs.slice(1).map(function (m) { return { role: m.role, content: m.content }; }) };
+    ASK.busy = true; $("askInput").value = ""; askRender();
+    var log = $("askLog"), out = document.createElement("div"); out.className = "askmsg ai streaming"; out.innerHTML = "<span class='askdots'>Grok is thinking\u2026</span>"; log.appendChild(out); log.scrollTop = log.scrollHeight;
+    var text = "", ctrl = window.AbortController ? new AbortController() : null; ASK.ctrl = ctrl;
+    function fail(msg) { ASK.busy = false; ASK.ctrl = null; out.classList.remove("streaming"); out.classList.add("err"); out.textContent = msg; $("askRetry").hidden = false; $("askInput").disabled = $("askSend").disabled = false; }
+    function finish() {
+      ASK.busy = false; ASK.ctrl = null;
+      if (!text.trim()) return fail("Grok sent an empty answer. Tap Try again.");
+      var a2 = askStore(), t2 = a2[id] || th; t2.msgs.push({ role: "assistant", content: text }); t2.ts = Date.now(); a2[id] = t2; askSave(a2);
+      if (ASK.cur && ASK.cur.id === id) askRender();
+    }
+    fetch(ASK.url + "/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) {
+        if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 429) { var mins = Math.max(1, Math.round((j.retryAfter || 3600) / 60)); fail(j.scope === "day" ? "You have reached today's limit of questions. It resets in about " + Math.round(mins / 60) + " hours." : "That is a lot of questions this hour. Try again in about " + mins + " minutes."); }
+          else if (r.status === 503) fail("Ask Grok is not switched on yet.");
+          else fail("Grok could not answer right now (error " + r.status + "). Tap Try again.");
+        });
+        if (!r.body || !r.body.getReader) return r.text().then(function (t) { parse(t); finish(); });
+        var rd = r.body.getReader(), dec = new TextDecoder(), buf = "";
+        function parse(chunk) {
+          buf += chunk; var lines = buf.split("\n"); buf = lines.pop();
+          lines.forEach(function (ln) {
+            ln = ln.trim(); if (ln.indexOf("data:") !== 0) return; var d = ln.slice(5).trim(); if (d === "[DONE]") return;
+            try { var j = JSON.parse(d), c = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content; if (c) { text += c; out.innerHTML = askFormat(text); log.scrollTop = log.scrollHeight; } } catch (e) {}
+          });
+        }
+        function pump() { return rd.read().then(function (x) { if (x.done) { parse("\n"); return finish(); } parse(dec.decode(x.value, { stream: true })); return pump(); }); }
+        return pump();
+      })
+      .catch(function (e) { if (e && e.name === "AbortError") { ASK.busy = false; return; } fail(navigator.onLine === false ? "No internet connection. Ask Grok needs internet." : "Could not reach Grok. Check the connection and tap Try again."); });
+  }
+  function askButton(onClick, label) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "askq"; b.setAttribute("aria-label", label || "Ask Grok to explain this part"); b.title = "Ask Grok to explain this part"; b.textContent = "?";
+    b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); onClick(); }); return b;
+  }
+  function askListenPart() {
+    var s = lastSnap || tutor.snapshot();
+    if (s.running && s.mode === "lesson" && s.lesson) { var segs = tutor.readSegs(s.lesson.topic); return { key: s.lesson.topic, si: s.lesson.seg, text: (s.lesson.text || segs[s.lesson.seg] || $("lText").textContent) }; }
+    return null;
+  }
+  function updateListenAsk() { var p = askListenPart(); $("lAsk").hidden = !p; }
+  function initAsk() {
+    $("askClose").addEventListener("click", closeAsk);
+    $("askSend").addEventListener("click", function () { askSend($("askInput").value); });
+    $("askInput").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askSend($("askInput").value); } });
+    $("askRetry").addEventListener("click", function () {
+      var all = askStore(), th = all[ASK.cur.id]; if (!th || !th.msgs.length) return askSend(null);
+      var last = th.msgs.pop(); all[ASK.cur.id] = th; askSave(all); askSend(th.msgs.length ? last.content : null);
+    });
+    $("askClear").addEventListener("click", function () { var all = askStore(); delete all[ASK.cur.id]; askSave(all); askRender(); if (ASK.url) askSend(null); });
+    $("askPanel").addEventListener("click", function (e) { if (e.target === $("askPanel")) closeAsk(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("askPanel").hidden) closeAsk(); });
+    $("lText").parentNode.insertBefore(askButton(function () { var p = askListenPart(); if (p) openAsk(p.key, p.si, p.text); }, "Ask Grok to explain this part"), $("lText")).id = "lAsk";
+    $("lAsk").hidden = true;
+    window.__ask = ASK; window.__openAsk = openAsk;
+  }
+
   /* ================= v4: device type, Read mode, sample statements ================= */
   var ST = window.Statements, device = "phone", rd = { key: null, si: 0 }, stmtShown = "bs", stmtFocusSig = "", stmtUserPick = false;
   function deviceInfo() {
@@ -754,6 +862,7 @@
       box.dataset.key = rd.key; box.innerHTML = "";
       segs.forEach(function (t, i) {
         var p = document.createElement("p"); p.dataset.si = i; p.textContent = t; p.tabIndex = 0;
+        p.appendChild(askButton(function () { openAsk(rd.key, i, t); }, "Ask Grok to explain part " + (i + 1)));
         p.addEventListener("click", function () { readGo(i); });
         box.appendChild(p);
       });
@@ -992,7 +1101,7 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("installSheet").hidden) $("installSheet").hidden = true; });
     window.__install = { isInstalled: isInstalled, platform: installPlatform, hasPrompt: function () { return !!dip; } };
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
-    initFlash(); initV4(); window.__v4ready = true;
+    initFlash(); initAsk(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       navigator.serviceWorker.register("sw.js").then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});

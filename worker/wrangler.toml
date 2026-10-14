@@ -1,0 +1,18 @@
+name = "fit-tutor-ask"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGINS = "https://motormouthvis.github.io"
+PER_HOUR = "20"
+PER_DAY = "100"
+
+# Per-visitor rate limit storage (free plan). Create with:
+#   npx wrangler kv namespace create RATE_KV
+# then paste the printed id below and uncomment.
+# [[kv_namespaces]]
+# binding = "RATE_KV"
+# id = "PASTE_ID_HERE"
+
+# Secret (never in this file):  npx wrangler secret put XAI_API_KEY

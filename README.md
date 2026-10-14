@@ -68,3 +68,9 @@ Test locally: `python3 -m http.server 8080` then open http://localhost:8080 (loc
 ## Tests
 `npm test` (or `node --test tests/engine.test.js`) and `python3 tests/e2e.py` (needs Playwright + Chrome).
 When you change any file, bump `VERSION` in `sw.js` (and `APP_VERSION` in `app.js`) so phones pick up the update. After changing any spoken text: `node tools/build-audio-plan.js && /workspace/ttsenv/bin/python tools/gen_audio.py` (only new clips are generated; the unit tests fail if any spoken sentence has no clip). `python3 tests/repro_v1_bug.py` reproduces the old bug against git commit 4b76680.
+
+## v4.6 — Ask Grok
+A circled **?** on each part (Read and Listen) opens a chat (side panel on desktop, bottom sheet on phone)
+that explains the part in plain English for an MBA beginner, streams the answer and allows 6 follow-ups.
+Conversations are kept on the device. Calls go through the Cloudflare Worker in `worker/` (see worker/README.md);
+until `ask-config.js` has its URL, the panel shows "coming soon". Tests: `python3 tests/e2e_v46.py` (REAL=1 for one real question).

@@ -58,7 +58,7 @@ with sync_playwright() as p:
     pg.click("#btnPlay")
     pg.wait_for_function("__tutor.lesson && __tutor.lesson.si===0 && __player.state().audio==='playing' && __player.state().d>10", timeout=40000)
     check("playing: button says PAUSE, banner PLAYING", "PAUSE" in pg.inner_text("#btnPlay") and word(pg) == "PLAYING", (pg.inner_text("#btnPlay"), word(pg)))
-    n = vis(pg, "#lessonCard button:not(#btnStmt)"); check("while playing: 5 buttons (back, play, forward, speed, mute) + v4 Statements on accounting topics", n == 5 and vis(pg, "#lessonCard button") <= 6, n)
+    n = vis(pg, "#lessonCard button:not(#btnStmt):not(#lAsk)"); check("while playing: 5 buttons (back, play, forward, speed, mute) + v4 Statements on accounting topics", n == 5 and vis(pg, "#lessonCard button:not(#lAsk)") <= 6, n)
     check("progress shows part x of y, topic x of N and time left", pg.inner_text("#lPos").startswith("Part 1 of") and "Topic 1 of 24" in pg.inner_text("#lTopicNo") and "left" in pg.inner_text("#lAllTime"), (pg.inner_text("#lPos"), pg.inner_text("#lTopicNo"), pg.inner_text("#lAllTime")))
     t0 = pg.evaluate("__player.state().t"); pg.click("#btnFwd10"); pg.wait_for_timeout(300); t1 = pg.evaluate("__player.state().t")
     check("forward 10 s jumps ahead about 10 s", 8.5 < t1 - t0 < 12.5, (t0, t1))

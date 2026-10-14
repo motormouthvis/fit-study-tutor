@@ -254,3 +254,30 @@ body.dev-phone .kbd, body.dev-phone .fckeys { display:none; }
 /* v4.5: the last line of the article/part can always be scrolled fully into view */
 .article { padding-bottom:2.2em; scroll-padding-top:12px; scroll-padding-bottom:2.2em; overscroll-behavior:contain; }
 .article p:last-child { margin-bottom:0; }
+
+/* ===== v4.6 Ask Grok ===== */
+.askq { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; border:2px solid var(--accent); background:transparent; color:var(--accent); font-weight:900; font-size:1rem; line-height:1; cursor:pointer; padding:0; vertical-align:middle; }
+.askq:hover, .askq:focus-visible { background:var(--accent); color:#000; }
+.article p .askq { float:right; margin:2px 0 4px 10px; }
+#lAsk { float:right; width:40px; height:40px; font-size:1.3rem; margin:2px 0 6px 10px; }
+.askpanel .askbox { display:flex; flex-direction:column; height:80vh; max-height:80vh; overflow:hidden; }
+.askpart { color:var(--accent); font-weight:700; }
+.askquote { margin:4px 0 6px; color:var(--mut); font-size:.95rem; } .askquote summary { cursor:pointer; }
+.asklog { flex:1; overflow:auto; padding:4px 2px; overscroll-behavior:contain; }
+.askmsg { margin:8px 0; padding:10px 12px; border-radius:14px; font-size:1.08rem; line-height:1.5; }
+.askmsg p { margin:0 0 .6em; } .askmsg p:last-child { margin-bottom:0; }
+.askmsg.ai { background:#1d2128; border:1px solid var(--line); }
+.askmsg.me { background:#003a6b; margin-left:18%; }
+.askmsg.err { background:#3a0d0d; border:1px solid var(--red); }
+.askdots { color:var(--mut); font-style:italic; }
+.asknote { background:#2a2410; border:2px solid var(--amber); border-radius:14px; padding:12px; margin:8px 0; line-height:1.45; }
+.askfoot { border-top:1px solid var(--line); padding-top:8px; }
+.askrow { display:flex; gap:8px; align-items:stretch; }
+.askrow textarea { flex:1; resize:none; font:inherit; font-size:1.05rem; background:#000; color:var(--fg); border:2px solid var(--line); border-radius:12px; padding:8px; }
+.askrow .btn { width:auto; margin:0; }
+.askrow2 { display:flex; gap:8px; align-items:center; margin-top:6px; } .askrow2 .small { margin-right:auto; } .askrow2 .btn { width:auto; margin:0; padding:6px 12px; min-height:40px; }
+.askfine { margin:6px 0 0; color:var(--mut); }
+body.dev-desktop .askpanel { inset:0 0 0 auto; width:min(460px, 38vw); background:transparent; align-items:stretch; }
+body.dev-desktop .askpanel .askbox { height:100vh; max-height:100vh; border-radius:0; border-width:0 0 0 3px; max-width:none; }
+body.dev-desktop.asking main { margin-right:min(460px, 38vw); }
+@media (max-width:480px) { .askpanel .askbox { height:86vh; max-height:86vh; } }

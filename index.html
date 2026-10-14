@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.5</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.6</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -163,7 +163,7 @@
       <p class="small">Score is recency-weighted: your last answers count most. Under 3 answers shows as New.</p></div>
   </section>
 
-  <!-- FLASH CARDS (v4.5) -->
+  <!-- FLASH CARDS (v4.2) -->
   <section id="tab-cards" class="panel" hidden>
     <div class="card fchead">
       <div class="fcrow">
@@ -313,7 +313,22 @@
   </div>
 </div>
 
-<!-- v4.5 install help -->
+<!-- Ask Grok chat (v4.6): side panel on desktop, bottom sheet on phone -->
+<div id="askPanel" class="sheet askpanel" role="dialog" aria-label="Ask Grok" hidden>
+  <div class="sheetbox askbox">
+    <div class="sheethead"><b>&#10067; Ask Grok</b><button id="askClose" class="btn">Close &#10005;</button></div>
+    <div id="askPart" class="small askpart"></div>
+    <details class="askquote"><summary>The part you asked about</summary><div id="askQuote"></div></details>
+    <div id="askLog" class="asklog" aria-live="polite"></div>
+    <div class="askfoot">
+      <div class="askrow"><textarea id="askInput" rows="2" maxlength="1500" aria-label="Follow-up question"></textarea><button id="askSend" class="btn go">Send</button></div>
+      <div class="askrow2"><span id="askLeft" class="small"></span><button id="askRetry" class="btn" hidden>&#8635; Try again</button><button id="askClear" class="btn">Start over</button></div>
+      <p class="small askfine">Answers come from Grok (xAI) and can be wrong. Your professor and the textbook are the final word. Chats are kept only on this device.</p>
+    </div>
+  </div>
+</div>
+
+<!-- install help (v4.3) -->
 <div id="installSheet" class="sheet" role="dialog" aria-label="Install the app" aria-modal="true" hidden>
   <div class="sheetbox">
     <div class="sheethead"><b id="instTitle">Install on my Phone or Computer</b><button id="instClose" class="btn">Close &#10005;</button></div>
@@ -358,6 +373,7 @@
 <script src="lessons-data.js"></script>
 <script src="statements.js"></script>
 <script src="flashcards.js"></script>
+<script src="ask-config.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>

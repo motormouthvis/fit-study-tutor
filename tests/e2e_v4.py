@@ -94,7 +94,7 @@ with sync_playwright() as p:
     pg.click("#lessonList .trw[data-topic=liquidity]")
     pg.wait_for_function("__tutor.lesson && __player.state().audio==='playing'", timeout=40000)
     check("phone: small 'Statements' button appears during an accounting lesson", pg.is_visible("#btnStmt"))
-    n = pg.locator("#lessonCard button:visible").count(); check("phone while playing: 6 buttons at most", n <= 6, n)
+    n = pg.locator("#lessonCard button:not(#lAsk):visible").count(); check("phone while playing: 6 buttons at most (+ v4.6 ? ask)", n <= 6, n)
     pg.evaluate("__tutor.ui('teachat', {key:'liquidity', si:8})"); pg.wait_for_timeout(300)
     pg.click("#btnStmt"); pg.wait_for_selector("#stmtSheet:not([hidden])")
     check("phone: statements open as a bottom sheet with the right lines highlighted", pg.is_visible("#stmtPanel") and sorted(pg.evaluate(HL)) == ["tca", "tcl"])
