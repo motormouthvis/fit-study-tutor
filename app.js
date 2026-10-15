@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.9";
+  var APP_VERSION = "v5.0";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -566,6 +566,13 @@
     t.rows.forEach(function (r) { h += "<tr" + (r[2] ? " class='" + r[2] + "'" : "") + "><td>" + fcEsc(r[0]) + "</td><td class='n'>" + fcNum(r[1]) + "</td></tr>"; });
     return h + "</table>";
   }
+  // v5.0: the task label on the front (Define:, Calculate: ...) and the answer labels on the back (Definition:, Example entry: ...) are shown in bold
+  var FC_TASK = /^(Define|Formula|Explain in one sentence|Explain|Calculate|Compare|List|Give an example|State|Describe|Apply|Decide|Interpret|Write the journal entry):/;
+  var FC_LABEL = /^(Definition|Formula|Example entry|Example|What it tells you|What each shows|The rule|Answer|Working|Why|Compare|Difference|Rule|Steps|Entry|Entries|Journal entry|Interpretation|Decision|Takeaway|Watch out|Common mistake|Test|Use|Limits|Limit|Meaning|Effect|Result|Explanation|Description|Problems|Related):/;
+  function fcFrontHtml(t) { var m = FC_TASK.exec(t); return m ? "<b class='fctask'>" + fcEsc(m[1]) + ":</b>" + fcEsc(t.slice(m[0].length)) : fcEsc(t); }
+  function fcBackHtml(t) {
+    return String(t).split("\n").map(function (ln) { var m = FC_LABEL.exec(ln); return "<div class='fcl'>" + (m ? "<b class='fclab'>" + fcEsc(m[1]) + ":</b>" + fcEsc(ln.slice(m[0].length)) : fcEsc(ln)) + "</div>"; }).join("");
+  }
   function fcFilterOptions() {
     var sel = $("fcFilter"), h = "<option value='all'>All cards</option><option value='course:acct'>BUS 5601 Accounting (all)</option><option value='course:econ'>BUS 5421 Economics (all)</option>" +
       "<option value='sa'>Statement Analysis</option><option value='mine'>My cards (AI) (" + FL.filterCards("mine").length + ")</option><option value='restudy'>Restudy only</option><option value='unseen'>Unseen</option>";
@@ -605,8 +612,8 @@
       $("fcFront").innerHTML = "<div class='fcq'>" + fcEsc(c.company) + ": " + fcEsc(c.q) + "</div><div class='fctbls'>" + c.tables.map(fcTable).join("") + "</div>";
       $("fcBack").innerHTML = "<div class='fcans'>" + fcEsc(c.answer) + "</div><div class='fcwork'><b>Working:</b> " + fcEsc(c.work) + "</div><div class='fcint'><b>What it means:</b> " + fcEsc(c.interp) + "</div>";
     } else {
-      $("fcFront").innerHTML = "<div class='fcq big'>" + fcEsc(c.f) + "</div>";
-      $("fcBack").innerHTML = "<div class='fcbacktxt'>" + fcEsc(c.b) + "</div>";
+      $("fcFront").innerHTML = "<div class='fcq big" + (c.f.length > 170 ? " sm" : c.f.length > 90 ? " mid" : "") + "'>" + fcFrontHtml(c.f) + "</div>";
+      $("fcBack").innerHTML = "<div class='fcbacktxt'>" + fcBackHtml(c.b) + "</div>";
     }
     ["fcFront", "fcBack"].forEach(function (fid) { var mb = document.createElement("button"); mb.type = "button"; mb.className = "fcmorebtn"; mb.textContent = "\u22EF"; mb.setAttribute("aria-label", "Card actions: improve, expand, create"); mb.setAttribute("aria-haspopup", "menu"); mb.title = "More: improve, expand, create"; mb.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); if (!$("fcMore").hidden) fcMoreClose(); else fcMoreOpen(mb); }); var qb = askButton(function () { openAskCard(c); }, "Ask Grok to explain this card in more depth"); qb.classList.add("fcask"); qb.title = "Ask Grok to explain this card"; $(fid).insertBefore(qb, $(fid).firstChild); $(fid).insertBefore(mb, $(fid).firstChild); });
     $("fcCard").classList.toggle("statement", c.kind === "statement");

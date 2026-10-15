@@ -26,7 +26,7 @@ with sync_playwright() as p:
     # ================= DESKTOP 1440 =================
     ctx, pg = newpage(1440, 900)
     check("desktop detected at 1440 px with a mouse", pg.evaluate("__v4.device()") == "desktop")
-    check("v4 label", "v4" in pg.inner_text(".top"))
+    check("v4 label", ("v4" in pg.inner_text(".top") or "v5" in pg.inner_text(".top")))
     check("Read / Listen toggle shown on desktop", pg.is_visible("#viewToggle") and pg.is_visible("[data-view=read]"))
     check("statements side by side with the lesson (accounting topic)", pg.is_visible("#stmtCol") and pg.is_visible("#splitBar") and pg.locator("#stmtCol").bounding_box()["x"] > 600)
     check("statements show 3 years with common-size % columns", pg.locator("#stmtBody thead th").count() == 7 and "100.0%" in pg.inner_text("#stmtBody"))

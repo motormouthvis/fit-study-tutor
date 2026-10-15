@@ -309,3 +309,10 @@ body.dev-desktop.asking main { margin-right:min(460px, 38vw); }
 .aibox label.lbl { display:block; font-weight:800; margin-top:6px; }
 .aibusy { padding:18px 6px; color:var(--mut); } .aierr { color:#ff9a9a; padding:8px 0; font-weight:700; }
 #fcImpMsg { margin-top:8px; color:var(--accent); }
+
+/* v5.0: clearer cards - task label on the front, labeled answer parts on the back */
+.fcq.big.mid { font-size:1.3rem; } .fcq.big.sm { font-size:1.12rem; line-height:1.35; margin:12px 0; }
+.fctask { color:var(--accent); margin-right:.35em; }
+.fcbacktxt .fcl { margin:0 0 8px; } .fclab { color:var(--green); margin-right:.3em; }
+.fcbacktxt { font-size:1.15rem; }
+@media (max-width:480px) { .fcq.big.mid { font-size:1.15rem; } .fcq.big.sm { font-size:1.02rem; } .fcbacktxt { font-size:1.05rem; } }

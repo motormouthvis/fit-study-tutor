@@ -1,4 +1,5 @@
 """v4.3: 'Install on my Phone or Computer' menu item + installability. Run: python3 tests/e2e_v43.py"""
+import re
 import os, sys, json
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +28,7 @@ with sync_playwright() as p:
     def open_menu(pg): pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])")
 
     ctx, pg = newpage()
-    check("v4.x label", "v4." in pg.inner_text("#ver"))
+    check("v4.x label", re.match(r"v[45]\.", pg.inner_text("#ver")) is not None)
     open_menu(pg)
     check("menu item label is exact", pg.inner_text("#btnInstall").strip() == LABEL, pg.inner_text("#btnInstall"))
     check("install item is visible without an install event", pg.is_visible("#btnInstall"))
@@ -48,7 +49,7 @@ with sync_playwright() as p:
     ok_icons = all(pg.evaluate(f"fetch('{i['src']}').then(r=>r.ok)") for i in m["icons"]); check("manifest icons load", ok_icons)
     pg.wait_for_function("navigator.serviceWorker.controller !== null || true"); pg.reload(); pg.wait_for_timeout(800)
     check("service worker active and controlling the page", pg.evaluate("navigator.serviceWorker.controller ? navigator.serviceWorker.controller.state : null") == "activated")
-    check("SW has a fetch handler that serves offline (start_url cached)", pg.evaluate("caches.keys().then(ks=>caches.open(ks.find(k=>/^study-tutor-v4/.test(k)))).then(c=>c.match('index.html')).then(r=>!!r)"))
+    check("SW has a fetch handler that serves offline (start_url cached)", pg.evaluate("caches.keys().then(ks=>caches.open(ks.find(k=>/^study-tutor-v[45]/.test(k)))).then(c=>c.match('index.html')).then(r=>!!r)"))
     cdp = ctx.new_cdp_session(pg)
     errs = [e for e in cdp.send("Page.getInstallabilityErrors")["installabilityErrors"] if e["errorId"] != "in-incognito"]
     check("Chrome reports no installability errors (throwaway test profile aside)", errs == [], errs)

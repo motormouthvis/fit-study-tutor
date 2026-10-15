@@ -1,4 +1,5 @@
 """v4.2: Flash Cards (desktop + phone). Run: python3 tests/e2e_v42.py"""
+import re
 import os, sys, json
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +22,7 @@ with sync_playwright() as p:
 
     # ---------------- desktop ----------------
     ctx, pg = newpage(1440, 900)
-    check("v4.x label", "v4." in pg.inner_text("#ver"))
+    check("v4.x label", re.match(r"v[45]\.", pg.inner_text("#ver")) is not None)
     pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])")
     check("Flash Cards is in the menu", pg.is_visible("#menu [data-goto=cards]") and "Flash Cards" in pg.inner_text("#mCards"))
     pg.click("#menu [data-goto=cards]"); pg.wait_for_timeout(200)

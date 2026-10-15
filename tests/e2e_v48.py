@@ -47,7 +47,7 @@ with sync_playwright() as p:
     for (w, h, mobile, tag) in [(1440, 900, False, "desktop"), (390, 844, True, "phone")]:
         ctx, pg = newpage(w, h, mobile, ask=f"http://127.0.0.1:{W1}")
         to_cards(pg)
-        check(tag + ": v4.8 label", pg.inner_text("#ver").startswith("v4."))
+        check(tag + ": v4.8 label", pg.inner_text("#ver")[:2] in ("v4", "v5"))
         check(tag + ": ? on the card front", pg.is_visible("#fcFront > .askq"))
         cid = pg.evaluate("window.__fc.queue[0]"); n0 = len(SEEN)
         if mobile: pg.tap("#fcFront > .askq")

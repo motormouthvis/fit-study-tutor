@@ -1,0 +1,2650 @@
+[
+ {
+  "id": "equation-1",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "formula",
+  "f": "The accounting equation",
+  "b": "Assets = Liabilities + Equity. Every asset was paid for by lenders (liabilities) or owners (equity)."
+ },
+ {
+  "id": "equation-2",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Asset",
+  "b": "Something the company owns or controls that will bring future economic benefit: cash, receivables, inventory, equipment."
+ },
+ {
+  "id": "equation-3",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Liability",
+  "b": "An obligation to pay or deliver something to others in the future: accounts payable, wages payable, loans."
+ },
+ {
+  "id": "equation-4",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Equity (owners' equity)",
+  "b": "The owners' residual claim: assets minus liabilities. Made up of contributed capital plus retained earnings."
+ },
+ {
+  "id": "equation-5",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Double-entry bookkeeping",
+  "b": "Every transaction affects at least two accounts so the equation always stays in balance; total debits = total credits."
+ },
+ {
+  "id": "equation-6",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Debit and credit (normal balances)",
+  "b": "Debits increase assets and expenses; credits increase liabilities, equity and revenue."
+ },
+ {
+  "id": "equation-7",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Assets $500k, liabilities $320k. Equity?",
+  "b": "$180k. Equity = assets - liabilities = 500 - 320."
+ },
+ {
+  "id": "equation-8",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "problem",
+  "f": "A company borrows $50k cash from a bank. Effect on the equation?",
+  "b": "Assets (cash) +$50k and liabilities (notes payable) +$50k. Equity unchanged."
+ },
+ {
+  "id": "equation-9",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Owners invest $100k cash in the business. Effect?",
+  "b": "Assets (cash) +$100k, equity (contributed capital) +$100k."
+ },
+ {
+  "id": "equation-10",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "problem",
+  "f": "The company pays $8k of accounts payable. Effect?",
+  "b": "Cash -$8k and accounts payable -$8k. Both sides shrink equally; equity unchanged."
+ },
+ {
+  "id": "equation-11",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "GAAP vs IFRS",
+  "b": "GAAP: US generally accepted accounting principles (set by FASB). IFRS: international standards (IASB). Public US firms report under GAAP."
+ },
+ {
+  "id": "equation-12",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Historical cost principle",
+  "b": "Most assets are recorded at what was paid for them, not today's market value."
+ },
+ {
+  "id": "equation-13",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Going-concern assumption",
+  "b": "Statements assume the business will keep operating for the foreseeable future, so assets are not valued at fire-sale prices."
+ },
+ {
+  "id": "equation-14",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "Four main financial statements",
+  "b": "Balance sheet, income statement, statement of cash flows, statement of stockholders' (owners') equity."
+ },
+ {
+  "id": "equation-15",
+  "topic": "equation",
+  "course": "acct",
+  "kind": "term",
+  "f": "How the statements connect",
+  "b": "Net income (income statement) flows into retained earnings (balance sheet); the cash flow statement explains the change in the balance sheet's cash."
+ },
+ {
+  "id": "balance-1",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Balance sheet",
+  "b": "A snapshot of assets, liabilities and equity on one date, e.g. December 31."
+ },
+ {
+  "id": "balance-2",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Current vs long-term",
+  "b": "Current = turns into cash or comes due within one year (or the operating cycle). Long-term = beyond one year."
+ },
+ {
+  "id": "balance-3",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Typical current assets (in liquidity order)",
+  "b": "Cash and equivalents, marketable securities, accounts receivable, inventory, prepaid expenses."
+ },
+ {
+  "id": "balance-4",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Accounts receivable",
+  "b": "Money customers owe for goods or services already delivered on credit."
+ },
+ {
+  "id": "balance-5",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Accounts payable",
+  "b": "Money the company owes suppliers for goods or services already received."
+ },
+ {
+  "id": "balance-6",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Prepaid expense",
+  "b": "An asset: cash paid in advance for a future benefit, e.g. 12 months of insurance. Expensed as it is used up."
+ },
+ {
+  "id": "balance-7",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Unearned (deferred) revenue",
+  "b": "A liability: cash received before the goods or service are delivered."
+ },
+ {
+  "id": "balance-8",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Property, plant & equipment (PP&E)",
+  "b": "Long-lived tangible assets. Shown at cost less accumulated depreciation = net book value."
+ },
+ {
+  "id": "balance-9",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Accumulated depreciation",
+  "b": "A contra-asset: total depreciation charged on an asset since purchase. Reduces PP&E to its net book value."
+ },
+ {
+  "id": "balance-10",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Intangible assets and goodwill",
+  "b": "Non-physical assets: patents, trademarks, software. Goodwill = price paid for an acquisition above the fair value of its net identifiable assets."
+ },
+ {
+  "id": "balance-11",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Retained earnings",
+  "b": "Cumulative net income kept in the business. Ending RE = beginning RE + net income - dividends."
+ },
+ {
+  "id": "balance-12",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Current portion of long-term debt",
+  "b": "Principal due within the next 12 months; shown as a current liability."
+ },
+ {
+  "id": "balance-13",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Book value of equity vs market value",
+  "b": "Book = assets - liabilities on the balance sheet. Market = share price x shares outstanding. They usually differ."
+ },
+ {
+  "id": "balance-14",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Beginning retained earnings $400k, net income $90k, dividends $30k. Ending RE?",
+  "b": "$460k. 400 + 90 - 30."
+ },
+ {
+  "id": "balance-15",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Equipment cost $120k, accumulated depreciation $45k. Net book value?",
+  "b": "$75k. 120 - 45."
+ },
+ {
+  "id": "balance-16",
+  "topic": "balance",
+  "course": "acct",
+  "kind": "term",
+  "f": "Treasury stock",
+  "b": "Company shares bought back from investors. Shown as a reduction of equity (contra-equity)."
+ },
+ {
+  "id": "income-1",
+  "topic": "income",
+  "course": "acct",
+  "kind": "term",
+  "f": "Income statement",
+  "b": "Shows revenue, expenses and profit over a period (quarter or year). Also called the P&L."
+ },
+ {
+  "id": "income-2",
+  "topic": "income",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Gross profit",
+  "b": "Revenue - cost of goods sold (COGS)."
+ },
+ {
+  "id": "income-3",
+  "topic": "income",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Operating income (EBIT)",
+  "b": "Gross profit - operating expenses (SG&A, R&D, depreciation). Earnings before interest and taxes."
+ },
+ {
+  "id": "income-4",
+  "topic": "income",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Net income",
+  "b": "EBIT - interest expense - income tax expense. The 'bottom line'."
+ },
+ {
+  "id": "income-5",
+  "topic": "income",
+  "course": "acct",
+  "kind": "term",
+  "f": "Cost of goods sold (COGS)",
+  "b": "The direct cost of the products sold in the period: materials, direct labor, factory overhead."
+ },
+ {
+  "id": "income-6",
+  "topic": "income",
+  "course": "acct",
+  "kind": "term",
+  "f": "SG&A",
+  "b": "Selling, general and administrative expenses: salaries, rent, marketing, office costs."
+ },
+ {
+  "id": "income-7",
+  "topic": "income",
+  "course": "acct",
+  "kind": "formula",
+  "f": "EBITDA",
+  "b": "EBIT + depreciation + amortization. A rough proxy for operating cash earnings."
+ },
+ {
+  "id": "income-8",
+  "topic": "income",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Earnings per share (EPS)",
+  "b": "(Net income - preferred dividends) / weighted average common shares outstanding."
+ },
+ {
+  "id": "income-9",
+  "topic": "income",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Revenue $1,000k, COGS $600k, operating expenses $250k. Operating income?",
+  "b": "$150k. Gross profit 400 - opex 250."
+ },
+ {
+  "id": "income-10",
+  "topic": "income",
+  "course": "acct",
+  "kind": "problem",
+  "f": "EBIT $150k, interest $30k, tax rate 25%. Net income?",
+  "b": "$90k. Pre-tax 120; tax 30; net income 90."
+ },
+ {
+  "id": "income-11",
+  "topic": "income",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Net income $2.4M, 1.2M shares, no preferred. EPS?",
+  "b": "$2.00 per share."
+ },
+ {
+  "id": "income-12",
+  "topic": "income",
+  "course": "acct",
+  "kind": "term",
+  "f": "Revenue recognition principle",
+  "b": "Record revenue when it is earned (goods or services delivered to the customer), not when cash arrives."
+ },
+ {
+  "id": "income-13",
+  "topic": "income",
+  "course": "acct",
+  "kind": "term",
+  "f": "Non-operating items",
+  "b": "Gains, losses, interest income and expense that are not part of the core business; reported below operating income."
+ },
+ {
+  "id": "income-14",
+  "topic": "income",
+  "course": "acct",
+  "kind": "term",
+  "f": "Effective tax rate",
+  "b": "Income tax expense / pre-tax income."
+ },
+ {
+  "id": "cashflow-1",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Statement of cash flows",
+  "b": "Explains the change in cash over a period in three sections: operating, investing, financing."
+ },
+ {
+  "id": "cashflow-2",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Operating activities",
+  "b": "Cash from running the business: collections from customers, payments to suppliers and employees, interest and taxes (US GAAP)."
+ },
+ {
+  "id": "cashflow-3",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Investing activities",
+  "b": "Buying or selling long-term assets and investments: capex (outflow), sale of equipment, acquisitions."
+ },
+ {
+  "id": "cashflow-4",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Financing activities",
+  "b": "Cash from or to owners and lenders: issuing or repaying debt, issuing stock, buybacks, dividends paid."
+ },
+ {
+  "id": "cashflow-5",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Indirect method",
+  "b": "Starts with net income, adds back non-cash expenses (depreciation), then adjusts for changes in working capital."
+ },
+ {
+  "id": "cashflow-6",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Working-capital adjustments (indirect method)",
+  "b": "Increase in a current asset (AR, inventory) subtracts cash; increase in a current liability (AP) adds cash. Decreases do the opposite."
+ },
+ {
+  "id": "cashflow-7",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Free cash flow",
+  "b": "Cash from operations - capital expenditures. Cash left over for debt repayment, dividends or growth."
+ },
+ {
+  "id": "cashflow-8",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Net income $80k, depreciation $20k, AR up $15k, AP up $5k. Cash from operations?",
+  "b": "$90k. 80 + 20 - 15 + 5."
+ },
+ {
+  "id": "cashflow-9",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "problem",
+  "f": "CFO $90k, capex $35k. Free cash flow?",
+  "b": "$55k."
+ },
+ {
+  "id": "cashflow-10",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Company pays $10k dividends and repays $40k of loans. Which section, and net amount?",
+  "b": "Financing: -$50k."
+ },
+ {
+  "id": "cashflow-11",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Why profit and cash differ",
+  "b": "Accrual accounting timing (credit sales, inventory build-up), non-cash expenses like depreciation, and capex and debt flows that are not on the income statement."
+ },
+ {
+  "id": "cashflow-12",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Red flag: profit up, operating cash down",
+  "b": "Earnings may be low quality: receivables or inventory piling up, or aggressive revenue recognition."
+ },
+ {
+  "id": "cashflow-13",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "term",
+  "f": "Typical healthy pattern of signs",
+  "b": "CFO positive, CFI negative (investing in the business), CFF either sign."
+ },
+ {
+  "id": "cashflow-14",
+  "topic": "cashflow",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Beginning cash $40k; CFO +$90k, CFI -$60k, CFF -$20k. Ending cash?",
+  "b": "$50k. 40 + 90 - 60 - 20."
+ },
+ {
+  "id": "accrual-1",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Accrual accounting",
+  "b": "Records revenue when earned and expenses when incurred, regardless of when cash moves."
+ },
+ {
+  "id": "accrual-2",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Cash-basis accounting",
+  "b": "Records revenue and expenses only when cash is received or paid. Simpler, but not GAAP for most companies."
+ },
+ {
+  "id": "accrual-3",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Matching principle",
+  "b": "Expenses are recorded in the same period as the revenue they help produce."
+ },
+ {
+  "id": "accrual-4",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Depreciation",
+  "b": "Allocating the cost of a long-lived tangible asset over its useful life. A non-cash expense."
+ },
+ {
+  "id": "accrual-5",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Straight-line depreciation",
+  "b": "(Cost - salvage value) / useful life in years."
+ },
+ {
+  "id": "accrual-6",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Machine cost $50k, salvage $5k, life 5 years. Annual straight-line depreciation?",
+  "b": "$9k a year. (50 - 5) / 5."
+ },
+ {
+  "id": "accrual-7",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Double-declining balance",
+  "b": "Accelerated method: rate = 2 / useful life, applied to the beginning book value each year. Never depreciate below salvage."
+ },
+ {
+  "id": "accrual-8",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Asset $40k, 5-year life, double-declining. Year 1 depreciation?",
+  "b": "$16k. Rate 2/5 = 40% x 40k."
+ },
+ {
+  "id": "accrual-9",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Amortization",
+  "b": "Spreading the cost of an intangible asset (patent, software license) over its useful life."
+ },
+ {
+  "id": "accrual-10",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Accrued expense",
+  "b": "An expense incurred but not yet paid, e.g. wages earned by staff in the last week of December. Recorded as a liability."
+ },
+ {
+  "id": "accrual-11",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Adjusting entries",
+  "b": "End-of-period entries so revenue and expenses land in the right period: accruals, deferrals, depreciation."
+ },
+ {
+  "id": "accrual-12",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "FIFO",
+  "b": "First-in, first-out: oldest inventory costs go to COGS first. When prices rise: lower COGS, higher profit, higher ending inventory."
+ },
+ {
+  "id": "accrual-13",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "LIFO",
+  "b": "Last-in, first-out: newest costs go to COGS first. When prices rise: higher COGS, lower taxable income. Allowed under US GAAP, banned under IFRS."
+ },
+ {
+  "id": "accrual-14",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Bought 10 units at $5, then 10 at $7. Sold 12. COGS under FIFO?",
+  "b": "$64. 10 x 5 + 2 x 7."
+ },
+ {
+  "id": "accrual-15",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Same purchases (10 at $5, then 10 at $7), sold 12. COGS under LIFO?",
+  "b": "$80. 10 x 7 + 2 x 5."
+ },
+ {
+  "id": "accrual-16",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Allowance for doubtful accounts",
+  "b": "A contra-asset estimating receivables that won't be collected. Net AR = gross AR - allowance."
+ },
+ {
+  "id": "accrual-17",
+  "topic": "accrual",
+  "course": "acct",
+  "kind": "term",
+  "f": "Conservatism principle",
+  "b": "When uncertain, choose the option that does not overstate assets or income, e.g. lower of cost or market for inventory."
+ },
+ {
+  "id": "liquidity-1",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Current ratio",
+  "b": "Current assets / current liabilities. Around 1.5-2 is comfortable; under 1 is a warning."
+ },
+ {
+  "id": "liquidity-2",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Quick (acid-test) ratio",
+  "b": "(Cash + marketable securities + receivables) / current liabilities. Often approximated as (current assets - inventory) / current liabilities."
+ },
+ {
+  "id": "liquidity-3",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Cash ratio",
+  "b": "(Cash + marketable securities) / current liabilities. The strictest liquidity test."
+ },
+ {
+  "id": "liquidity-4",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Working capital",
+  "b": "Current assets - current liabilities, in dollars."
+ },
+ {
+  "id": "liquidity-5",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "term",
+  "f": "Why the quick ratio excludes inventory",
+  "b": "Inventory may be slow to sell or sell at a discount, so it is the least liquid current asset."
+ },
+ {
+  "id": "liquidity-6",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Current assets $300k, current liabilities $200k. Current ratio and working capital?",
+  "b": "1.5x; working capital $100k."
+ },
+ {
+  "id": "liquidity-7",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "problem",
+  "f": "CA $300k including inventory $120k; CL $200k. Quick ratio?",
+  "b": "0.9x. (300 - 120) / 200."
+ },
+ {
+  "id": "liquidity-8",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "term",
+  "f": "Can a current ratio be too high?",
+  "b": "Yes. It may mean idle cash, bloated inventory or slow collections: assets not working hard."
+ },
+ {
+  "id": "liquidity-9",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "term",
+  "f": "Liquidity vs solvency",
+  "b": "Liquidity = paying bills due in the next year. Solvency = meeting all obligations long term (leverage ratios)."
+ },
+ {
+  "id": "liquidity-10",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Current ratio is 1.2. The company pays $10k of AP with cash (CA $120k, CL $100k). New current ratio?",
+  "b": "1.22x. 110 / 90. Paying down CL with cash raises a ratio that is above 1."
+ },
+ {
+  "id": "liquidity-11",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "term",
+  "f": "Operating cycle",
+  "b": "Days inventory outstanding + days sales outstanding: time from buying inventory to collecting cash."
+ },
+ {
+  "id": "liquidity-12",
+  "topic": "liquidity",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Cash conversion cycle",
+  "b": "DIO + DSO - DPO. Days cash is tied up in operations; lower is better."
+ },
+ {
+  "id": "leverage-1",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Debt-to-equity ratio",
+  "b": "Total liabilities / total equity (some analysts use only interest-bearing debt). Higher = more financial risk."
+ },
+ {
+  "id": "leverage-2",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Debt ratio",
+  "b": "Total liabilities / total assets. The share of assets financed by creditors."
+ },
+ {
+  "id": "leverage-3",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Interest coverage (times interest earned)",
+  "b": "EBIT / interest expense. Under about 1.5x is a red flag."
+ },
+ {
+  "id": "leverage-4",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Equity multiplier",
+  "b": "Total assets / total equity = 1 + D/E (with D = total liabilities)."
+ },
+ {
+  "id": "leverage-5",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Liabilities $600k, equity $400k. D/E and debt ratio?",
+  "b": "D/E 1.5x; debt ratio 0.60 (600 / 1,000)."
+ },
+ {
+  "id": "leverage-6",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "problem",
+  "f": "EBIT $240k, interest $60k. Interest coverage?",
+  "b": "4.0x."
+ },
+ {
+  "id": "leverage-7",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "term",
+  "f": "Financial leverage: upside and downside",
+  "b": "Debt magnifies ROE when returns exceed the interest cost, and magnifies losses when they don't. Raises bankruptcy risk."
+ },
+ {
+  "id": "leverage-8",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "term",
+  "f": "Debt covenants",
+  "b": "Loan conditions, e.g. a minimum interest coverage or maximum D/E. Breaking one can let the lender demand repayment."
+ },
+ {
+  "id": "leverage-9",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Debt ratio 0.5. What is D/E?",
+  "b": "1.0x. Liabilities equal equity."
+ },
+ {
+  "id": "leverage-10",
+  "topic": "leverage",
+  "course": "acct",
+  "kind": "term",
+  "f": "Operating leverage",
+  "b": "High fixed costs relative to variable costs: profits swing more than sales do."
+ },
+ {
+  "id": "profit-1",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Gross margin",
+  "b": "Gross profit / revenue."
+ },
+ {
+  "id": "profit-2",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Operating margin",
+  "b": "Operating income (EBIT) / revenue."
+ },
+ {
+  "id": "profit-3",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Net profit margin",
+  "b": "Net income / revenue."
+ },
+ {
+  "id": "profit-4",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Return on assets (ROA)",
+  "b": "Net income / total assets (average assets is better when available)."
+ },
+ {
+  "id": "profit-5",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Return on equity (ROE)",
+  "b": "Net income / shareholders' equity."
+ },
+ {
+  "id": "profit-6",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "DuPont identity",
+  "b": "ROE = net margin x asset turnover x equity multiplier = (NI/Sales) x (Sales/Assets) x (Assets/Equity)."
+ },
+ {
+  "id": "profit-7",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Net margin 5%, asset turnover 2.0, equity multiplier 1.5. ROE?",
+  "b": "15%. 0.05 x 2.0 x 1.5."
+ },
+ {
+  "id": "profit-8",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Revenue $800k, net income $40k, assets $500k, equity $200k. Net margin, ROA, ROE?",
+  "b": "Margin 5%, ROA 8%, ROE 20%."
+ },
+ {
+  "id": "profit-9",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "term",
+  "f": "Why ROE can mislead",
+  "b": "High ROE can come from heavy debt (a small equity base) rather than good operations. Check D/E alongside it."
+ },
+ {
+  "id": "profit-10",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Revenue $2M, gross profit $700k. Gross margin?",
+  "b": "35%."
+ },
+ {
+  "id": "profit-11",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "term",
+  "f": "Gross margin falling while revenue rises",
+  "b": "Pricing pressure or rising input costs; growth may be bought with discounts."
+ },
+ {
+  "id": "profit-12",
+  "topic": "profit",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Return on invested capital (ROIC)",
+  "b": "NOPAT / (debt + equity), where NOPAT = EBIT x (1 - tax rate). Compare it with the cost of capital."
+ },
+ {
+  "id": "efficiency-1",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Asset turnover",
+  "b": "Revenue / total assets. Sales generated per dollar of assets."
+ },
+ {
+  "id": "efficiency-2",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Inventory turnover",
+  "b": "COGS / average inventory."
+ },
+ {
+  "id": "efficiency-3",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Days inventory outstanding (DIO)",
+  "b": "365 / inventory turnover, or average inventory / COGS x 365."
+ },
+ {
+  "id": "efficiency-4",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Receivables turnover",
+  "b": "Revenue (credit sales) / average accounts receivable."
+ },
+ {
+  "id": "efficiency-5",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Days sales outstanding (DSO)",
+  "b": "Average AR / revenue x 365. Average days to collect from customers."
+ },
+ {
+  "id": "efficiency-6",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Days payables outstanding (DPO)",
+  "b": "Average AP / COGS x 365. Average days taken to pay suppliers."
+ },
+ {
+  "id": "efficiency-7",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "problem",
+  "f": "COGS $360k, average inventory $60k. Turnover and days?",
+  "b": "6x; about 61 days (365 / 6)."
+ },
+ {
+  "id": "efficiency-8",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Revenue $730k, AR $100k. DSO?",
+  "b": "50 days. 100 / 730 x 365."
+ },
+ {
+  "id": "efficiency-9",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "problem",
+  "f": "DIO 60, DSO 45, DPO 30. Cash conversion cycle?",
+  "b": "75 days."
+ },
+ {
+  "id": "efficiency-10",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "term",
+  "f": "Rising DSO",
+  "b": "Customers are paying more slowly: looser credit terms or collection trouble. Cash gets tied up."
+ },
+ {
+  "id": "efficiency-11",
+  "topic": "efficiency",
+  "course": "acct",
+  "kind": "term",
+  "f": "Asset turnover differs by industry",
+  "b": "Grocers turn assets fast at low margins; utilities and airlines turn slowly at higher margins. Compare within an industry."
+ },
+ {
+  "id": "hv-1",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "term",
+  "f": "Horizontal analysis",
+  "b": "Compares the same line item across periods, in dollars and %. Trend analysis."
+ },
+ {
+  "id": "hv-2",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "term",
+  "f": "Vertical (common-size) analysis",
+  "b": "Expresses each line as a % of a base within one period: revenue for the income statement, total assets for the balance sheet."
+ },
+ {
+  "id": "hv-3",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Percent change",
+  "b": "(Current - prior) / prior x 100."
+ },
+ {
+  "id": "hv-4",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Revenue grew from $500k to $600k. Percent change?",
+  "b": "+20%."
+ },
+ {
+  "id": "hv-5",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Revenue $2M, SG&A $500k. SG&A as common-size %?",
+  "b": "25% of revenue."
+ },
+ {
+  "id": "hv-6",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "term",
+  "f": "Why use common-size statements",
+  "b": "They remove size differences so you can compare companies of different scale, or one company across years."
+ },
+ {
+  "id": "hv-7",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Compound annual growth rate (CAGR)",
+  "b": "(Ending / beginning)^(1/years) - 1."
+ },
+ {
+  "id": "hv-8",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Sales went from $100 to $121 over 2 years. CAGR?",
+  "b": "10%. sqrt(1.21) - 1."
+ },
+ {
+  "id": "hv-9",
+  "topic": "hv",
+  "course": "acct",
+  "kind": "term",
+  "f": "Benchmarking",
+  "b": "Comparing a company's ratios with competitors or industry averages to judge whether they are good or bad."
+ },
+ {
+  "id": "altman-1",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Altman Z-score (public manufacturers)",
+  "b": "Z = 1.2A + 1.4B + 3.3C + 0.6D + 1.0E."
+ },
+ {
+  "id": "altman-2",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "term",
+  "f": "Altman components A-E",
+  "b": "A = working capital / TA; B = retained earnings / TA; C = EBIT / TA; D = market value of equity / total liabilities; E = sales / TA."
+ },
+ {
+  "id": "altman-3",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "term",
+  "f": "Altman zones (original model)",
+  "b": "Z > 2.99 safe; 1.81-2.99 grey zone; Z < 1.81 distress."
+ },
+ {
+  "id": "altman-4",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "term",
+  "f": "Which Altman ratio has the biggest weight?",
+  "b": "EBIT / total assets (x3.3): operating productivity of the assets."
+ },
+ {
+  "id": "altman-5",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "problem",
+  "f": "A 0.10, B 0.20, C 0.10, D 1.00, E 1.50. Z?",
+  "b": "2.83 (grey zone). 0.12 + 0.28 + 0.33 + 0.60 + 1.50."
+ },
+ {
+  "id": "altman-6",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "term",
+  "f": "Limits of the Z-score",
+  "b": "Built on 1960s US manufacturers; less reliable for banks, service and private firms (Z' and Z'' variants exist). A screen, not a verdict."
+ },
+ {
+  "id": "altman-7",
+  "topic": "altman",
+  "course": "acct",
+  "kind": "term",
+  "f": "Why retained earnings in Z",
+  "b": "It captures cumulative profitability and the firm's age: young firms with little RE score lower."
+ },
+ {
+  "id": "tenk-1",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "Form 10-K",
+  "b": "Annual report public US companies file with the SEC; free on EDGAR. 10-Q = quarterly report, 8-K = major-event report."
+ },
+ {
+  "id": "tenk-2",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "10-K Item 1",
+  "b": "Business: what the company does, its segments, customers and competition."
+ },
+ {
+  "id": "tenk-3",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "10-K Item 1A",
+  "b": "Risk factors."
+ },
+ {
+  "id": "tenk-4",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "10-K Item 7",
+  "b": "MD&A: management's discussion and analysis of results, liquidity and outlook."
+ },
+ {
+  "id": "tenk-5",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "10-K Item 8",
+  "b": "Financial statements and notes, with the auditor's report."
+ },
+ {
+  "id": "tenk-6",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "Notes to the financial statements",
+  "b": "Accounting policies, debt terms, leases, segments, contingencies. Often where the real story is."
+ },
+ {
+  "id": "tenk-7",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "Auditor's opinion types",
+  "b": "Unqualified (clean), qualified, adverse, disclaimer. Watch for a 'going concern' paragraph: serious doubt about survival."
+ },
+ {
+  "id": "tenk-8",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "Proxy statement (DEF 14A)",
+  "b": "Filed before the annual meeting: executive pay, board elections, shareholder proposals."
+ },
+ {
+  "id": "tenk-9",
+  "topic": "tenk",
+  "course": "acct",
+  "kind": "term",
+  "f": "Sarbanes-Oxley (SOX)",
+  "b": "2002 law: CEO/CFO certify the financials; internal-control requirements; tighter auditor independence."
+ },
+ {
+  "id": "cvp-1",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Contribution margin per unit",
+  "b": "Price - variable cost per unit."
+ },
+ {
+  "id": "cvp-2",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Contribution margin ratio",
+  "b": "Contribution margin / price (or total CM / sales)."
+ },
+ {
+  "id": "cvp-3",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Break-even units",
+  "b": "Fixed costs / contribution margin per unit."
+ },
+ {
+  "id": "cvp-4",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Break-even sales dollars",
+  "b": "Fixed costs / contribution margin ratio."
+ },
+ {
+  "id": "cvp-5",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Units for a target profit",
+  "b": "(Fixed costs + target profit) / contribution margin per unit."
+ },
+ {
+  "id": "cvp-6",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Price $50, variable cost $30, fixed costs $40k. Break-even units?",
+  "b": "2,000 units. 40,000 / 20."
+ },
+ {
+  "id": "cvp-7",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Same product: price $50, VC $30, FC $40k. Units to earn $20k profit?",
+  "b": "3,000 units. (40,000 + 20,000) / 20."
+ },
+ {
+  "id": "cvp-8",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Margin of safety",
+  "b": "(Actual or budgeted sales - break-even sales) / actual sales."
+ },
+ {
+  "id": "cvp-9",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Fixed costs $120k, CM ratio 40%. Break-even sales?",
+  "b": "$300k."
+ },
+ {
+  "id": "cvp-10",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "term",
+  "f": "Fixed vs variable cost",
+  "b": "Fixed: same total regardless of volume in the short run (rent). Variable: total rises with volume (materials)."
+ },
+ {
+  "id": "cvp-11",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "term",
+  "f": "Master budget",
+  "b": "Sales budget -> production -> purchases and expenses -> budgeted income statement, cash budget, balance sheet."
+ },
+ {
+  "id": "cvp-12",
+  "topic": "cvp",
+  "course": "acct",
+  "kind": "term",
+  "f": "Variance (budget vs actual)",
+  "b": "Favorable if actual profit beats budget (revenue higher or cost lower); unfavorable otherwise."
+ },
+ {
+  "id": "tvm-1",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Future value",
+  "b": "FV = PV x (1 + r)^n."
+ },
+ {
+  "id": "tvm-2",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "formula",
+  "f": "Present value",
+  "b": "PV = FV / (1 + r)^n."
+ },
+ {
+  "id": "tvm-3",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "problem",
+  "f": "$1,000 invested at 10% for 2 years. FV?",
+  "b": "$1,210."
+ },
+ {
+  "id": "tvm-4",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "problem",
+  "f": "PV of $1,210 received in 2 years at 10%?",
+  "b": "$1,000."
+ },
+ {
+  "id": "tvm-5",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "term",
+  "f": "Net present value (NPV)",
+  "b": "PV of future cash flows - initial investment. Accept if NPV > 0: it earns more than the cost of capital."
+ },
+ {
+  "id": "tvm-6",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "term",
+  "f": "Internal rate of return (IRR)",
+  "b": "The discount rate that makes NPV = 0. Accept if IRR > cost of capital (watch out for unusual cash-flow patterns)."
+ },
+ {
+  "id": "tvm-7",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "term",
+  "f": "Payback period",
+  "b": "Years to recover the initial investment. Simple, but ignores the time value of money and cash after payback."
+ },
+ {
+  "id": "tvm-8",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "formula",
+  "f": "PV of a perpetuity",
+  "b": "Annual cash flow / r. With growth: CF next year / (r - g)."
+ },
+ {
+  "id": "tvm-9",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Perpetuity paying $500 a year, r = 5%. PV?",
+  "b": "$10,000."
+ },
+ {
+  "id": "tvm-10",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "term",
+  "f": "Cost of capital (WACC)",
+  "b": "The weighted average return required by lenders and owners; the hurdle rate for investments."
+ },
+ {
+  "id": "tvm-11",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "problem",
+  "f": "Invest $100 today, get $115 in one year; cost of capital 10%. NPV?",
+  "b": "+$4.55. 115 / 1.10 - 100. Accept."
+ },
+ {
+  "id": "tvm-12",
+  "topic": "tvm",
+  "course": "acct",
+  "kind": "term",
+  "f": "Rule of 72",
+  "b": "Years to double ≈ 72 / interest rate in %. At 8%, about 9 years."
+ },
+ {
+  "id": "found-1",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Rational-actor paradigm (Froeb)",
+  "b": "Assume people act rationally, optimally and self-interestedly. To change behavior, change incentives."
+ },
+ {
+  "id": "found-2",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Froeb's problem-solving method",
+  "b": "Find the bad decision; ask who made it, did they have enough information, and the incentive to decide well? Fix information or incentives."
+ },
+ {
+  "id": "found-3",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Three ways to fix a bad decision (Froeb)",
+  "b": "Change (1) decision rights, (2) the information people have, or (3) incentives (evaluation and compensation)."
+ },
+ {
+  "id": "found-4",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Organizational design trio",
+  "b": "Decision rights + evaluation (performance measurement) + rewards. They should be aligned."
+ },
+ {
+  "id": "found-5",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Positive vs normative economics",
+  "b": "Positive: what is (testable). Normative: what ought to be (value judgment)."
+ },
+ {
+  "id": "found-6",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Efficiency in economics",
+  "b": "Resources go to their highest-valued use; all mutually beneficial trades happen."
+ },
+ {
+  "id": "found-7",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Voluntary trade creates wealth",
+  "b": "Assets move to people who value them more; both sides gain (buyer value > price > seller value)."
+ },
+ {
+  "id": "found-8",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Consumer surplus",
+  "b": "Value to the buyer - price paid."
+ },
+ {
+  "id": "found-9",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Producer (seller) surplus",
+  "b": "Price received - seller's cost (or value)."
+ },
+ {
+  "id": "found-10",
+  "topic": "found",
+  "course": "econ",
+  "kind": "term",
+  "f": "Ceteris paribus",
+  "b": "'Other things equal': change one variable and hold the rest constant."
+ },
+ {
+  "id": "oppcost-1",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "term",
+  "f": "Opportunity cost",
+  "b": "The value of the best alternative given up when you make a choice."
+ },
+ {
+  "id": "oppcost-2",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "term",
+  "f": "Explicit vs implicit cost",
+  "b": "Explicit: out-of-pocket payments. Implicit: forgone alternatives, like the owner's time or the return on capital."
+ },
+ {
+  "id": "oppcost-3",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Economic profit",
+  "b": "Revenue - explicit costs - implicit costs (including the opportunity cost of capital)."
+ },
+ {
+  "id": "oppcost-4",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Economic value added (EVA)",
+  "b": "NOPAT - (cost of capital x invested capital). Profit after charging for all capital used."
+ },
+ {
+  "id": "oppcost-5",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Accounting profit $100k; owner could earn $80k elsewhere; capital could earn $30k elsewhere. Economic profit?",
+  "b": "-$10k. 100 - 80 - 30. Accounting profit hides a loss."
+ },
+ {
+  "id": "oppcost-6",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "term",
+  "f": "Hidden-cost fallacy (Froeb)",
+  "b": "Ignoring the opportunity cost of assets you already own, e.g. treating owned capital as free."
+ },
+ {
+  "id": "oppcost-7",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "term",
+  "f": "Zero economic profit means...",
+  "b": "The firm earns exactly its opportunity cost: a normal return. Not 'no money'."
+ },
+ {
+  "id": "oppcost-8",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "problem",
+  "f": "You give up a $60k job to run a shop that earns $50k accounting profit. Good idea, purely financially?",
+  "b": "No. Economic profit is -$10k."
+ },
+ {
+  "id": "oppcost-9",
+  "topic": "oppcost",
+  "course": "econ",
+  "kind": "term",
+  "f": "Comparative advantage",
+  "b": "Doing what you give up least to do (lowest opportunity cost). Basis for specialization and trade."
+ },
+ {
+  "id": "marginal-1",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "term",
+  "f": "Marginal analysis",
+  "b": "Compare the extra benefit with the extra cost of one more unit. Do more while MB > MC."
+ },
+ {
+  "id": "marginal-2",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "term",
+  "f": "Extent decisions (Froeb)",
+  "b": "'How much' decisions: produce, advertise or hire until marginal benefit = marginal cost."
+ },
+ {
+  "id": "marginal-3",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Profit-maximizing rule",
+  "b": "Produce where marginal revenue (MR) = marginal cost (MC)."
+ },
+ {
+  "id": "marginal-4",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Marginal cost",
+  "b": "Change in total cost / change in quantity."
+ },
+ {
+  "id": "marginal-5",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Marginal revenue",
+  "b": "Change in total revenue / change in quantity."
+ },
+ {
+  "id": "marginal-6",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "term",
+  "f": "Average vs marginal",
+  "b": "Decisions should use marginal, not average, cost and benefit. Averages include fixed and sunk costs."
+ },
+ {
+  "id": "marginal-7",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "problem",
+  "f": "The next unit adds $40 of revenue and $35 of cost. Produce it?",
+  "b": "Yes. It adds $5 of profit."
+ },
+ {
+  "id": "marginal-8",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "problem",
+  "f": "TC(10) = $500, TC(11) = $560. MC of the 11th unit?",
+  "b": "$60."
+ },
+ {
+  "id": "marginal-9",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "term",
+  "f": "Diminishing marginal returns",
+  "b": "Adding more of one input to fixed others eventually adds less and less output."
+ },
+ {
+  "id": "marginal-10",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "term",
+  "f": "All-or-nothing bonus problem",
+  "b": "Agents respond to marginal incentives: a bonus paid only above a threshold gives no incentive once the threshold is safely met or out of reach."
+ },
+ {
+  "id": "marginal-11",
+  "topic": "marginal",
+  "course": "econ",
+  "kind": "term",
+  "f": "Shutdown rule (short run)",
+  "b": "Keep operating if price ≥ average variable cost (revenue covers variable costs); fixed costs are paid either way."
+ },
+ {
+  "id": "sunk-1",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Sunk cost",
+  "b": "A cost already incurred that can't be recovered. Irrelevant to forward-looking decisions."
+ },
+ {
+  "id": "sunk-2",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Sunk-cost fallacy",
+  "b": "Continuing a project because of what you've already spent, rather than on future costs and benefits."
+ },
+ {
+  "id": "sunk-3",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "problem",
+  "f": "$2M already spent; finishing costs $1M more and brings $1.5M. Finish?",
+  "b": "Yes. Future benefit 1.5 > future cost 1.0. The $2M is sunk."
+ },
+ {
+  "id": "sunk-4",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "problem",
+  "f": "$5M spent; finishing costs $3M; project returns $2M. Finish?",
+  "b": "No. 2 < 3, regardless of the $5M."
+ },
+ {
+  "id": "sunk-5",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Fixed vs sunk",
+  "b": "Fixed costs don't vary with output but may be avoidable (e.g. by shutting down). Sunk costs can't be avoided at all."
+ },
+ {
+  "id": "sunk-6",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Overhead allocation error",
+  "b": "Allocated fixed overhead does not change with the decision; including it can make profitable products look unprofitable."
+ },
+ {
+  "id": "sunk-7",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Relevant costs",
+  "b": "Costs that differ between the alternatives: future, avoidable costs, including opportunity costs."
+ },
+ {
+  "id": "sunk-8",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Three costly decision errors",
+  "b": "Ignoring hidden (opportunity) costs, letting sunk costs drive decisions, and using average instead of marginal analysis."
+ },
+ {
+  "id": "sunk-9",
+  "topic": "sunk",
+  "course": "econ",
+  "kind": "term",
+  "f": "Break-even price for an investment",
+  "b": "The price at which the project's NPV = 0, i.e. covers its avoidable cost per unit. Compare it with the expected price."
+ },
+ {
+  "id": "costs-1",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Fixed cost",
+  "b": "Doesn't change with output in the short run (rent, insurance)."
+ },
+ {
+  "id": "costs-2",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Variable cost",
+  "b": "Rises with output (materials, hourly labor)."
+ },
+ {
+  "id": "costs-3",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Average total cost",
+  "b": "Total cost / quantity = AFC + AVC."
+ },
+ {
+  "id": "costs-4",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Economies of scale",
+  "b": "Average cost falls as output rises (spreading fixed costs, specialization)."
+ },
+ {
+  "id": "costs-5",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Diseconomies of scale",
+  "b": "Average cost rises at large output (coordination and bureaucracy costs)."
+ },
+ {
+  "id": "costs-6",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Economies of scope",
+  "b": "Producing two products together is cheaper than producing them separately (shared assets, brand, distribution)."
+ },
+ {
+  "id": "costs-7",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Learning curve",
+  "b": "Average cost falls with cumulative output as workers and firms learn."
+ },
+ {
+  "id": "costs-8",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Minimum efficient scale",
+  "b": "The smallest output at which average cost is lowest. High MES relative to the market means few firms."
+ },
+ {
+  "id": "costs-9",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Short run vs long run",
+  "b": "Short run: at least one input fixed. Long run: all inputs variable, including plant size and entry or exit."
+ },
+ {
+  "id": "costs-10",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Fixed $10k, variable $5 a unit, 1,000 units. Average total cost?",
+  "b": "$15. (10,000 + 5,000) / 1,000."
+ },
+ {
+  "id": "costs-11",
+  "topic": "costs",
+  "course": "econ",
+  "kind": "term",
+  "f": "Make vs buy (vertical integration)",
+  "b": "Make when outsourcing would expose you to hold-up on specific investments; buy when the market is competitive and contracts are easy."
+ },
+ {
+  "id": "sd-1",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Law of demand",
+  "b": "Price up -> quantity demanded down, other things equal."
+ },
+ {
+  "id": "sd-2",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Law of supply",
+  "b": "Price up -> quantity supplied up."
+ },
+ {
+  "id": "sd-3",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Demand shifters",
+  "b": "Income, prices of substitutes and complements, tastes, expectations, number of buyers."
+ },
+ {
+  "id": "sd-4",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Supply shifters",
+  "b": "Input costs, technology, number of sellers, prices of other goods sellers could make, expectations."
+ },
+ {
+  "id": "sd-5",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Change in demand vs quantity demanded",
+  "b": "Change in demand: the whole curve shifts (a shifter changed). Change in quantity demanded: a move along the curve due to price."
+ },
+ {
+  "id": "sd-6",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Equilibrium",
+  "b": "Price where quantity demanded = quantity supplied."
+ },
+ {
+  "id": "sd-7",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Surplus and shortage",
+  "b": "Price above equilibrium -> surplus (excess supply); below -> shortage (excess demand)."
+ },
+ {
+  "id": "sd-8",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Substitutes vs complements",
+  "b": "Substitutes: the price of one up -> demand for the other up (coffee and tea). Complements: price up -> demand for the other down (printers and ink)."
+ },
+ {
+  "id": "sd-9",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Normal vs inferior good",
+  "b": "Normal: demand rises with income. Inferior: demand falls as income rises."
+ },
+ {
+  "id": "sd-10",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Demand Qd = 100 - 2P, supply Qs = 20 + 2P. Equilibrium price and quantity?",
+  "b": "P = 20, Q = 60."
+ },
+ {
+  "id": "sd-11",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Demand rises, supply unchanged",
+  "b": "Price up, quantity up."
+ },
+ {
+  "id": "sd-12",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Supply rises (cost falls), demand unchanged",
+  "b": "Price down, quantity up."
+ },
+ {
+  "id": "sd-13",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Price ceiling below equilibrium",
+  "b": "Shortage, queues, black markets (e.g. rent control)."
+ },
+ {
+  "id": "sd-14",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Price floor above equilibrium",
+  "b": "Surplus (e.g. minimum wage -> fewer jobs than workers seeking them, per the standard model)."
+ },
+ {
+  "id": "sd-15",
+  "topic": "sd",
+  "course": "econ",
+  "kind": "term",
+  "f": "Deadweight loss",
+  "b": "Total surplus lost when output differs from the efficient quantity (from taxes, price controls, market power)."
+ },
+ {
+  "id": "elasticity-1",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Price elasticity of demand",
+  "b": "% change in quantity demanded / % change in price."
+ },
+ {
+  "id": "elasticity-2",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "term",
+  "f": "Elastic vs inelastic",
+  "b": "|e| > 1 elastic (buyers sensitive); |e| < 1 inelastic; |e| = 1 unit elastic."
+ },
+ {
+  "id": "elasticity-3",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "term",
+  "f": "Elasticity and total revenue",
+  "b": "Elastic: raising price lowers revenue. Inelastic: raising price raises revenue. Revenue is maximized at unit elasticity."
+ },
+ {
+  "id": "elasticity-4",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "term",
+  "f": "Determinants of elasticity",
+  "b": "More substitutes, a bigger budget share, a longer time horizon, and narrowly defined goods -> more elastic."
+ },
+ {
+  "id": "elasticity-5",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Price up 10%, quantity down 25%. Elasticity, and what happens to revenue?",
+  "b": "|e| = 2.5, elastic; revenue falls."
+ },
+ {
+  "id": "elasticity-6",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Arc (midpoint) elasticity",
+  "b": "[(Q2 - Q1) / ((Q1 + Q2)/2)] / [(P2 - P1) / ((P1 + P2)/2)]."
+ },
+ {
+  "id": "elasticity-7",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Price $10 -> $12, quantity 100 -> 80. Midpoint elasticity?",
+  "b": "About -1.22. (-20/90) / (2/11) = -0.222 / 0.182."
+ },
+ {
+  "id": "elasticity-8",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Income elasticity",
+  "b": "% change in quantity / % change in income. Positive = normal good; negative = inferior; > 1 = luxury."
+ },
+ {
+  "id": "elasticity-9",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Cross-price elasticity",
+  "b": "% change in quantity of A / % change in price of B. Positive = substitutes; negative = complements."
+ },
+ {
+  "id": "elasticity-10",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Optimal markup rule",
+  "b": "(P - MC) / P = 1 / |e|. Less elastic demand -> higher markup."
+ },
+ {
+  "id": "elasticity-11",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "problem",
+  "f": "MC $60, demand elasticity -3. Profit-maximizing price?",
+  "b": "$90. (P - 60)/P = 1/3, so P = 90."
+ },
+ {
+  "id": "elasticity-12",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "term",
+  "f": "Firm vs industry elasticity",
+  "b": "A single brand's demand is more elastic than the industry's, because other brands are close substitutes."
+ },
+ {
+  "id": "elasticity-13",
+  "topic": "elasticity",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Quick % change in quantity",
+  "b": "% change in Q ≈ elasticity x % change in P. E.g. e = -2, price +5% -> quantity -10%."
+ },
+ {
+  "id": "structures-1",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Perfect competition",
+  "b": "Many firms, identical products, free entry: price takers; long-run economic profit = 0; P = MC."
+ },
+ {
+  "id": "structures-2",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Monopolistic competition",
+  "b": "Many firms, differentiated products, free entry: some pricing power, but long-run economic profit tends to zero."
+ },
+ {
+  "id": "structures-3",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Oligopoly",
+  "b": "A few interdependent firms; strategic behavior (game theory); barriers to entry."
+ },
+ {
+  "id": "structures-4",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Monopoly",
+  "b": "A single seller with high entry barriers; sets MR = MC; price > MC; deadweight loss."
+ },
+ {
+  "id": "structures-5",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Barriers to entry",
+  "b": "Economies of scale, patents, licenses, control of key inputs, network effects, switching costs, brand."
+ },
+ {
+  "id": "structures-6",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Long-run entry and exit",
+  "b": "Profits attract entry and push price toward average cost; losses cause exit. Above-normal profit erodes without a sustainable advantage."
+ },
+ {
+  "id": "structures-7",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Sustainable competitive advantage",
+  "b": "Earning above-average profit long term requires something rivals can't easily copy: cost advantage, differentiation, or barriers."
+ },
+ {
+  "id": "structures-8",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Porter's Five Forces",
+  "b": "Rivalry, threat of entry, threat of substitutes, buyer power, supplier power."
+ },
+ {
+  "id": "structures-9",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Herfindahl-Hirschman Index (HHI)",
+  "b": "Sum of squared market shares (%). Under the 2023 US merger guidelines, over 1,800 = highly concentrated (the 2010 guidelines used 2,500)."
+ },
+ {
+  "id": "structures-10",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Four firms with shares 40, 30, 20, 10%. HHI?",
+  "b": "3,000. 1600 + 900 + 400 + 100."
+ },
+ {
+  "id": "structures-11",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Indifference principle (Froeb)",
+  "b": "If assets or workers are mobile, in equilibrium all uses must be equally attractive: differences get bid away (compensating wage differentials, house prices)."
+ },
+ {
+  "id": "structures-12",
+  "topic": "structures",
+  "course": "econ",
+  "kind": "term",
+  "f": "Natural monopoly",
+  "b": "One firm can supply the market at lower cost than several, because of huge fixed costs (utilities). Often regulated."
+ },
+ {
+  "id": "pricing-1",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Monopoly pricing",
+  "b": "Pick the quantity where MR = MC, then charge the highest price demand allows for that quantity."
+ },
+ {
+  "id": "pricing-2",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Problem with cost-plus pricing",
+  "b": "It ignores demand (elasticity) and often uses average rather than marginal cost."
+ },
+ {
+  "id": "pricing-3",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Price discrimination",
+  "b": "Charging different prices to different customers for the same good, based on willingness to pay rather than cost."
+ },
+ {
+  "id": "pricing-4",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "First-degree price discrimination",
+  "b": "Each customer pays their own maximum willingness to pay (perfect discrimination)."
+ },
+ {
+  "id": "pricing-5",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Second-degree price discrimination",
+  "b": "Indirect: customers self-select via menus such as volume discounts, versions or quality tiers."
+ },
+ {
+  "id": "pricing-6",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Third-degree price discrimination",
+  "b": "Direct: different prices for identifiable groups (students, seniors, regions). Charge more to the less elastic group."
+ },
+ {
+  "id": "pricing-7",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Conditions for price discrimination",
+  "b": "Market power, ability to identify or sort customers, and preventing resale (arbitrage)."
+ },
+ {
+  "id": "pricing-8",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Bundling",
+  "b": "Selling goods together; profitable when customers' valuations are negatively correlated."
+ },
+ {
+  "id": "pricing-9",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "problem",
+  "f": "A values Word $100, Excel $40; B values Word $40, Excel $100. Zero marginal cost. Best separate prices vs a bundle?",
+  "b": "Separate: $100 each sells one of each = $200 (beats $40 each = $160). Bundle at $140 sells to both = $280."
+ },
+ {
+  "id": "pricing-10",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Two-part tariff",
+  "b": "An entry fee plus a per-unit price (gym membership plus fees, Costco). Set the unit price near MC and capture surplus with the fee."
+ },
+ {
+  "id": "pricing-11",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Versioning",
+  "b": "Offering a 'damaged' or premium version so customers sort themselves by willingness to pay."
+ },
+ {
+  "id": "pricing-12",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Peak-load pricing",
+  "b": "Charging more when demand is high and capacity is tight (airlines, electricity, ride-share surge)."
+ },
+ {
+  "id": "pricing-13",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Adults: elasticity -2; students: -4. MC $10. Prices with the markup rule?",
+  "b": "Adults $20 ((P-10)/P = 1/2); students $13.33 ((P-10)/P = 1/4)."
+ },
+ {
+  "id": "pricing-14",
+  "topic": "pricing",
+  "course": "econ",
+  "kind": "term",
+  "f": "Penetration vs skimming",
+  "b": "Penetration: a low entry price to win share and scale. Skimming: start high for eager buyers, then cut the price."
+ },
+ {
+  "id": "game-1",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Game theory",
+  "b": "Analysis of strategic decisions where your payoff depends on others' choices."
+ },
+ {
+  "id": "game-2",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Dominant strategy",
+  "b": "Best for you whatever the other player does."
+ },
+ {
+  "id": "game-3",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Nash equilibrium",
+  "b": "A set of strategies where no player can gain by changing strategy alone."
+ },
+ {
+  "id": "game-4",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Prisoner's dilemma",
+  "b": "Each player's dominant strategy (defect) leads to an outcome worse for both than cooperating. E.g. price wars, ad wars."
+ },
+ {
+  "id": "game-5",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Escaping the prisoner's dilemma",
+  "b": "Repeated play (tit-for-tat), contracts, mergers, meet-the-competition clauses (with legal limits on collusion)."
+ },
+ {
+  "id": "game-6",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Sequential game",
+  "b": "Players move in turn; solve by backward induction from the last move."
+ },
+ {
+  "id": "game-7",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Credible commitment",
+  "b": "A threat or promise that is believable because carrying it out is in your interest, or because you have tied your hands."
+ },
+ {
+  "id": "game-8",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "First-mover advantage",
+  "b": "Moving first can lock in an outcome (capacity, standards), if the commitment is credible and irreversible."
+ },
+ {
+  "id": "game-9",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Bargaining power",
+  "b": "Set by each side's alternative to agreement (BATNA). Improve your alternative or worsen theirs to win a bigger share."
+ },
+ {
+  "id": "game-10",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "BATNA",
+  "b": "Best alternative to a negotiated agreement. Never accept a deal worse than it."
+ },
+ {
+  "id": "game-11",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Bargaining range (ZOPA)",
+  "b": "Between the seller's minimum (reservation price) and the buyer's maximum. A deal is possible only if buyer max > seller min."
+ },
+ {
+  "id": "game-12",
+  "topic": "game",
+  "course": "econ",
+  "kind": "problem",
+  "f": "Payoffs (You, Rival): both High (10,10); you High/they Low (2,14); you Low/they High (14,2); both Low (5,5). Equilibrium?",
+  "b": "Both Low (5,5). Low is dominant for each (14 > 10, 5 > 2): a prisoner's dilemma."
+ },
+ {
+  "id": "game-13",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Mixed strategy",
+  "b": "Randomizing between choices so opponents can't predict you (penalty kicks, audits)."
+ },
+ {
+  "id": "game-14",
+  "topic": "game",
+  "course": "econ",
+  "kind": "term",
+  "f": "Hold-up problem",
+  "b": "After one party makes a relationship-specific investment, the other can renegotiate to grab its value. Solved by contracts or integration."
+ },
+ {
+  "id": "uncert-1",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "formula",
+  "f": "Expected value",
+  "b": "Sum of (probability x payoff) over the outcomes."
+ },
+ {
+  "id": "uncert-2",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "problem",
+  "f": "60% chance of +$100k, 40% chance of -$50k. Expected value?",
+  "b": "+$40k. 60 - 20."
+ },
+ {
+  "id": "uncert-3",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Risk aversion",
+  "b": "Preferring a sure amount to a gamble with the same expected value; willing to pay to reduce risk (insurance)."
+ },
+ {
+  "id": "uncert-4",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Value of information",
+  "b": "Expected value with the information - expected value without it. Never pay more than this."
+ },
+ {
+  "id": "uncert-5",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Oral (English) auction",
+  "b": "Ascending bids; the winner pays about the second-highest value. Bidding up to your value is optimal."
+ },
+ {
+  "id": "uncert-6",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Sealed-bid first-price auction",
+  "b": "Highest bid wins and pays its own bid, so bidders shade bids below their value."
+ },
+ {
+  "id": "uncert-7",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Second-price (Vickrey) auction",
+  "b": "Highest bid wins and pays the second-highest bid. Bidding your true value is a dominant strategy."
+ },
+ {
+  "id": "uncert-8",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Winner's curse",
+  "b": "In common-value auctions the winner is likely the one who overestimated the value most. Bid below your estimate."
+ },
+ {
+  "id": "uncert-9",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Revenue equivalence",
+  "b": "Under standard assumptions (risk-neutral, independent private values), the common auction formats yield the same expected revenue."
+ },
+ {
+  "id": "uncert-10",
+  "topic": "uncert",
+  "course": "econ",
+  "kind": "term",
+  "f": "Decision tree",
+  "b": "Map choices and chance events, attach probabilities and payoffs, then work backward picking the best expected value."
+ },
+ {
+  "id": "asymmetric-1",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Asymmetric information",
+  "b": "One party to a deal knows more than the other."
+ },
+ {
+  "id": "asymmetric-2",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Adverse selection",
+  "b": "Hidden information BEFORE the deal: the worst types are most eager to participate (lemons, high-risk insurance buyers)."
+ },
+ {
+  "id": "asymmetric-3",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Moral hazard",
+  "b": "Hidden action AFTER the deal: behavior changes because someone else bears the cost (insured drivers take less care)."
+ },
+ {
+  "id": "asymmetric-4",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Market for lemons (Akerlof)",
+  "b": "Buyers can't tell quality, so they pay average prices; good cars exit; the market can unravel."
+ },
+ {
+  "id": "asymmetric-5",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Signaling",
+  "b": "The informed party credibly reveals its type with a costly action that low types can't afford to copy (warranties, degrees)."
+ },
+ {
+  "id": "asymmetric-6",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Screening",
+  "b": "The uninformed party designs choices so types sort themselves (deductible menus, probation periods)."
+ },
+ {
+  "id": "asymmetric-7",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Fixes for adverse selection",
+  "b": "Screening, signaling, warranties, reputation, third-party certification, mandatory pooling (e.g. insurance mandates)."
+ },
+ {
+  "id": "asymmetric-8",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Fixes for moral hazard",
+  "b": "Monitoring, deductibles and co-pays, performance-based pay, bonding, reputation."
+ },
+ {
+  "id": "asymmetric-9",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Example: deductible",
+  "b": "Reduces moral hazard (the insured bears part of the loss) and screens for risk (low-risk people pick high deductibles)."
+ },
+ {
+  "id": "asymmetric-10",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Example: warranty",
+  "b": "A signal of quality: a maker of a bad product can't afford to offer a long warranty."
+ },
+ {
+  "id": "asymmetric-11",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Adverse selection or moral hazard? A bank's riskiest applicants most want loans",
+  "b": "Adverse selection (hidden type before the deal)."
+ },
+ {
+  "id": "asymmetric-12",
+  "topic": "asymmetric",
+  "course": "econ",
+  "kind": "term",
+  "f": "Adverse selection or moral hazard? A borrower takes bigger risks after getting the loan",
+  "b": "Moral hazard (hidden action after the deal)."
+ },
+ {
+  "id": "incentives-1",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Principal-agent problem",
+  "b": "An agent (employee, manager) acting for a principal (owner) has different goals and better information."
+ },
+ {
+  "id": "incentives-2",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Incentive-pay trade-off",
+  "b": "Stronger performance pay improves effort but loads risk on the agent, who must be paid more to bear it."
+ },
+ {
+  "id": "incentives-3",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Pay on revenue vs profit",
+  "b": "Revenue pay pushes sales staff to cut price and chase volume; profit or margin pay aligns with owners."
+ },
+ {
+  "id": "incentives-4",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Fixed salary vs commission",
+  "b": "Salary: low risk, weak effort incentive (needs monitoring). Commission: strong incentive, more risk, can encourage gaming."
+ },
+ {
+  "id": "incentives-5",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Gaming performance metrics",
+  "b": "People optimize the measure, not the goal (Goodhart's law). Use multiple, hard-to-manipulate measures."
+ },
+ {
+  "id": "incentives-6",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Relative performance evaluation",
+  "b": "Pay based on performance relative to peers, filtering out common shocks (tournaments, rankings)."
+ },
+ {
+  "id": "incentives-7",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Stock options for CEOs",
+  "b": "Align managers with shareholders, but can encourage short-termism or excessive risk-taking."
+ },
+ {
+  "id": "incentives-8",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Centralization vs decentralization",
+  "b": "Centralize when coordination matters and information is easy to send up; decentralize when local knowledge matters."
+ },
+ {
+  "id": "incentives-9",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Transfer pricing",
+  "b": "The price one division charges another. Setting it at marginal or opportunity cost avoids distorting internal decisions."
+ },
+ {
+  "id": "incentives-10",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Profit center vs cost center",
+  "b": "Profit center: judged on profit. Cost center: judged on meeting output at minimum cost. The metric drives behavior."
+ },
+ {
+  "id": "incentives-11",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Efficiency wage",
+  "b": "Paying above market to boost effort and loyalty and cut turnover: the job becomes costly to lose."
+ },
+ {
+  "id": "incentives-12",
+  "topic": "incentives",
+  "course": "econ",
+  "kind": "term",
+  "f": "Multitask problem",
+  "b": "Rewarding only measurable tasks causes neglect of unmeasured ones (quality, teamwork)."
+ },
+ {
+  "id": "failure-1",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Externality",
+  "b": "A cost or benefit falling on third parties outside the transaction."
+ },
+ {
+  "id": "failure-2",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Negative externality result",
+  "b": "The market overproduces (pollution). Fixes: Pigouvian tax, cap-and-trade, regulation."
+ },
+ {
+  "id": "failure-3",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Positive externality result",
+  "b": "The market underproduces (vaccines, R&D). Fixes: subsidies, patents."
+ },
+ {
+  "id": "failure-4",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Public good",
+  "b": "Non-rival and non-excludable (national defense). Free riders lead to underprovision."
+ },
+ {
+  "id": "failure-5",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Free-rider problem",
+  "b": "People benefit without paying, so voluntary provision falls short."
+ },
+ {
+  "id": "failure-6",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Coase theorem",
+  "b": "With clear property rights and low transaction costs, private bargaining reaches the efficient outcome regardless of who holds the rights."
+ },
+ {
+  "id": "failure-7",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Tragedy of the commons",
+  "b": "Shared resources with open access get overused (overfishing)."
+ },
+ {
+  "id": "failure-8",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Antitrust (Sherman Act)",
+  "b": "Bans price-fixing and monopolization; mergers are reviewed (Clayton Act) for reducing competition."
+ },
+ {
+  "id": "failure-9",
+  "topic": "failure",
+  "course": "econ",
+  "kind": "term",
+  "f": "Exchange rates and trade",
+  "b": "A stronger dollar makes imports cheaper and US exports less competitive."
+ }
+]

@@ -1,4 +1,5 @@
 """v4.1: desktop Read mode auto-hides the top rows (header, status, tabs, Read/Listen toggle). Run: python3 tests/e2e_v41.py"""
+import re
 import os, sys
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -18,7 +19,7 @@ with sync_playwright() as p:
         ctx.add_init_script(FAKE_REC); ctx.add_init_script(PRESET)
         pg = ctx.new_page(); pg.errs = []; pg.on("pageerror", lambda e: pg.errs.append(str(e))); pg.goto(URL); pg.wait_for_timeout(500); return ctx, pg
     ctx, pg = newpage(1366, 700)   # small laptop
-    check("v4.x label", "v4." in pg.inner_text("#ver"))
+    check("v4.x label", re.match(r"v[45]\.", pg.inner_text("#ver")) is not None)
     check("Listen mode: top rows visible, not immersive", not pg.evaluate("document.body.classList.contains('immersive')") and pg.is_visible(".top") and pg.is_visible(".tabs"))
     pg.mouse.move(700, 400)
     art_listen_y = pg.locator("#lessonCard").bounding_box()["y"]

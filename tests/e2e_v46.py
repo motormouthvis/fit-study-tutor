@@ -45,7 +45,7 @@ with sync_playwright() as p:
         pg = ctx.new_page(); pg.errs = []; pg.on("pageerror", lambda e: pg.errs.append(str(e)));  pg.goto(URL); pg.wait_for_timeout(500); return ctx, pg
     # ---------- coming soon (no Worker address yet) ----------
     ctx, pg = newpage(1440, 900, ask="")
-    check("v4.6+ label", pg.inner_text("#ver").startswith("v4."))
+    check("v4.6+ label", pg.inner_text("#ver")[:2] in ("v4", "v5"))
     pg.click("[data-view=read]"); pg.mouse.move(700, 500); pg.wait_for_timeout(900)
     n = pg.evaluate("document.querySelectorAll('#rText p').length"); q = pg.evaluate("document.querySelectorAll('#rText p > .askq').length")
     check("Read mode: a circled ? on every part", n > 0 and q == n, (n, q))

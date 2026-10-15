@@ -1,8 +1,8 @@
 /* Offline cache. v2: app files are network-first (so updates arrive quickly); audio clips are cached on demand
    in a separate cache that survives version bumps. Bump VERSION whenever any app file changes. */
-var VERSION = "study-tutor-v4.9";
+var VERSION = "study-tutor-v5.0";
 var AUDIO_CACHE = "study-tutor-audio-v1";
-var FILES = ["./", "index.html", "style.css", "app.js", "engine.js", "questions.js", "lessons-data.js", "statements.js", "flashcards.js", "ask-config.js", "audio-manifest.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
+var FILES = ["./", "index.html", "style.css", "app.js", "engine.js", "questions.js", "lessons-data.js", "statements.js", "cards-v50.js", "flashcards.js", "ask-config.js", "audio-manifest.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) {
     return Promise.all(FILES.map(function (f) { return c.add(new Request(f, { cache: "reload" })); }));

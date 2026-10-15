@@ -88,3 +88,7 @@ Saved cards are "My cards" (AI badge), kept in localStorage (`tutor.v1.mycards`)
 ☰ → **Export my cards / Import my cards** saves and restores them as `my-flash-cards.json`.
 The Worker has JSON modes `kind: improve | expand | create` (same model, caps and rate limits); the app validates the JSON again and falls back to a friendly message on bad output.
 Statement Analysis cards have no Improve (their numbers are generated and checked). Test: `python3 tests/e2e_v49.py`.
+
+## v5.0 — clearer flash cards
+All 331 course cards re-worded (ids unchanged, so scores, Restudy marks and your improved cards carry over). Every front now says exactly what to produce ("Define: prepaid expense, ... then give the journal entries ...", "Cash ratio: write the formula and say what a high vs low number tells you", "Calculate: ...", "Compare: ..."); every back is a labeled model answer (Definition / Formula / Example entry / Example / What it tells you / Answer / Working). Accounting term cards include a tiny balanced example journal entry. Statement Analysis prompts now say what to calculate and to say what it tells you.
+Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept in `tests/cards-v4-originals.json`, and a unit test checks that every original number survived and every example entry balances. Test: `python3 tests/e2e_v50.py`.

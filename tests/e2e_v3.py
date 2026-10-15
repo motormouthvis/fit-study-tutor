@@ -47,7 +47,7 @@ with sync_playwright() as p:
     check("menu (idle) has log, settings, help, test sound, restart mic, gym, about", all(pg.is_visible(s) for s in ["[data-goto=log]", "[data-goto=settings]", "[data-goto=help]", "#btnTestSound2", "#btnMicRetry", "#btnGym", "[data-goto=help-about]"]))
     check("menu hides lesson/quiz items when idle", not pg.is_visible("#menu [data-ui=prev]") and not pg.is_visible("#menu [data-ui=stop]"))
     pg.click("#menuClose")
-    goto(pg, "help-about"); check("About shows diagnostics line", pg.is_visible("#dbgLine") and "v4" in dbg(pg))
+    goto(pg, "help-about"); check("About shows diagnostics line", pg.is_visible("#dbgLine") and ("v4" in dbg(pg) or "v5" in dbg(pg)))
     pg.click(".panel.active [data-back]"); check("Back returns to Learn", pg.is_visible("#btnPlay"))
     goto(pg, "log"); check("Log reachable from menu", pg.is_visible("#btnCsv")); pg.click(".panel.active [data-back]")
     goto(pg, "settings"); check("Settings reachable from menu", pg.is_visible("#setKeyword")); pg.click(".panel.active [data-back]")

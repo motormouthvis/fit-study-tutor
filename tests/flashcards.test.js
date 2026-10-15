@@ -70,8 +70,9 @@ test("statement deck mixes healthy and distressed firms across industries", () =
   for (const m of ["current", "quick", "wc", "de", "roa", "roe", "gm", "nm"]) assert.ok(F.SA.filter(c => c.metric === m).length >= 3, m);
 });
 test("hand-checked formula answers", () => {
-  const find = s => F.CARDS.find(c => c.f.includes(s)).b;
-  assert.match(find("A 0.10, B 0.20"), /^2\.83/); assert.ok(Math.abs(1.2*.1 + 1.4*.2 + 3.3*.1 + .6*1 + 1.5 - 2.83) < 1e-9);
+  const orig = JSON.parse(require("fs").readFileSync(__dirname + "/cards-v4-originals.json", "utf8"));
+  const find = s => { const o = orig.find(x => x.f.includes(s)); assert.ok(o, s); return F.CARDS.find(c => c.id === o.id).b; };
+  assert.match(find("A 0.10, B 0.20"), /Answer: 2\.83/); assert.ok(Math.abs(1.2*.1 + 1.4*.2 + 3.3*.1 + .6*1 + 1.5 - 2.83) < 1e-9);
   assert.match(find("10 units at $5, then 10 at $7. Sold 12. COGS under FIFO"), /\$64/);
   assert.match(find("COGS under LIFO"), /\$80/);
   assert.match(find("MC $60, demand elasticity -3"), /\$90/); assert.ok(Math.abs((90 - 60) / 90 - 1 / 3) < 1e-9);
@@ -150,4 +151,35 @@ test("setUser: custom cards join ALL (filters, stats, queue), improved cards ove
 test("setUser never lets an override touch a Statement Analysis card", () => {
   const sa = F.SA[0]; F.setUser({ over: { [sa.id]: { f: "x", b: "y" } } });
   assert.equal(F.ALL.find(c => c.id === sa.id).kind, "statement"); assert.ok(!F.ALL.find(c => c.id === sa.id).improved); F.setUser({});
+});
+
+// ---- v5.0: every course card says exactly what to produce ----
+test("v5.0: all 331 course cards are re-worded: task-label fronts, labeled backs, ids unchanged", () => {
+  const R = require("../cards-v50.js"), TASK = /^(Define|Formula|Explain in one sentence|Explain|Calculate|Compare|List|Give an example|State|Describe|Apply|Decide|Interpret|Write the journal entry):|^[A-Za-z][^:]{2,60}: (write|state|give|say|define|explain|list)/;
+  assert.equal(F.CARDS.length, 331); assert.equal(Object.keys(R).length, 331);
+  for (const c of F.CARDS) {
+    assert.ok(R[c.id], "no rewrite for " + c.id);
+    assert.ok(TASK.test(c.f), "front does not state the task: " + c.id + " " + c.f);
+    assert.ok(c.f.length > 20 && c.f.length <= 260, "front length " + c.id);
+    assert.ok(/^[A-Z][A-Za-z' ]+:/.test(c.b), "back is not labeled: " + c.id + " " + c.b.slice(0, 40));
+    assert.ok(c.b.length <= 900, "back too long " + c.id);
+    assert.ok(!/[*#`]/.test(c.f + c.b), "markdown in " + c.id);
+  }
+});
+test("v5.0: journal entries in the cards balance (Dr total = Cr total)", () => {
+  let n = 0;
+  for (const c of F.CARDS) for (const sent of c.b.split(/(?<=[a-z0-9\)])\.\s+|\n/)) {
+    const items = [...sent.matchAll(/\b(Dr|Cr)\b[^/;]*?\s(\d[\d,]*(?:\.\d+)?)\s*(?=\/|$|\.|;|,|\))/g)];
+    if (!items.length) continue; n++;
+    const sum = t => items.filter(m => m[1] === t).reduce((a, m) => a + parseFloat(m[2].replace(/,/g, "")), 0);
+    assert.ok(sum("Dr") > 0 && Math.abs(sum("Dr") - sum("Cr")) < 0.01, c.id + " unbalanced: " + sent);
+  }
+  assert.ok(n >= 20, "expected 20+ example entries, found " + n);
+});
+test("v5.0: numbers from the original cards are all still there (facts kept)", () => {
+  const orig = JSON.parse(require("fs").readFileSync(__dirname + "/cards-v4-originals.json", "utf8")), nums = t => new Set((t.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(x => x.replace(/,/g, "")));
+  for (const o of orig) { const c = F.CARDS.find(x => x.id === o.id), have = nums(c.f + " " + c.b); for (const n of nums(o.f + " " + o.b)) if (n !== "0" && n !== "1") assert.ok(have.has(n), o.id + " lost number " + n); }
+});
+test("v5.0: Statement Analysis prompts say what to calculate", () => {
+  for (const c of F.SA) assert.ok(/^Calculate .* from the (balance sheet|income statement|statements) below, then say what it tells you/.test(c.q), c.q);
 });

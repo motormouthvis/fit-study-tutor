@@ -420,23 +420,23 @@
   }
   function band(v, lo, hi, a, b, d) { return v < lo ? a : v < hi ? b : d; }
   var SAQ = {
-    current: function (c) { var v = c.ca / c.cl; return { q: "Current ratio?", val: v, a: r2(v).toFixed(2) + "x", w: "Current assets / current liabilities = " + c.ca + " / " + c.cl + " = " + r2(v).toFixed(2) + ".",
+    current: function (c) { var v = c.ca / c.cl; return { q: "Calculate the current ratio (current assets / current liabilities) from the balance sheet below, then say what it tells you about this company.", val: v, a: r2(v).toFixed(2) + "x", w: "Current assets / current liabilities = " + c.ca + " / " + c.cl + " = " + r2(v).toFixed(2) + ".",
       i: band(v, 1, 1.5, "Below 1: current liabilities exceed current assets. A liquidity warning; it may struggle to pay bills due this year.", "Thin cushion: it can cover this year's bills, with little room for surprises.", "Comfortable: about $" + r2(v).toFixed(2) + " of current assets for every $1 due within a year.") + (c.industry === "grocery" ? " Grocers often run low ratios because inventory sells fast and suppliers are paid later." : "") }; },
-    quick: function (c) { var q = c.cash + c.ar, v = q / c.cl; return { q: "Quick ratio, (cash + receivables) / current liabilities?", val: v, a: r2(v).toFixed(2) + "x", w: "(" + c.cash + " + " + c.ar + ") / " + c.cl + " = " + q + " / " + c.cl + " = " + r2(v).toFixed(2) + ".",
+    quick: function (c) { var q = c.cash + c.ar, v = q / c.cl; return { q: "Calculate the quick ratio ((cash + receivables) / current liabilities) from the balance sheet below, then say what it tells you about this company.", val: v, a: r2(v).toFixed(2) + "x", w: "(" + c.cash + " + " + c.ar + ") / " + c.cl + " = " + q + " / " + c.cl + " = " + r2(v).toFixed(2) + ".",
       i: band(v, 0.5, 1, "Very low: without selling inventory it covers well under half its near-term bills.", "Below 1: it relies on selling inventory to pay current liabilities.", "1 or more: it can pay near-term bills without selling any inventory.") + (c.inv > c.ca * 0.5 ? " Inventory is over half of current assets, so the quick ratio is far below the current ratio." : "") }; },
-    wc: function (c) { var v = c.ca - c.cl; return { q: "Working capital?", val: v, a: k(v), w: "Current assets - current liabilities = " + c.ca + " - " + c.cl + " = " + v + ".",
+    wc: function (c) { var v = c.ca - c.cl; return { q: "Calculate working capital (current assets - current liabilities) from the balance sheet below, then say what it tells you about this company.", val: v, a: k(v), w: "Current assets - current liabilities = " + c.ca + " - " + c.cl + " = " + v + ".",
       i: v < 0 ? "Negative: short-term obligations exceed short-term assets. It needs operating cash, new borrowing or asset sales to stay current." : "Positive: a " + k(v) + " cushion of short-term assets over short-term obligations." }; },
-    de: function (c) { var v = c.tl / c.eq; return { q: "Debt-to-equity (total liabilities / equity)?", val: v, a: r2(v).toFixed(2) + "x", w: "Total liabilities / equity = " + c.tl + " / " + c.eq + " = " + r2(v).toFixed(2) + ".",
+    de: function (c) { var v = c.tl / c.eq; return { q: "Calculate debt-to-equity (total liabilities / equity) from the balance sheet below, then say what it tells you about this company.", val: v, a: r2(v).toFixed(2) + "x", w: "Total liabilities / equity = " + c.tl + " / " + c.eq + " = " + r2(v).toFixed(2) + ".",
       i: band(v, 1, 2, "Conservative: owners fund more of the assets than creditors do.", "Moderate: creditors fund more than owners. Normal in many industries, but watch interest coverage.", "Highly leveraged: $" + r2(v).toFixed(2) + " of liabilities per $1 of equity. Little cushion if profits fall.") }; },
-    roa: function (c) { var v = c.ni / c.ta * 100; return { q: "Return on assets (net income / total assets)?", val: v, a: r1(v).toFixed(1) + "%", w: "Net income / total assets = " + c.ni + " / " + c.ta + " = " + r1(v).toFixed(1) + "%.",
+    roa: function (c) { var v = c.ni / c.ta * 100; return { q: "Calculate return on assets (net income / total assets) from the statements below, then say what it tells you about this company.", val: v, a: r1(v).toFixed(1) + "%", w: "Net income / total assets = " + c.ni + " / " + c.ta + " = " + r1(v).toFixed(1) + "%.",
       i: v < 0 ? "Negative: the assets are losing money." : band(v, 3, 8, "Low: the asset base earns little.", "Moderate return on the asset base.", "Strong: the assets earn a high return.") }; },
-    roe: function (c) { var v = c.ni / c.eq * 100; return { q: "Return on equity (net income / equity)?", val: v, a: r1(v).toFixed(1) + "%", w: "Net income / equity = " + c.ni + " / " + c.eq + " = " + r1(v).toFixed(1) + "%.",
+    roe: function (c) { var v = c.ni / c.eq * 100; return { q: "Calculate return on equity (net income / equity) from the statements below, then say what it tells you about this company.", val: v, a: r1(v).toFixed(1) + "%", w: "Net income / equity = " + c.ni + " / " + c.eq + " = " + r1(v).toFixed(1) + "%.",
       i: v < 0 ? "Negative: the owners' stake shrank this year." : (c.tl / c.eq > 2 ? "Flattered by leverage: equity is small (D/E " + r2(c.tl / c.eq).toFixed(2) + "), so debt, not just operations, lifts ROE." : band(v, 8, 15, "Below a typical cost of equity (~10%): weak for the owners.", "Reasonable return for the owners.", "Strong return for the owners.")) }; },
-    gm: function (c) { var v = c.gp / c.rev * 100; return { q: "Gross margin?", val: v, a: r1(v).toFixed(1) + "%", w: "Gross profit / revenue = " + c.gp + " / " + c.rev + " = " + r1(v).toFixed(1) + "%.",
+    gm: function (c) { var v = c.gp / c.rev * 100; return { q: "Calculate gross margin (gross profit / revenue) from the income statement below, then say what it tells you about this company.", val: v, a: r1(v).toFixed(1) + "%", w: "Gross profit / revenue = " + c.gp + " / " + c.rev + " = " + r1(v).toFixed(1) + "%.",
       i: "Keeps " + Math.round(v) + " cents of each sales dollar after product costs. " + (v > 60 ? "Very high: typical of software or services with low direct costs." : v < 26 ? "Thin: typical of grocery, wholesale or commodity businesses; volume matters." : "Mid-range; compare with industry peers.") }; },
-    nm: function (c) { var v = c.ni / c.rev * 100; return { q: "Net profit margin?", val: v, a: r1(v).toFixed(1) + "%", w: "Net income / revenue = " + c.ni + " / " + c.rev + " = " + r1(v).toFixed(1) + "%.",
+    nm: function (c) { var v = c.ni / c.rev * 100; return { q: "Calculate net profit margin (net income / revenue) from the income statement below, then say what it tells you about this company.", val: v, a: r1(v).toFixed(1) + "%", w: "Net income / revenue = " + c.ni + " / " + c.rev + " = " + r1(v).toFixed(1) + "%.",
       i: v < 0 ? "Losing money: costs and interest exceed revenue." : band(v, 3, 10, "Thin: little room for cost increases.", "Healthy for most industries.", "High: strong pricing power or low costs.") }; },
-    tie: function (c) { var v = c.ebit / c.int; return { q: "Interest coverage (EBIT / interest)?", val: v, a: r1(v).toFixed(1) + "x", w: "EBIT / interest = " + c.ebit + " / " + c.int + " = " + r1(v).toFixed(1) + ".",
+    tie: function (c) { var v = c.ebit / c.int; return { q: "Calculate interest coverage (EBIT / interest expense) from the income statement below, then say what it tells you about this company.", val: v, a: r1(v).toFixed(1) + "x", w: "EBIT / interest = " + c.ebit + " / " + c.int + " = " + r1(v).toFixed(1) + ".",
       i: v < 1.5 ? "Danger: operating profit barely covers, or doesn't cover, interest. High default risk." : v < 4 ? "Adequate, but not much margin if profits dip." : "Comfortable: interest is easily covered." }; }
   };
   var PLAN = [
@@ -453,6 +453,9 @@
         f: c.name + ": " + r.q, q: r.q, tables: NEEDS_IS[m] ? [bsTable(c), isTable(c)] : [bsTable(c)], answer: r.a, work: r.w, interp: r.i, b: r.a + ". " + r.w + " " + r.i });
     });
   });
+  // v5.0: every course card re-worded so the front says exactly what to produce and the back is a labeled model answer (ids unchanged).
+  var RW = (typeof module === "object" && module.exports) ? require("./cards-v50.js") : (typeof window !== "undefined" && window.FlashRewrite) || {};
+  CARDS.forEach(function (c) { var r = RW[c.id]; if (r) { c.f = r[0]; c.b = r[1]; } });
   var ALL = CARDS.concat(SA);
   var BASE = ALL.slice(); // the built-in deck exactly as shipped
 

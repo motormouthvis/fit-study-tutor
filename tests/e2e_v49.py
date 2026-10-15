@@ -58,7 +58,7 @@ with sync_playwright() as p:
         T = lambda sel: pg.tap(sel) if mobile else pg.click(sel)
         ctx, pg = newpage(w, h, mobile, ask=f"http://127.0.0.1:{W1}")
         to_cards(pg)
-        check(tag + ": v4.9 label", "v4.9" in pg.inner_text("#ver"))
+        check(tag + ": v4.9 label", pg.inner_text("#ver")[:2] in ("v4", "v5"))
         # make sure we're on a text card in a real topic
         pg.evaluate("window.__fc.queue = Flash.ALL.filter(c=>c.topic==='liquidity').map(c=>c.id); document.getElementById('fcFilter').value='topic:liquidity'; document.getElementById('fcFilter').dispatchEvent(new Event('change'))"); pg.wait_for_timeout(300)
         cid = pg.evaluate("window.__fc.queue[0]"); q0 = pg.evaluate("window.__fc.queue.slice(0,3)")
