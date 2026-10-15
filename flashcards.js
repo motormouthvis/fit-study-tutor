@@ -454,9 +454,32 @@
     });
   });
   var ALL = CARDS.concat(SA);
+  var BASE = ALL.slice(); // the built-in deck exactly as shipped
+
+  /* ---------- v4.9: My cards (custom AI cards) and improved-card overrides, stored by the app on the device ---------- */
+  var MINE = "mine", MINE_NAME = "My cards";
+  function validTopic(t) { for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].key === t && TOPICS[i].course !== "sa") return true; return false; }
+  function clean(v, n) { return typeof v === "string" ? v.trim().slice(0, n) : ""; }
+  // user = { cards: [{id, topic, f, b, ai, orig?}], over: { <baseId>: {f, b} } }. Rebuilds ALL in place (same array object) so stats, filters and queues just work.
+  function setUser(user) {
+    user = user || {}; var over = user.over || {}, out = [], seen = {};
+    BASE.forEach(function (c) {
+      var o = over[c.id]; seen[c.id] = 1;
+      if (!o || c.kind === "statement" || !clean(o.f, 600) || !clean(o.b, 1500)) { out.push(c); return; }
+      var n = {}; for (var k in c) n[k] = c[k]; n.f = clean(o.f, 600); n.b = clean(o.b, 1500); n.improved = true; out.push(n);
+    });
+    (user.cards || []).forEach(function (c) {
+      if (!c || typeof c.id !== "string" || seen[c.id] || !clean(c.f, 600) || !clean(c.b, 1500)) return; seen[c.id] = 1;
+      var t = validTopic(c.topic) ? c.topic : MINE;
+      out.push({ id: c.id, topic: t, course: t === MINE ? MINE : topicCourse(t), kind: "term", f: clean(c.f, 600), b: clean(c.b, 1500), custom: true, ai: c.ai !== false, improved: !!c.orig });
+    });
+    ALL.length = 0; out.forEach(function (c) { ALL.push(c); });
+    return ALL;
+  }
+  function baseCard(id) { for (var i = 0; i < BASE.length; i++) if (BASE[i].id === id) return BASE[i]; return null; }
 
   /* ---------- deck logic (pure) ---------- */
-  function topicName(key) { for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].key === key) return TOPICS[i].name; return key; }
+  function topicName(key) { if (key === MINE) return MINE_NAME; for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].key === key) return TOPICS[i].name; return key; }
   // filter: "all" | "course:acct" | "course:econ" | "topic:<key>" | "sa" | "restudy" | "unseen"
   function filterCards(filter, st) {
     st = st || { cards: {} };
@@ -464,6 +487,7 @@
       var s = st.cards[c.id] || {};
       if (!filter || filter === "all") return true;
       if (filter === "sa") return c.course === "sa";
+      if (filter === "mine") return !!c.custom;
       if (filter === "restudy") return !!s.restudy;
       if (filter === "unseen") return !s.seen;
       if (filter.indexOf("course:") === 0) return c.course === filter.slice(7);
@@ -505,6 +529,6 @@
     var n = st.life.got + st.life.miss;
     return { total: ALL.length, seen: seen, unseen: ALL.length - seen, mastered: mastered, restudy: restudy, got: st.life.got, miss: st.life.miss, acc: n ? st.life.got / n : 0, byCourse: byCourse, sessions: st.sessions || 0 };
   }
-  return { COURSES: COURSES, TOPICS: TOPICS, CARDS: CARDS, SA: SA, ALL: ALL, COMPANIES: COMPANIES, SAQ: SAQ, topicName: topicName, filterCards: filterCards,
+  return { MINE: MINE, MINE_NAME: MINE_NAME, setUser: setUser, baseCard: baseCard, validTopic: validTopic, BASE: BASE, COURSES: COURSES, TOPICS: TOPICS, CARDS: CARDS, SA: SA, ALL: ALL, COMPANIES: COMPANIES, SAQ: SAQ, topicName: topicName, filterCards: filterCards,
     buildQueue: buildQueue, answer: answer, setRestudy: setRestudy, stats: stats, newState: newState, REQUEUE_GAP: REQUEUE_GAP, shuffle: shuffle, rng: rng };
 });

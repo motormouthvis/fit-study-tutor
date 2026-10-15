@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.8</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v4.9</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -170,6 +170,7 @@
         <select id="fcFilter" aria-label="Which cards"></select>
         <button id="fcShuffle" class="btn" aria-pressed="true">&#128256; Shuffle on</button>
       </div>
+      <div id="fcImpMsg" class="small" role="status" hidden></div>
       <div class="fcscore" id="fcScore" aria-live="polite"></div>
     </div>
     <div id="fcEmpty" class="card" hidden></div>
@@ -302,6 +303,18 @@
     <div class="mgrid">
       <button class="btn" data-goto="cards" id="mCards">&#127183; Flash Cards</button>
       <button class="btn" id="mStmt">&#128202; Show statements</button>
+    </div>
+    <div class="msec">My flash cards (AI)</div>
+    <div class="mgrid">
+      <button class="btn" id="mCreate">&#10024; Create a card</button>
+      <button class="btn" id="mImprove">&#9999;&#65039; Improve this card</button>
+      <button class="btn" id="mExpand">&#10133; Expand this card</button>
+      <button class="btn" id="mExport">&#11015; Export my cards</button>
+      <button class="btn" id="mImport">&#11014; Import my cards</button>
+      <input type="file" id="fcImportFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="msec">More</div>
+    <div class="mgrid">
       <button class="btn" data-goto="log">Answer log &amp; export</button>
       <button class="btn" data-goto="settings">Settings</button>
       <button class="btn" data-goto="help">Voice commands &amp; help</button>
@@ -310,6 +323,23 @@
       <button class="btn" id="btnGym">Gym mode (dark)</button>
       <button class="btn" data-goto="help-about">About &amp; diagnostics</button>
     </div>
+  </div>
+</div>
+
+<!-- AI flash cards (v4.9): card ... menu, and the Improve / Expand / Create sheet -->
+<div id="fcMore" class="fcmore" role="menu" aria-label="Card actions" hidden>
+  <button id="fcmImprove" role="menuitem">&#10024; Improve with Grok</button>
+  <button id="fcmExpand" role="menuitem">&#10133; Make more cards like this</button>
+  <button id="fcmCreate" role="menuitem">&#128221; Create a new card</button>
+  <button id="fcmReset" role="menuitem" hidden>&#8617; Reset to original</button>
+  <button id="fcmDelete" role="menuitem" hidden>&#128465; Delete this card</button>
+</div>
+<div id="fcAi" class="sheet" role="dialog" aria-label="AI flash cards" hidden>
+  <div class="sheetbox aibox">
+    <div class="sheethead"><b id="fcAiTitle"></b><button id="fcAiClose" class="btn">Close &#10005;</button></div>
+    <div id="fcAiBody" aria-live="polite"></div>
+    <div id="fcAiFoot" class="aifoot"></div>
+    <p class="small askfine">Cards written by Grok (xAI) can be wrong. Check them against your course material. Saved only on this device; use Export in the menu to keep a copy.</p>
   </div>
 </div>
 

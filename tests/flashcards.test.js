@@ -125,3 +125,29 @@ test("stats", () => {
   assert.equal(s.seen, 2); assert.equal(s.got, 1); assert.equal(s.miss, 1); assert.equal(s.restudy, 1); assert.equal(s.mastered, 1);
   assert.equal(s.total, F.ALL.length); assert.equal(s.acc, 0.5);
 });
+
+// ---- v4.9: My cards + improved overrides ----
+test("setUser: custom cards join ALL (filters, stats, queue), improved cards override, reset restores", () => {
+  const base = F.BASE.length, c0 = F.BASE.find(c => c.kind === "term"), st = F.newState();
+  F.setUser({ cards: [{ id: "my-a", topic: "liquidity", f: "Q1", b: "A1", ai: true }, { id: "my-b", topic: "nonsense", f: "Q2", b: "A2" }, { id: "my-bad", topic: "liquidity", f: "", b: "x" }],
+    over: { [c0.id]: { f: "NEW F", b: "NEW B" }, "no-such": { f: "x", b: "y" } } });
+  assert.equal(F.ALL.length, base + 2);
+  const a = F.ALL.find(c => c.id === "my-a"), b = F.ALL.find(c => c.id === "my-b");
+  assert.equal(a.course, "acct"); assert.equal(a.custom, true); assert.equal(a.ai, true);
+  assert.equal(b.topic, "mine"); assert.equal(b.course, "mine");
+  const o = F.ALL.find(c => c.id === c0.id); assert.equal(o.f, "NEW F"); assert.equal(o.improved, true);
+  assert.equal(F.baseCard(c0.id).f, c0.f, "original untouched");
+  assert.ok(F.filterCards("all", st).some(c => c.id === "my-a"));
+  assert.ok(F.filterCards("topic:liquidity", st).some(c => c.id === "my-a"));
+  assert.ok(F.filterCards("course:acct", st).some(c => c.id === "my-a"));
+  assert.deepEqual(F.filterCards("mine", st).map(c => c.id).sort(), ["my-a", "my-b"]);
+  F.answer(st, ["my-a"], "my-a", false); F.setRestudy(st, "my-b", true);
+  assert.ok(F.filterCards("restudy", st).some(c => c.id === "my-a") && F.filterCards("restudy", st).some(c => c.id === "my-b"));
+  assert.equal(F.filterCards("unseen", st).some(c => c.id === "my-a"), false);
+  const s = F.stats(st); assert.equal(s.total, base + 2); assert.equal(s.byCourse.mine.total, 1); assert.equal(s.restudy, 2);
+  F.setUser({}); assert.equal(F.ALL.length, base); assert.equal(F.ALL.find(c => c.id === c0.id).f, c0.f);
+});
+test("setUser never lets an override touch a Statement Analysis card", () => {
+  const sa = F.SA[0]; F.setUser({ over: { [sa.id]: { f: "x", b: "y" } } });
+  assert.equal(F.ALL.find(c => c.id === sa.id).kind, "statement"); assert.ok(!F.ALL.find(c => c.id === sa.id).improved); F.setUser({});
+});

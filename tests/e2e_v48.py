@@ -47,7 +47,7 @@ with sync_playwright() as p:
     for (w, h, mobile, tag) in [(1440, 900, False, "desktop"), (390, 844, True, "phone")]:
         ctx, pg = newpage(w, h, mobile, ask=f"http://127.0.0.1:{W1}")
         to_cards(pg)
-        check(tag + ": v4.8 label", "v4.8" in pg.inner_text("#ver"))
+        check(tag + ": v4.8 label", pg.inner_text("#ver").startswith("v4."))
         check(tag + ": ? on the card front", pg.is_visible("#fcFront > .askq"))
         cid = pg.evaluate("window.__fc.queue[0]"); n0 = len(SEEN)
         if mobile: pg.tap("#fcFront > .askq")
@@ -57,7 +57,7 @@ with sync_playwright() as p:
         body = SEEN[-1]["body"] if len(SEEN) > n0 else {}
         first = body.get("messages", [{}, {}])[1].get("content", "")
         c = pg.evaluate("(function(id){return Flash.ALL.find(function(x){return x.id===id})})('%s')" % cid)
-        fr = (c.get("f") or c.get("q") or "")[:30]; bk = (c.get("b") or c.get("answer") or "")[:30]
+        fr = (c.get("q") or c.get("f") or "")[:30]; bk = (c.get("answer") or c.get("b") or "")[:30]
         check(tag + ": sends the card front + back with 'explain in more depth' instruction", "Explain this card in more depth, in plain English, for an MBA beginner" in first and fr in first and bk in first, first[:300])
         check(tag + ": answer shown with card header", "current ratio" in pg.inner_text("#askLog").lower() and pg.inner_text("#askPart").startswith("Flash card"))
         # shortcuts inert while open

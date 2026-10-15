@@ -81,3 +81,10 @@ Worker `fit-tutor-ask` deployed at https://fit-tutor-ask.motormouthvis.workers.d
 ## v4.8 — Ask Grok on flash cards
 A circled **?** on the front and back of each flash card opens the same chat, asking Grok to explain the card (front + back) in more depth.
 It does not flip the card, and card shortcuts are paused while the chat is open. Test: `python3 tests/e2e_v48.py`.
+
+## v4.9 — AI flash cards
+A small **⋯** menu next to the **?** on each card: **Improve** (Grok rewrites the card; Before/After; Save or Discard), **Expand** (3–5 related cards; tick the ones to keep) and **Create a new card** (type a topic; edit the draft; Save). Also in ☰ → "My flash cards (AI)".
+Saved cards are "My cards" (AI badge), kept in localStorage (`tutor.v1.mycards`), and count in every filter, score, Restudy and the stats. Improved cards override the original on this device (**Reset to original** in the ⋯ menu); custom cards can be deleted.
+☰ → **Export my cards / Import my cards** saves and restores them as `my-flash-cards.json`.
+The Worker has JSON modes `kind: improve | expand | create` (same model, caps and rate limits); the app validates the JSON again and falls back to a friendly message on bad output.
+Statement Analysis cards have no Improve (their numbers are generated and checked). Test: `python3 tests/e2e_v49.py`.

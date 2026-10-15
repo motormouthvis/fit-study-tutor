@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v4.8";
+  var APP_VERSION = "v4.9";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -568,7 +568,7 @@
   }
   function fcFilterOptions() {
     var sel = $("fcFilter"), h = "<option value='all'>All cards</option><option value='course:acct'>BUS 5601 Accounting (all)</option><option value='course:econ'>BUS 5421 Economics (all)</option>" +
-      "<option value='sa'>Statement Analysis</option><option value='restudy'>Restudy only</option><option value='unseen'>Unseen</option>";
+      "<option value='sa'>Statement Analysis</option><option value='mine'>My cards (AI) (" + FL.filterCards("mine").length + ")</option><option value='restudy'>Restudy only</option><option value='unseen'>Unseen</option>";
     ["acct", "econ"].forEach(function (co) {
       h += "<optgroup label='" + (co === "acct" ? "BUS 5601 topics" : "BUS 5421 topics") + "'>";
       FL.TOPICS.filter(function (t) { return t.course === co; }).forEach(function (t) { h += "<option value='topic:" + t.key + "'>" + fcEsc(t.name) + "</option>"; });
@@ -591,14 +591,15 @@
     $("fcStage").hidden = !c; $("fcEmpty").hidden = !!c;
     if (!c) {
       var none = !fc.sess.total;
-      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button>"
+      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button>"
         : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
       var b; if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
       if ((b = $("fcAgain"))) b.onclick = fcStart; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
       return;
     }
     var s = fc.st.cards[c.id] || {};
-    $("fcTopic").textContent = (c.course === "sa" ? "Statement Analysis · " + c.health : (c.course === "acct" ? "BUS 5601 · " : "BUS 5421 · ") + FL.topicName(c.topic)) + (s.seen ? "" : " · new");
+    var ttl = c.course === "sa" ? "Statement Analysis · " + c.health : c.custom ? (c.course === "acct" ? "BUS 5601 · " : c.course === "econ" ? "BUS 5421 · " : "") + FL.topicName(c.topic) + " · My card" : (c.course === "acct" ? "BUS 5601 · " : "BUS 5421 · ") + FL.topicName(c.topic);
+    $("fcTopic").innerHTML = fcEsc(ttl + (s.seen ? "" : " · new")) + (c.custom ? "<span class='aibadge' title='Written with Grok'>AI</span>" : "") + (c.improved ? "<span class='aibadge imp' title='Improved with Grok on this device'>" + (c.custom ? "IMPROVED" : "AI IMPROVED") + "</span>" : "");
     $("fcStar").innerHTML = s.restudy ? "&#9733; Restudy" : "&#9734; Restudy"; $("fcStar").setAttribute("aria-pressed", s.restudy ? "true" : "false"); $("fcStar").classList.toggle("on", !!s.restudy);
     if (c.kind === "statement") {
       $("fcFront").innerHTML = "<div class='fcq'>" + fcEsc(c.company) + ": " + fcEsc(c.q) + "</div><div class='fctbls'>" + c.tables.map(fcTable).join("") + "</div>";
@@ -607,7 +608,7 @@
       $("fcFront").innerHTML = "<div class='fcq big'>" + fcEsc(c.f) + "</div>";
       $("fcBack").innerHTML = "<div class='fcbacktxt'>" + fcEsc(c.b) + "</div>";
     }
-    ["fcFront", "fcBack"].forEach(function (fid) { var qb = askButton(function () { openAskCard(c); }, "Ask Grok to explain this card in more depth"); qb.classList.add("fcask"); qb.title = "Ask Grok to explain this card"; $(fid).insertBefore(qb, $(fid).firstChild); });
+    ["fcFront", "fcBack"].forEach(function (fid) { var mb = document.createElement("button"); mb.type = "button"; mb.className = "fcmorebtn"; mb.textContent = "\u22EF"; mb.setAttribute("aria-label", "Card actions: improve, expand, create"); mb.setAttribute("aria-haspopup", "menu"); mb.title = "More: improve, expand, create"; mb.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); if (!$("fcMore").hidden) fcMoreClose(); else fcMoreOpen(mb); }); var qb = askButton(function () { openAskCard(c); }, "Ask Grok to explain this card in more depth"); qb.classList.add("fcask"); qb.title = "Ask Grok to explain this card"; $(fid).insertBefore(qb, $(fid).firstChild); $(fid).insertBefore(mb, $(fid).firstChild); });
     $("fcCard").classList.toggle("statement", c.kind === "statement");
     $("fcBack").hidden = !fc.flipped; $("fcCard").classList.toggle("flipped", fc.flipped);
     $("fcHint").textContent = fc.flipped ? (device === "desktop" ? "Did you get it? G or → got it, M or ← missed" : "Did you get it?") : (device === "desktop" ? "Click the card or press Space to flip" : "Tap the card to flip");
@@ -629,13 +630,14 @@
       "<div class='small'>Lifetime: " + s.got + " got it, " + s.miss + " missed" + (s.got + s.miss ? " (" + Math.round(s.acc * 100) + "%)" : "") + " &middot; " + s.mastered + " mastered &middot; " + s.restudy + " marked Restudy &middot; " + s.sessions + " sessions</div>";
     Object.keys(FL.COURSES).forEach(function (k) { var b = s.byCourse[k]; if (!b) return; var n = b.got + b.miss;
       h += "<div class='small'>" + fcEsc(FL.COURSES[k]) + ": seen " + b.seen + "/" + b.total + (n ? ", " + Math.round(b.got / n * 100) + "% got" : "") + "</div>"; });
+    if (s.byCourse.mine) { var bm = s.byCourse.mine, nm = bm.got + bm.miss; h += "<div class='small'>My cards (AI): " + bm.total + " saved, seen " + bm.seen + (nm ? ", " + Math.round(bm.got / nm * 100) + "% got" : "") + "</div>"; }
     h += "<button class='btn' id='fcGoStats'>Open flash cards</button>"; box.innerHTML = h; $("fcGoStats").onclick = function () { switchTab("cards"); };
   }
   function initFlash() {
     if (!FL) return;
     fc = { st: storage.load("fc", null) || FL.newState(), filter: storage.load("fcFilter", "all"), shuffle: storage.load("fcShuffle", true), queue: null, sess: null, flipped: false };
     if (!fc.st.cards) fc.st = FL.newState(); if (!fc.st.life) fc.st.life = { got: 0, miss: 0 };
-    fcFilterOptions();
+    initAiCards(); fcFilterOptions();
     var sh = $("fcShuffle"); function shLabel() { sh.innerHTML = fc.shuffle ? "&#128256; Shuffle on" : "&#10145; In order"; sh.setAttribute("aria-pressed", fc.shuffle ? "true" : "false"); } shLabel();
     sh.addEventListener("click", function () { fc.shuffle = !fc.shuffle; shLabel(); fcSave(); fcStart(); });
     $("fcFilter").addEventListener("change", function () { fcSetFilter($("fcFilter").value); });
@@ -646,8 +648,9 @@
     document.addEventListener("keydown", function (e) {
       if (!$("tab-cards").classList.contains("active") || e.ctrlKey || e.metaKey || e.altKey) return;
       var tg = e.target, tag = tg && tg.tagName; if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
-      if (!$("menu").hidden || (document.querySelector(".sheet:not([hidden])"))) return;
+      if (!$("menu").hidden || !$("fcMore").hidden || (document.querySelector(".sheet:not([hidden])"))) return;
       var k = e.key;
+      if (tg && tg.classList && (tg.classList.contains("askq") || tg.classList.contains("fcmorebtn")) && (k === " " || k === "Enter")) return;
       if (k === " ") { e.preventDefault(); fcFlip(); }
       else if (k === "Enter" && tg === $("fcCard")) { e.preventDefault(); fcFlip(); }
       else if (k === "g" || k === "G" || k === "ArrowRight") { e.preventDefault(); fcAnswer(true); }
@@ -658,6 +661,209 @@
     window.__fc = fc;
   }
 
+
+  /* ================= v4.9: AI flash cards (Improve / Expand / Create), My cards, export / import ================= */
+  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", prompt: "", topic: "mine", tries: 0 };
+  function mycLoad() {
+    var m = storage.load("mycards", null); MYC = (m && typeof m === "object") ? m : {};
+    if (!Array.isArray(MYC.cards)) MYC.cards = []; if (!MYC.over || typeof MYC.over !== "object") MYC.over = {};
+    FL.setUser(MYC);
+  }
+  function mycSave() { storage.save("mycards", MYC); FL.setUser(MYC); }
+  function mycNewId() { var id; do { id = "my-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 46656).toString(36); } while (MYC.cards.some(function (c) { return c.id === id; })); return id; }
+  function aiErrText(status, j) {
+    j = j || {};
+    if (status === 429) { var mins = Math.max(1, Math.round((j.retryAfter || 3600) / 60)); return j.scope === "day" ? "You have reached today's limit of Grok questions. It resets in about " + Math.round(mins / 60) + " hours." : "That is a lot of Grok requests this hour. Try again in about " + mins + " minutes."; }
+    if (status === 503) return "Ask Grok is not switched on yet.";
+    return "Grok could not do that right now (error " + status + "). Tap Try again.";
+  }
+  function aiValid(arr, max) {
+    if (!Array.isArray(arr)) return null; var out = [];
+    arr.forEach(function (c) {
+      if (!c || typeof c !== "object") return; var f = c.front != null ? c.front : c.f, b = c.back != null ? c.back : c.b;
+      if (typeof f !== "string" || typeof b !== "string") return; f = f.trim().slice(0, 300); b = b.trim().slice(0, 900); if (f && b) out.push({ f: f, b: b });
+    });
+    return out.length ? out.slice(0, max || 5) : null;
+  }
+  function aiParse(text) {
+    if (typeof text !== "string") return null; var t = text.replace(/```(?:json)?/gi, ""), a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a < 0 || b <= a) return null; try { var o = JSON.parse(t.slice(a, b + 1)); return o && o.cards; } catch (e) { return null; }
+  }
+  // one request to the Worker's JSON card modes. Resolves to [{f,b}], rejects with a friendly Error.
+  function aiCall(kind, o) {
+    if (!ASK.url) return Promise.reject(new Error("AI cards need Ask Grok, which is not switched on yet."));
+    var body = { kind: kind, topic: String(o.topic || "").slice(0, 200), partText: String(o.text || "").slice(0, 4000), prompt: String(o.prompt || "").slice(0, 300) };
+    return fetch(ASK.url + "/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .catch(function () { throw new Error(navigator.onLine === false ? "No internet connection. AI cards need internet." : "Could not reach Grok. Check the connection and tap Try again."); })
+      .then(function (r) {
+        if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(aiErrText(r.status, j)); });
+        return r.json().catch(function () { return {}; });
+      })
+      .then(function (j) {
+        if (Array.isArray(j.cards) && !j.cards.length) throw new Error("Grok could not make a card from that. Try rephrasing, with an accounting, economics or finance topic.");
+        var max = kind === "expand" ? 5 : 1, cards = aiValid(j.cards, max) || aiValid(aiParse(j.content), max);
+        if (!cards) throw new Error("Grok's answer was not in the right format. Tap Try again.");
+        return cards;
+      });
+  }
+  function fcCurrent() { var id = fc && fc.queue && fc.queue[0]; return id ? fcCard(id) : null; }
+  function fcSay(t) { var m = $("fcImpMsg"); if (!m) return; m.textContent = t; m.hidden = !t; clearTimeout(fcSay.t); if (t) fcSay.t = setTimeout(function () { m.hidden = true; }, 9000); }
+  function fcAddToQueue(ids) {
+    if (!fc.queue || !fc.queue.length) { fcStart(); return; }
+    var ok = FL.filterCards(fc.filter, fc.st).map(function (c) { return c.id; });
+    ids.slice().reverse().forEach(function (id) { if (ok.indexOf(id) >= 0 && fc.queue.indexOf(id) < 0) { fc.queue.splice(1, 0, id); fc.sess.total++; } });
+  }
+  /* ---- the small card menu ---- */
+  function fcMoreClose() { $("fcMore").hidden = true; }
+  function fcMoreOpen(btn) {
+    var c = fcCurrent(); if (!c) return; var m = $("fcMore");
+    var isSt = c.kind === "statement";
+    $("fcmImprove").hidden = isSt; $("fcmReset").hidden = !(c.improved); $("fcmDelete").hidden = !c.custom;
+    $("fcmDelete").textContent = "\uD83D\uDDD1 Delete this card"; $("fcmDelete").dataset.sure = "";
+    m.hidden = false; var r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+    var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)), top = r.bottom + 6; if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    m.style.left = left + "px"; m.style.top = top + "px";
+    var first = m.querySelector("button:not([hidden])"); if (first) first.focus();
+  }
+  /* ---- the Improve / Expand / Create sheet ---- */
+  function aiTopicOptions(sel) {
+    var h = "<option value='mine'>Any topic (goes in My cards)</option>";
+    [["acct", "BUS 5601 topics"], ["econ", "BUS 5421 topics"]].forEach(function (g) {
+      h += "<optgroup label='" + g[1] + "'>"; FL.TOPICS.filter(function (t) { return t.course === g[0]; }).forEach(function (t) { h += "<option value='" + t.key + "'" + (t.key === sel ? " selected" : "") + ">" + fcEsc(t.name) + "</option>"; }); h += "</optgroup>";
+    });
+    return h;
+  }
+  function aiShow() { $("fcAi").hidden = false; }
+  function aiClose() { $("fcAi").hidden = true; AI.mode = null; AI.card = null; AI.res = null; AI.busy = false; AI.tries++; try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
+  function aiFoot(btns) { var f = $("fcAiFoot"); f.innerHTML = btns.map(function (b) { return "<button class='btn " + (b.cls || "") + "' id='" + b.id + "'" + (b.dis ? " disabled" : "") + ">" + b.t + "</button>"; }).join(""); btns.forEach(function (b) { $(b.id).addEventListener("click", b.fn); }); }
+  function aiRender() {
+    var body = $("fcAiBody"), c = AI.card, title = { improve: "\u2728 Improve this card", expand: "\u2795 More cards like this", create: "\uD83D\uDCDD Create a card" }[AI.mode] || "";
+    $("fcAiTitle").textContent = title;
+    var err = AI.err ? "<div class='aierr' role='alert'>" + fcEsc(AI.err) + "</div>" : "";
+    if (AI.busy) { body.innerHTML = "<div class='aibusy'>Grok is " + (AI.mode === "create" ? "writing your card" : AI.mode === "expand" ? "writing new cards" : "rewriting this card") + "\u2026</div>"; aiFoot([{ id: "aiCancel", t: "Cancel", fn: aiClose }]); return; }
+    if (AI.mode === "create" && !AI.res) {
+      body.innerHTML = "<label class='lbl' for='aiPrompt'>What should the card be about?</label><textarea id='aiPrompt' rows='3' maxlength='300' placeholder='Type a topic or a question, e.g. What is working capital?'>" + fcEsc(AI.prompt) + "</textarea>" +
+        "<label class='lbl' for='aiTopic'>Course topic (optional)</label><select id='aiTopic'>" + aiTopicOptions(AI.topic) + "</select>" + err;
+      aiFoot([{ id: "aiDraft", t: "Draft the card", cls: "go", fn: aiDoCreate }, { id: "aiCancel", t: "Cancel", fn: aiClose }]);
+      $("aiPrompt").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiDoCreate(); } });
+      $("aiPrompt").focus(); return;
+    }
+    if (!AI.res) { body.innerHTML = err; aiFoot([{ id: "aiAgain", t: "\u21BB Try again", cls: "go", fn: aiRun }, { id: "aiCancel", t: "Close", fn: aiClose }]); return; }
+    if (AI.mode === "improve") {
+      var n = AI.res[0];
+      body.innerHTML = "<div class='aicmp'><div class='aicol'><h4>Before</h4><div class='f'>" + fcEsc(c.f) + "</div><div class='b'>" + fcEsc(c.b) + "</div></div><div class='aicol new'><h4>After (Grok)</h4><div class='f'>" + fcEsc(n.f) + "</div><div class='b'>" + fcEsc(n.b) + "</div></div></div>" + err;
+      aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveImprove }, { id: "aiDiscard", t: "Discard", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]); $("aiSave").focus();
+    } else if (AI.mode === "expand") {
+      body.innerHTML = "<p class='small'>Tick the cards to keep.</p>" + AI.res.map(function (x, i) { return "<label class='aipick'><input type='checkbox' data-i='" + i + "' checked><div><div class='f'>" + fcEsc(x.f) + "</div><div class='b'>" + fcEsc(x.b) + "</div></div></label>"; }).join("") + err;
+      var upd = function () { var k = body.querySelectorAll("input:checked").length; var sv = $("aiSave"); sv.disabled = !k; sv.textContent = k ? "Save " + k + " card" + (k === 1 ? "" : "s") : "Save"; };
+      aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveExpand }, { id: "aiDiscard", t: "Discard", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
+      Array.prototype.forEach.call(body.querySelectorAll("input"), function (i) { i.addEventListener("change", upd); }); upd();
+    } else {
+      var d = AI.res[0];
+      body.innerHTML = "<p class='small'>Draft from Grok. You can edit it before saving.</p><label class='lbl' for='aiF'>Front (question or term)</label><textarea id='aiF' rows='2' maxlength='600'>" + fcEsc(d.f) + "</textarea><label class='lbl' for='aiB'>Back (answer)</label><textarea id='aiB' rows='5' maxlength='1500'>" + fcEsc(d.b) + "</textarea>" + err;
+      aiFoot([{ id: "aiSave", t: "Save card", cls: "go", fn: aiSaveCreate }, { id: "aiDiscard", t: "Discard", fn: aiClose }, { id: "aiAgain", t: "\u21BB Redraft", fn: aiRun }]);
+    }
+  }
+  function aiRun() {
+    var tok = ++AI.tries; AI.busy = true; AI.err = ""; AI.res = (AI.mode === "create") ? null : null; aiRender();
+    var c = AI.card, name = c ? (c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic)) : (AI.topic !== "mine" ? FL.topicName(AI.topic) : "");
+    var p = AI.mode === "create" ? aiCall("create", { topic: name, prompt: AI.prompt }) : aiCall(AI.mode, { topic: name, text: askCardText(c) });
+    p.then(function (cards) { if (tok !== AI.tries) return; AI.busy = false; AI.res = cards; aiRender(); },
+      function (e) { if (tok !== AI.tries) return; AI.busy = false; AI.res = null; AI.err = e.message; aiRender(); });
+  }
+  function aiDoCreate() {
+    var v = ($("aiPrompt").value || "").trim(); if (!v) { AI.err = "Type a topic or a question first."; aiRender(); return; }
+    AI.prompt = v.slice(0, 300); AI.topic = $("aiTopic").value; aiRun();
+  }
+  function aiOpen(mode, card) {
+    $("menu").hidden = true; fcMoreClose();
+    if (mode !== "create" && !card) { fcSay("No card is showing. Open Flash Cards first."); return; }
+    if (mode === "improve" && card.kind === "statement") { fcSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic."); return; }
+    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1 };
+    aiShow();
+    if (mode === "create") aiRender(); else aiRun();
+  }
+  function aiSaveImprove() {
+    var c = AI.card, n = AI.res && AI.res[0]; if (!c || !n) return;
+    var mc = c.custom && MYC.cards.filter(function (x) { return x.id === c.id; })[0];
+    if (mc) { if (!mc.orig) mc.orig = { f: mc.f, b: mc.b }; mc.f = n.f; mc.b = n.b; } else MYC.over[c.id] = { f: n.f, b: n.b, ts: Date.now() };
+    mycSave(); aiClose(); fcRender(); fcSay("Saved. The improved card replaces the original on this device (Reset to original is in the ... menu).");
+  }
+  function aiSaveExpand() {
+    var c = AI.card, picks = [], ids = [];
+    Array.prototype.forEach.call($("fcAiBody").querySelectorAll("input:checked"), function (i) { picks.push(AI.res[+i.dataset.i]); });
+    if (!picks.length) return;
+    var topic = c && FL.validTopic(c.topic) ? c.topic : "mine";
+    picks.forEach(function (x) { var id = mycNewId(); ids.push(id); MYC.cards.push({ id: id, topic: topic, f: x.f, b: x.b, ai: true, ts: Date.now() }); });
+    mycSave(); fcFilterOptions(); fcAddToQueue(ids); aiClose(); fcRender(); fcSay("Saved " + ids.length + " new card" + (ids.length === 1 ? "" : "s") + " to My cards.");
+  }
+  function aiSaveCreate() {
+    var f = ($("aiF").value || "").trim(), b = ($("aiB").value || "").trim(); if (!f || !b) { AI.err = "Both the front and the back need some text."; var e = $("fcAiBody").querySelector(".aierr"); if (!e) { e = document.createElement("div"); e.className = "aierr"; $("fcAiBody").appendChild(e); } e.textContent = AI.err; return; }
+    var id = mycNewId(); MYC.cards.push({ id: id, topic: FL.validTopic(AI.topic) ? AI.topic : "mine", f: f.slice(0, 600), b: b.slice(0, 1500), ai: true, ts: Date.now() });
+    mycSave(); fcFilterOptions(); fcAddToQueue([id]); aiClose(); fcRender(); fcSay("Saved to My cards.");
+  }
+  function fcResetCard() {
+    var c = fcCurrent(); if (!c) return; fcMoreClose();
+    var mc = c.custom && MYC.cards.filter(function (x) { return x.id === c.id; })[0];
+    if (mc && mc.orig) { mc.f = mc.orig.f; mc.b = mc.orig.b; delete mc.orig; } else delete MYC.over[c.id];
+    mycSave(); fcRender(); fcSay("Back to the original card.");
+  }
+  function fcDeleteCard() {
+    var c = fcCurrent(); if (!c || !c.custom) return; var b = $("fcmDelete");
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Tap again to delete"; setTimeout(function () { b.dataset.sure = ""; b.textContent = "\uD83D\uDDD1 Delete this card"; }, 4000); return; }
+    fcMoreClose(); MYC.cards = MYC.cards.filter(function (x) { return x.id !== c.id; }); delete fc.st.cards[c.id]; mycSave();
+    fc.queue = fc.queue.filter(function (id) { return id !== c.id; }); fc.flipped = false; fcSave(); fcFilterOptions(); fcRender(); fcSay("Card deleted.");
+  }
+  function mycExport() {
+    var data = { app: "mba-study-tutor", kind: "my-cards", version: 1, exported: new Date().toISOString(), cards: MYC.cards, over: MYC.over };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "my-flash-cards.json"; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    $("menu").hidden = true; var n = MYC.cards.length, o = Object.keys(MYC.over).length; fcSay("Exported " + n + " card" + (n === 1 ? "" : "s") + (o ? " and " + o + " improved card" + (o === 1 ? "" : "s") : "") + " to my-flash-cards.json.");
+    return data;
+  }
+  function mycImportText(text) {
+    var d; try { d = JSON.parse(text); } catch (e) { return { err: "That file is not valid JSON." }; }
+    if (!d || typeof d !== "object" || !Array.isArray(d.cards) && !d.over) return { err: "That file does not look like exported flash cards." };
+    var added = 0, replaced = 0, imp = 0, skipped = 0;
+    (Array.isArray(d.cards) ? d.cards : []).forEach(function (c) {
+      var f = c && typeof c.f === "string" ? c.f.trim().slice(0, 600) : "", b = c && typeof c.b === "string" ? c.b.trim().slice(0, 1500) : "";
+      if (!f || !b || !c.id || typeof c.id !== "string" || !/^my-[a-z0-9-]{3,40}$/.test(c.id)) { skipped++; return; }
+      var n = { id: c.id, topic: FL.validTopic(c.topic) ? c.topic : "mine", f: f, b: b, ai: c.ai !== false, ts: +c.ts || Date.now() };
+      if (c.orig && typeof c.orig.f === "string" && typeof c.orig.b === "string") n.orig = { f: c.orig.f.slice(0, 600), b: c.orig.b.slice(0, 1500) };
+      var i = -1; MYC.cards.forEach(function (x, k) { if (x.id === n.id) i = k; });
+      if (i >= 0) { MYC.cards[i] = n; replaced++; } else { MYC.cards.push(n); added++; }
+    });
+    var ov = d.over && typeof d.over === "object" ? d.over : {};
+    Object.keys(ov).forEach(function (id) { var o = ov[id], bc = FL.baseCard(id); if (!bc || bc.kind === "statement" || !o || typeof o.f !== "string" || typeof o.b !== "string" || !o.f.trim() || !o.b.trim()) return; MYC.over[id] = { f: o.f.trim().slice(0, 600), b: o.b.trim().slice(0, 1500), ts: +o.ts || Date.now() }; imp++; });
+    mycSave(); fcFilterOptions(); if (fc.queue) fcStart();
+    return { added: added, replaced: replaced, improved: imp, skipped: skipped };
+  }
+  function initAiCards() {
+    mycLoad();
+    $("fcAiClose").addEventListener("click", aiClose);
+    $("fcAi").addEventListener("click", function (e) { if (e.target === $("fcAi")) aiClose(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if (!$("fcAi").hidden) aiClose(); else if (!$("fcMore").hidden) { fcMoreClose(); try { $("fcCard").focus({ preventScroll: true }); } catch (x) {} } } });
+    document.addEventListener("click", function (e) { if (!$("fcMore").hidden && !e.target.closest("#fcMore") && !e.target.closest(".fcmorebtn")) fcMoreClose(); });
+    $("fcmImprove").addEventListener("click", function () { aiOpen("improve", fcCurrent()); });
+    $("fcmExpand").addEventListener("click", function () { aiOpen("expand", fcCurrent()); });
+    $("fcmCreate").addEventListener("click", function () { aiOpen("create", fcCurrent()); });
+    $("fcmReset").addEventListener("click", fcResetCard); $("fcmDelete").addEventListener("click", fcDeleteCard);
+    function viaCards(fn) { return function () { $("menu").hidden = true; switchTab("cards"); fn(); }; }
+    $("mCreate").addEventListener("click", viaCards(function () { aiOpen("create", fcCurrent()); }));
+    $("mImprove").addEventListener("click", viaCards(function () { aiOpen("improve", fcCurrent()); }));
+    $("mExpand").addEventListener("click", viaCards(function () { aiOpen("expand", fcCurrent()); }));
+    $("mExport").addEventListener("click", function () { mycExport(); });
+    $("mImport").addEventListener("click", function () { $("fcImportFile").value = ""; $("fcImportFile").click(); });
+    $("fcImportFile").addEventListener("change", function () {
+      var f = this.files && this.files[0]; if (!f) return; var rd = new FileReader();
+      rd.onload = function () {
+        var r = mycImportText(String(rd.result || "")); $("menu").hidden = true; switchTab("cards");
+        fcSay(r.err ? r.err : "Imported " + r.added + " new card" + (r.added === 1 ? "" : "s") + (r.replaced ? ", updated " + r.replaced : "") + (r.improved ? ", " + r.improved + " improved card" + (r.improved === 1 ? "" : "s") : "") + (r.skipped ? " (" + r.skipped + " skipped)" : "") + ".");
+      };
+      rd.readAsText(f);
+    });
+    window.__myc = function () { return MYC; }; window.__aiOpen = aiOpen; window.__mycImport = mycImportText;
+  }
 
   /* ================= v4.6: Ask Grok ("?" on each part -> explain further + follow-ups) ================= */
   var ASK = { url: ((window.ASK_CONFIG && window.ASK_CONFIG.url) || "").replace(/\/+$/, ""), cur: null, busy: false, ctrl: null };
@@ -708,6 +914,7 @@
     return ("Front: " + c.f + "\n\nBack: " + c.b).slice(0, 4000);
   }
   function openAskCard(c) {
+    $("fcMore").hidden = true;
     var name = c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic);
     ASK.cur = { id: "card:" + c.id, key: "card:" + c.id, si: 0, kind: "card", text: askCardText(c), topicName: name, label: "Flash card \u00B7 " + name };
     $("menu").hidden = true; $("askPanel").hidden = false; document.body.classList.add("asking");

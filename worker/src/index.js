@@ -2,7 +2,7 @@
    The xAI key lives only here, as the secret XAI_API_KEY. The model and the teaching instruction are fixed server-side.
    Protections: origin allow-list, request size caps, follow-up cap, per-visitor rate limit (KV), answer length cap. */
 export const MODEL = "grok-4.20-0309-non-reasoning"; // cheapest current Grok chat model on docs.x.ai/docs/models (Oct 2026)
-export const LIMITS = { partChars: 4000, titleChars: 200, msgChars: 1500, maxMessages: 13, maxTokens: 700, perHour: 20, perDay: 100 };
+export const LIMITS = { partChars: 4000, titleChars: 200, msgChars: 1500, maxMessages: 13, maxTokens: 700, jsonTokens: 900, promptChars: 300, perHour: 20, perDay: 100 };
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
 export const SYSTEM = "You are a patient tutor for Bill, an MBA beginner (BUS 5601 accounting basics, BUS 5421 managerial economics). " +
   "The student pressed 'explain further' on one part of a lesson. Explain it further in plain English for an MBA beginner: short paragraphs, " +
@@ -43,6 +43,48 @@ export function buildMessages(body) {
   return { messages: [{ role: "system", content: SYSTEM }, first].concat(msgs) };
 }
 
+// ---- v4.9: JSON card modes (improve / expand / create). Strict JSON out, validated here and again on the client. ----
+export const JSON_KINDS = { improve: { min: 1, max: 1 }, expand: { min: 3, max: 5 }, create: { min: 1, max: 1 } };
+export const SYSTEM_JSON = "You write flash cards for Bill, an MBA beginner (BUS 5601 accounting basics, BUS 5421 managerial economics, finance and business basics). " +
+  "Reply with ONLY one JSON object, no markdown, no code fences, no commentary, exactly in this shape: {\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]}. " +
+  "front = a short question or term (under 200 characters). back = the answer in plain English, concise (under 500 characters), standard textbook definitions and formulas; " +
+  "if numbers are involved show the arithmetic briefly. Plain text only. Never invent facts: if you are unsure, keep the card general. " +
+  "If the request is not about business, accounting, economics, finance or study skills, reply {\"cards\":[]}.";
+function cardText(t) { return String(t).replace(/\s+/g, " ").trim(); }
+export function buildJsonMessages(body) {
+  const kind = body && body.kind, spec = JSON_KINDS[kind];
+  if (!spec) return { error: "bad_kind" };
+  const title = str(body.topic, LIMITS.titleChars), part = str(body.partText, LIMITS.partChars + 1), prompt = str(body.prompt, LIMITS.promptChars + 1);
+  let user;
+  if (kind === "create") {
+    if (!prompt.trim()) return { error: "missing_prompt" };
+    if (prompt.length > LIMITS.promptChars) return { error: "prompt_too_long" };
+    user = "TASK: CREATE one new flash card.\nTopic area: " + (title || "any MBA topic") + "\nWhat Bill wants a card about: " + cardText(prompt) + "\nReturn exactly 1 card.";
+  } else {
+    if (!part.trim()) return { error: "missing_part" };
+    if (part.length > LIMITS.partChars) return { error: "part_too_long" };
+    user = (kind === "improve"
+      ? "TASK: IMPROVE this flash card. Rewrite it to be clearer and more accurate while keeping the same scope and meaning. Fix any mistakes. Return exactly 1 card."
+      : "TASK: EXPAND this flash card. Write 3 to 5 NEW related flash cards that deepen understanding (related terms, formulas, a worked example, a common mistake). Do not repeat the given card.") +
+      "\nTopic: " + (title || "MBA flash card") + "\n\nThe card:\n\"\"\"\n" + part + "\n\"\"\"";
+  }
+  return { kind, spec, messages: [{ role: "system", content: SYSTEM_JSON }, { role: "user", content: user }] };
+}
+// pull {"cards":[{front,back}]} out of the model text (tolerates code fences / chatter); null if unusable
+export function parseCards(text, spec) {
+  let t = String(text || "").replace(/```(?:json)?/gi, "");
+  const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a < 0 || b <= a) return null;
+  let o; try { o = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+  if (!o || !Array.isArray(o.cards)) return null;
+  const out = [];
+  for (const c of o.cards) {
+    if (!c || typeof c.front !== "string" || typeof c.back !== "string") continue;
+    const f = c.front.trim().slice(0, 300), bk = c.back.trim().slice(0, 900);
+    if (f && bk) out.push({ front: f, back: bk });
+  }
+  return out.slice(0, spec ? spec.max : 5);
+}
+
 async function visitorKey(request) {
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("fit-tutor-ask:" + ip));
@@ -76,10 +118,21 @@ export default {
     const len = +(request.headers.get("Content-Length") || 0);
     if (len > 40000) return json(413, { error: "too_large" }, origin);
     let body; try { const t = await request.text(); if (t.length > 40000) return json(413, { error: "too_large" }, origin); body = JSON.parse(t); } catch (e) { return json(400, { error: "bad_json" }, origin); }
-    const built = buildMessages(body);
+    const isJson = body && typeof body === "object" && ["improve", "expand", "create"].includes(body.kind);
+    const built = isJson ? buildJsonMessages(body) : buildMessages(body);
     if (built.error) return json(400, { error: built.error }, origin);
     const rl = await rateLimit(env, await visitorKey(request));
     if (rl) return json(429, { error: "rate_limited", scope: rl.scope, retryAfter: rl.retryAfter }, origin, { "Retry-After": String(rl.retryAfter) });
+    if (isJson) {
+      let jr;
+      try { jr = await fetch(env.XAI_URL || XAI_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + env.XAI_API_KEY },
+        body: JSON.stringify({ model: MODEL, messages: built.messages, stream: false, max_tokens: LIMITS.jsonTokens, temperature: 0.3, response_format: { type: "json_object" } }) }); }
+      catch (e) { return json(502, { error: "upstream_unreachable" }, origin); }
+      if (!jr.ok) { try { await jr.body.cancel(); } catch (e) {} return json(502, { error: "upstream_error", status: jr.status }, origin); }
+      let content = ""; try { const j = await jr.json(); content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || ""; } catch (e) {}
+      const cards = parseCards(content, built.spec);
+      return json(200, { kind: built.kind, cards, content: cards ? undefined : String(content).slice(0, 3000) }, origin, { "Cache-Control": "no-store" });
+    }
     let up;
     try { up = await fetch(env.XAI_URL || XAI_URL, {
       method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + env.XAI_API_KEY },

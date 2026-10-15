@@ -84,3 +84,38 @@ test("flash card kind uses the 'explain in more depth' instruction with front+ba
   assert.match(r.messages[1].content, /Explain this card in more depth, in plain English, for an MBA beginner\./);
   assert.match(r.messages[1].content, /Current assets \/ current liabilities/);
 });
+
+// ---- v4.9: JSON card modes ----
+import { buildJsonMessages, parseCards, JSON_KINDS } from "../src/index.js";
+test("json modes: improve/expand/create build fixed prompts and enforce caps", () => {
+  const i = buildJsonMessages({ kind: "improve", topic: "Liquidity", partText: "Front: a\n\nBack: b" });
+  assert.match(i.messages[1].content, /TASK: IMPROVE/); assert.match(i.messages[0].content, /ONLY one JSON object/);
+  assert.match(buildJsonMessages({ kind: "expand", partText: "x" }).messages[1].content, /3 to 5 NEW/);
+  assert.match(buildJsonMessages({ kind: "create", prompt: "what is working capital" }).messages[1].content, /TASK: CREATE/);
+  assert.equal(buildJsonMessages({ kind: "bogus", partText: "x" }).error, "bad_kind");
+  assert.equal(buildJsonMessages({ kind: "create", prompt: "" }).error, "missing_prompt");
+  assert.equal(buildJsonMessages({ kind: "create", prompt: "x".repeat(301) }).error, "prompt_too_long");
+  assert.equal(buildJsonMessages({ kind: "improve", partText: "x".repeat(4001) }).error, "part_too_long");
+});
+test("parseCards: strict JSON, tolerates fences, drops bad entries, caps count, null on garbage", () => {
+  const spec = JSON_KINDS.expand;
+  assert.deepEqual(parseCards('{"cards":[{"front":"A","back":"B"}]}', spec), [{ front: "A", back: "B" }]);
+  assert.equal(parseCards('Sure!\n```json\n{"cards":[{"front":"A","back":"B"}]}\n```', spec).length, 1);
+  assert.equal(parseCards('{"cards":[{"front":"A"},{"front":1,"back":2},{"front":"C","back":"D"}]}', spec).length, 1);
+  assert.equal(parseCards(JSON.stringify({ cards: Array.from({ length: 9 }, (_, n) => ({ front: "q" + n, back: "a" })) }), spec).length, 5);
+  assert.equal(parseCards("not json at all", spec), null); assert.equal(parseCards('{"cards":"nope"}', spec), null); assert.equal(parseCards("", spec), null);
+  assert.deepEqual(parseCards('{"cards":[]}', spec), []);
+});
+test("json mode over HTTP: non-streaming, same model/key, rate limited, bad JSON falls back to raw content", async () => {
+  const seen = []; const realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, init) => { seen.push(JSON.parse(init.body)); return new Response(JSON.stringify({ choices: [{ message: { content: seen.length === 1 ? '{"cards":[{"front":"F","back":"B"}]}' : "sorry, no json" } }] }), { status: 200 }); };
+  try {
+    const env = { XAI_API_KEY: "k", ALLOWED_ORIGINS: "https://o.example", PER_HOUR: "2", PER_DAY: "100" };
+    const mk = () => new Request("https://w.example/ask", { method: "POST", headers: { Origin: "https://o.example", "CF-Connecting-IP": "9.9.9.9" }, body: JSON.stringify({ kind: "create", prompt: "working capital" }) });
+    const r1 = await worker.fetch(mk(), env); const j1 = await r1.json();
+    assert.equal(r1.status, 200); assert.deepEqual(j1.cards, [{ front: "F", back: "B" }]);
+    assert.equal(seen[0].model, MODEL); assert.equal(seen[0].stream, false); assert.equal(seen[0].max_tokens, LIMITS.jsonTokens);
+    const j2 = await (await worker.fetch(mk(), env)).json(); assert.equal(j2.cards, null); assert.equal(j2.content, "sorry, no json");
+    assert.equal((await worker.fetch(mk(), env)).status, 429);
+  } finally { globalThis.fetch = realFetch; }
+});
