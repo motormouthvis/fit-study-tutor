@@ -2,7 +2,8 @@
 // Usage: PORT=8787 ALLOWED_ORIGINS=http://127.0.0.1:1234 [XAI_URL=...] node worker/local-server.mjs   (reads XAI_API_KEY from env; never prints it)
 import http from "node:http";
 import worker from "./src/index.js";
-const env = { XAI_API_KEY: process.env.XAI_API_KEY, ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS, PER_HOUR: process.env.PER_HOUR, PER_DAY: process.env.PER_DAY, XAI_URL: process.env.XAI_URL };
+const kvm = new Map(); const SYNC_KV = { get: async (k, o) => { const v = kvm.get(k); return v == null ? null : (o && o.type === "json" ? JSON.parse(v) : v); }, put: async (k, v) => { kvm.set(k, v); } };
+const env = { SYNC_KV, XAI_API_KEY: process.env.XAI_API_KEY, ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS, PER_HOUR: process.env.PER_HOUR, PER_DAY: process.env.PER_DAY, XAI_URL: process.env.XAI_URL };
 http.createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c);
   const headers = new Headers(); for (const [k, v] of Object.entries(req.headers)) headers.set(k, Array.isArray(v) ? v.join(",") : v);

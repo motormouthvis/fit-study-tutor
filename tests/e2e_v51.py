@@ -26,7 +26,7 @@ with sync_playwright() as p:
         pg.evaluate("""localStorage.setItem('tutor.v1.fc', JSON.stringify({cards:{'balance-6':{seen:3,got:1,miss:2,restudy:true},'balance-1':{seen:1,got:1,miss:0},'my-ch1-01-account-payable':{seen:2,got:2,miss:0}}, life:{got:4,miss:2}, sessions:3}));
           localStorage.setItem('tutor.v1.mycards', JSON.stringify({cards:[{id:'my-ch1-01-account-payable',topic:'mine',f:'In one sentence, say what "Account payable" means.',b:'x',ai:false},{id:'my-zz-1',topic:'balance',f:'Own card',b:'Own back',ai:true}], over:{'balance-4':{f:'MY OWN FRONT', b:'MY OWN BACK'}}}));""")
         pg.reload(); pg.wait_for_timeout(500)
-        check(tag + ": v5.1 label", "v5.1" in pg.inner_text("#ver"))
+        check(tag + ": v5.1 label", "v5.2" in pg.inner_text("#ver"))
         tabs = pg.evaluate("Array.from(document.querySelectorAll('.tabs .tab')).map(t=>t.textContent.trim())")
         check(tag + ": top tabs read Learn - Quiz - Flash Cards - My Stats", tabs == ["Learn", "Quiz", "Flash Cards", "My Stats"], tabs)
         pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])")

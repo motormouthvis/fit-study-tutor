@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.1";
+  var APP_VERSION = "v5.2";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -560,7 +560,7 @@
   /* ================= v4.2: Flash Cards ================= */
   var FL = window.Flash, fc = null;
   function fcEsc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function fcSave() { storage.save("fc", fc.st); storage.save("fcFilter", fc.filter); storage.save("fcShuffle", fc.shuffle); }
+  function fcSave() { syncStampFc(); storage.save("fc", fc.st); storage.save("fcFilter", fc.filter); storage.save("fcShuffle", fc.shuffle); }
   function fcNum(v) { var a = Math.abs(v).toLocaleString("en-US"); return v < 0 ? "(" + a + ")" : a; }
   function fcTable(t) {
     var h = "<table class='fctbl'><caption>" + fcEsc(t.title) + "</caption>";
@@ -725,6 +725,114 @@
   }
 
 
+  /* ================= v5.2: sync flash card progress across devices (Cloudflare Worker + KV) =================
+     localStorage stays the offline copy. Each card result carries u (updated time); SyncMerge (sync-merge.js) merges: newest card wins,
+     history = union by session id, My cards / improved cards newest wins with delete markers. Sync on load, after grading (debounced),
+     when the app is hidden or shown again, and when the connection comes back. */
+  var SM = window.SyncMerge, SY = { code: "", last: 0, snapFc: {}, snapH: "", snapC: {}, snapO: {}, dirty: 0, timer: 0, first: 0, busy: false, pending: false, msg: "", err: false, retry: 0 };
+  var SYNC_IDLE_MS = window.__SYNC_IDLE_MS || 20000, SYNC_MAX_MS = window.__SYNC_MAX_MS || 90000;   // free-tier friendly: at most about one write per 20-90 s while studying
+  function syncUrl() { var u = window.__SYNC_URL || (window.ASK_CONFIG && window.ASK_CONFIG.url) || ""; return u.replace(/\/+$/, ""); }
+  function sigNoU(o) { var c = {}; for (var k in o) if (k !== "u") c[k] = o[k]; return SM.stable(c); }
+  function syncSnap() {
+    if (!fc || !SM) return; SY.snapFc = {}; for (var id in fc.st.cards) SY.snapFc[id] = sigNoU(fc.st.cards[id]); SY.snapH = SM.stable(fc.st.hist || {});
+    SY.snapC = {}; MYC.cards.forEach(function (c) { SY.snapC[c.id] = sigNoU(c); }); SY.snapO = {}; for (var o in MYC.over) SY.snapO[o] = sigNoU(MYC.over[o]);
+  }
+  function syncStampFc() {
+    if (!fc || !SM || !SY.ready) return; var now = Date.now(), ch = false, id;
+    for (id in fc.st.cards) { var g = sigNoU(fc.st.cards[id]); if (SY.snapFc[id] !== g) { fc.st.cards[id].u = now; SY.snapFc[id] = g; ch = true; } }
+    var h = fc.st.hist || {}; for (var sec in h) h[sec].forEach(function (e) { if (!e.id) e.id = "s" + (e.t || now).toString(36) + Math.floor(Math.random() * 1679616).toString(36); });
+    var hs = SM.stable(h); if (hs !== SY.snapH) { SY.snapH = hs; ch = true; }
+    if (ch) syncDirty();
+  }
+  function syncStampMy() {
+    if (!SM || !SY.ready) return; var now = Date.now(), seen = {}, k; if (!MYC.del || typeof MYC.del !== "object") MYC.del = {};
+    MYC.cards.forEach(function (c) { seen[c.id] = 1; var g = sigNoU(c); if (SY.snapC[c.id] !== g) { c.u = now; SY.snapC[c.id] = g; } });
+    for (k in SY.snapC) if (!seen[k]) { MYC.del["c:" + k] = now; delete SY.snapC[k]; }
+    for (k in MYC.over) { var g2 = sigNoU(MYC.over[k]); if (SY.snapO[k] !== g2) { MYC.over[k].u = now; SY.snapO[k] = g2; } }
+    for (k in SY.snapO) if (!MYC.over[k]) { MYC.del["o:" + k] = now; delete SY.snapO[k]; }
+  }
+  function syncDirty() { if (!SY.ready) return; SY.dirty++; if (!SY.code) return; var now = Date.now(); if (!SY.first) SY.first = now; syncSchedule(Math.max(0, Math.min(SYNC_IDLE_MS, SY.first + SYNC_MAX_MS - now))); }
+  function syncSchedule(ms) { clearTimeout(SY.timer); SY.timer = setTimeout(function () { syncNow(); }, ms); }
+  function syncLocalDoc() {
+    var cards = {}; MYC.cards.forEach(function (c) { cards[c.id] = c; });
+    return { v: 1, cards: fc.st.cards, hist: fc.st.hist || {}, my: { cards: cards, over: MYC.over, del: MYC.del || {} }, sessions: fc.st.sessions || 0 };
+  }
+  function sumGM(cards) { var g = 0, m = 0; for (var id in cards) { g += +cards[id].got || 0; m += +cards[id].miss || 0; } return { g: g, m: m }; }
+  function syncApply(d) {
+    var before = sumGM(fc.st.cards), offG = Math.max(0, (fc.st.life.got || 0) - before.g), offM = Math.max(0, (fc.st.life.miss || 0) - before.m);
+    fc.st.cards = d.cards || {}; fc.st.hist = d.hist || {}; fc.st.sessions = Math.max(fc.st.sessions || 0, d.sessions || 0);
+    var after = sumGM(fc.st.cards); fc.st.life = { got: after.g + offG, miss: after.m + offM };
+    if (fc.histRef && fc.histRef.id) { var hr = null; for (var sec in fc.st.hist) fc.st.hist[sec].forEach(function (e) { if (e.id === fc.histRef.id) hr = e; }); fc.histRef = hr; }
+    var my = d.my || {}; MYC.cards = Object.keys(my.cards || {}).map(function (k) { return my.cards[k]; }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    MYC.over = my.over || {}; MYC.del = my.del || {}; FL.setUser(MYC);
+    storage.save("fc", fc.st); storage.save("mycards", MYC); syncSnap();
+    if (fc.queue) fc.queue = fc.queue.filter(function (id) { return !!fcCard(id); });
+    fcFilterOptions(); if ($("tab-cards").classList.contains("active")) fcRender(); if ($("tab-progress").classList.contains("active")) renderFcStats();
+  }
+  function syncStatus(msg, err) { SY.msg = msg; SY.err = !!err; renderSync(); }
+  function syncReq(method, doc, keep) {
+    var o = { method: method, cache: "no-store", headers: {} };
+    if (doc) { o.body = JSON.stringify({ doc: doc }); o.headers["Content-Type"] = "application/json"; if (keep && o.body.length < 60000) o.keepalive = true; }
+    return fetch(syncUrl() + "/progress/" + encodeURIComponent(SY.code), o).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; return j; }); });
+  }
+  function syncNow(keep) {
+    if (!SY.code || !SM || !fc) return Promise.resolve();
+    if (!syncUrl()) { syncStatus("Sync is not available (no server address).", true); return Promise.resolve(); }
+    if (navigator.onLine === false) { syncStatus("Offline. Your results are saved on this device and will sync when you are back online.", true); return Promise.resolve(); }
+    if (SY.busy) { SY.pending = true; return Promise.resolve(); }
+    clearTimeout(SY.timer); SY.busy = true; var sent = SY.dirty, put = sent > 0;
+    if (!SY.msg || SY.err) syncStatus("Syncing...");
+    return syncReq(put ? "PUT" : "GET", put ? syncLocalDoc() : null, keep).then(function (j) {
+      if (j.status === 429) { if (j.doc) syncMergeIn(j.doc); SY.retry = (+j.retryAfter || 5) * 1000; if (j.error === "daily_limit") { syncStatus("Sync paused for today (daily limit). Your results are safe on this device.", true); return; } syncSchedule(Math.min(SY.retry, 600000)); return; }
+      if (j.status !== 200) { syncStatus(j.error === "bad_code" ? "That sync code is not valid. Check it and try again." : "Could not sync right now (" + (j.error || ("error " + j.status)) + "). I will try again.", true); if (j.error !== "bad_code") syncSchedule(60000); return; }
+      var remote = j.doc, merged = syncMergeIn(remote);
+      if (put) { if (SY.dirty === sent) { SY.dirty = 0; SY.first = 0; } }
+      else if (!remote || !SM.same(merged, SM.merge(remote, {}))) { SY.dirty = Math.max(SY.dirty, 1); SY.pending = true; }
+      SY.last = Date.now(); storage.save("sync", { code: SY.code, last: SY.last }); syncStatus("");
+    }, function () { syncStatus("Could not reach the sync server. Your results are saved on this device; I will try again.", true); syncSchedule(60000); })
+      .then(function () { SY.busy = false; if (SY.pending) { SY.pending = false; syncSchedule(SY.dirty ? 2500 : 0); } });
+  }
+  function syncMergeIn(remote) {
+    var local = syncLocalDoc(), merged = SM.merge(local, remote || {});
+    if (!SM.same(merged, SM.merge(local, {}))) syncApply(merged);
+    return merged;
+  }
+  var SYNC_ABC = "abcdefghjkmnpqrstuvwxyz23456789";
+  function syncNewCode() {
+    var out = "", b = new Uint8Array(64), i = 0; crypto.getRandomValues(b);
+    while (out.replace(/-/g, "").length < 30) { if (i >= b.length) { crypto.getRandomValues(b); i = 0; } var x = b[i++]; if (x >= 248) continue; out += SYNC_ABC[x % 31]; if (out.replace(/-/g, "").length % 5 === 0 && out.replace(/-/g, "").length < 30) out += "-"; }
+    return out;
+  }
+  function syncNorm(t) { var c = String(t || "").toLowerCase().replace(/[^a-z0-9]/g, ""); if (c.length !== 30) return ""; return c.match(/.{5}/g).join("-"); }
+  function syncUse(code) {
+    SY.code = code; SY.last = 0; storage.save("sync", { code: code, last: 0 }); SY.dirty = Math.max(SY.dirty, 1); SY.first = 0;
+    syncStatus("Syncing..."); return syncNow();
+  }
+  function renderSync() {
+    var on = !!SY.code, st = $("syncStatus"); if (!st) return;
+    $("syncOn").hidden = !on; $("syncOff").hidden = on; $("syncCode").textContent = SY.code;
+    var t = SY.msg || (on ? (SY.last ? "Sync is on. Last synced " + new Date(SY.last).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + "." : "Sync is on.") : "Sync is off on this device. Results stay on this device only.");
+    st.textContent = t; st.className = "syncstatus" + (on && !SY.err && !SY.msg ? " ok" : SY.err ? " err" : "");
+  }
+  function initSync() {
+    if (!fc || !SM) return;
+    var sv = storage.load("sync", null); if (sv && sv.code) { SY.code = sv.code; SY.last = sv.last || 0; }
+    syncSnap(); SY.ready = true; renderSync();
+    $("btnSyncNew").addEventListener("click", function () { syncUse(syncNewCode()); });
+    $("btnSyncUse").addEventListener("click", function () { var c = syncNorm($("syncInput").value); if (!c) { syncStatus("That does not look like a sync code. It has 30 letters and numbers (dashes optional).", true); return; } $("syncInput").value = ""; syncUse(c); });
+    $("btnSyncNow").addEventListener("click", function () { syncNow(); });
+    $("btnSyncCopy").addEventListener("click", function () { var c = SY.code; function done() { syncStatus("Code copied. Paste it into Settings on your other device."); setTimeout(function () { syncStatus(""); }, 5000); }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(c).then(done, function () { syncStatus("Could not copy. Select the code and copy it by hand.", true); }); else syncStatus("Select the code and copy it by hand.", true); });
+    $("btnSyncOff").addEventListener("click", function () { var b = $("btnSyncOff"); if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Tap again to turn off sync here"; setTimeout(function () { b.dataset.sure = ""; b.textContent = "Turn off sync on this device"; }, 4000); return; }
+      b.dataset.sure = ""; b.textContent = "Turn off sync on this device"; clearTimeout(SY.timer); SY.code = ""; SY.msg = ""; storage.save("sync", null); syncStatus("Sync turned off on this device. Your results stay here; other devices keep syncing."); });
+    document.addEventListener("visibilitychange", function () { if (!SY.code) return; if (document.visibilityState === "hidden") { if (SY.dirty) syncNow(true); } else syncNow(); });
+    window.addEventListener("online", function () { if (SY.code) syncNow(); });
+    window.addEventListener("pagehide", function () { if (SY.code && SY.dirty && !SY.busy) syncNow(true); });
+    if (SY.code) syncNow();
+    window.__sync = SY; window.__syncNow = syncNow;
+  }
+
+
   /* ================= v4.9: AI flash cards (Improve / Expand / Create), My cards, export / import ================= */
   var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", prompt: "", topic: "mine", tries: 0 };
   function mycLoad() {
@@ -741,7 +849,7 @@
     });
     if (moved) { mycSave(); fcSave(); }
   }
-  function mycSave() { storage.save("mycards", MYC); FL.setUser(MYC); }
+  function mycSave() { syncStampMy(); storage.save("mycards", MYC); FL.setUser(MYC); syncDirty(); }
   function mycNewId() { var id; do { id = "my-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 46656).toString(36); } while (MYC.cards.some(function (c) { return c.id === id; })); return id; }
   function aiErrText(status, j) {
     j = j || {};
@@ -1396,7 +1504,7 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("installSheet").hidden) $("installSheet").hidden = true; });
     window.__install = { isInstalled: isInstalled, platform: installPlatform, hasPrompt: function () { return !!dip; } };
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
-    initFlash(); initAsk(); initV4(); window.__v4ready = true;
+    initFlash(); initSync(); initAsk(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       navigator.serviceWorker.register("sw.js").then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});

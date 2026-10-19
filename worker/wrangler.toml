@@ -16,3 +16,8 @@ binding = "RATE_KV"
 id = "759b029d08ee4e00acf81c77526241d2"
 
 # Secret (never in this file):  npx wrangler secret put XAI_API_KEY
+
+# v5.2: flash card progress sync (free plan KV). Created with: npx wrangler kv namespace create SYNC_KV
+[[kv_namespaces]]
+binding = "SYNC_KV"
+id = "9e1e03c064f2443dbd07610daab14fb2"

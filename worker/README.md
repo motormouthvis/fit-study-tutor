@@ -12,3 +12,7 @@ Deploy (needs CLOUDFLARE_API_TOKEN with Workers Scripts:Edit + Workers KV Storag
 
 Then set `url` in ../ask-config.js to that address (no trailing slash), bump the version, push.
 Test: `npm test`. Local: `PORT=8787 ALLOWED_ORIGINS=http://localhost:8000 node local-server.mjs`.
+
+## v5.2: flash card sync
+`GET/PUT /progress/<code>` (same origin check). KV namespace `SYNC_KV` (id in wrangler.toml, created with `npx wrangler kv namespace create SYNC_KV`).
+Merge rules come from `../sync-merge.js` (shared with the app). Caps: 400 KB per doc, 1 write per code per 2 s, 400 writes per code per day, 60 reads per code per minute per isolate. Test: `npm test`.

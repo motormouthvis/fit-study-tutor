@@ -1,4 +1,6 @@
-# MBA Study Tutor (Bill's hands-free voice tutor) - v5.1
+# MBA Study Tutor (Bill's hands-free voice tutor) - v5.2
+
+**v5.2:** flash card progress can sync across devices (Settings > "Sync flash cards across my devices"). See "v5.2" at the bottom.
 
 **v5.1:** Flash Cards is now a top tab (Learn - Quiz - Flash Cards - My Stats) that opens on a list of **sections**, and Chapter 1 of the accounting book is built in. See "v5.1" at the bottom, including **Adding a chapter**.
 
@@ -112,3 +114,11 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 3. Each card is one line: `["short-unique-slug", "Front: say what to produce", "Back: short model answer in our own words"]`. The card id becomes `<book id>-ch<NN>-<slug>`, so keep slugs unique within the chapter and never rename one after Bill has studied it (the score follows the id).
 4. The chapter appears under "Books and chapters" automatically, titled "Course <courseNo> - Book: <title>, Chapter <n>: <chapter title>". Nothing else needs editing.
 5. Run `npm test` (checks unique ids and no empty text), bump `VERSION` in `sw.js` and `APP_VERSION` in `app.js`, then commit and push.
+
+## v5.2 - sync flash card progress across devices
+- Before v5.2 every device kept its own results in its browser storage (`localStorage`), so results studied on the laptop never showed on the phone. v5.1 itself saved correctly (checked on the live site, phone and desktop, including the v5.0 import upgrade path).
+- **Settings > Sync flash cards across my devices.** First device: **Turn on sync (make a new code)**, then **Copy code**. Each other device: paste the code in "Already have a code?" and tap **Use this code**. Results already on that device are merged in, not lost.
+- What syncs: per-card results (right/wrong, counts, last answer, Restudy star), section history, My cards, improved cards (and deletes / resets). Nothing else (quiz log, settings) syncs.
+- How: the Worker `fit-tutor-ask` has `GET/PUT /progress/<code>` (same origin check; 400 KB cap; one write per code every 2 s, 400 writes per code per day; KV key is a SHA-256 of the code). Storage is the free-plan KV namespace `SYNC_KV`. The merge rules live in `sync-merge.js` and are shared by the app and the Worker: newest change per card wins (each result has an update time), history is a union by session id, deletes win over older edits. The app syncs on load, about 20 s after you stop grading (at most every 90 s while you keep going), when the app is hidden or shown again, and when the connection comes back. Offline grading is kept on the device and sent later.
+- KV reads can lag up to about a minute between far-apart places; tap **Sync now** if a device looks behind.
+- Tests: `tests/sync.test.js` (merge rules), `worker/test/sync.test.js` (endpoints), `tests/e2e_v52.py` (two devices: turn on, enter code, offline then online, same card on both, My cards add/delete, turn off).

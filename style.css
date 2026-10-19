@@ -352,3 +352,9 @@ body.dev-desktop .fcsecbtns { max-width:520px; }
 body.dev-desktop .fcsections { max-width:900px; }
 details.fcgroup > summary .small { margin-left:auto; white-space:nowrap; }
 @media (max-width:520px) { details.fcgroup > summary { font-size:1.02rem; padding:10px 12px; } }
+
+/* ===== v5.2 sync ===== */
+.syncstatus { margin:8px 0; padding:8px 12px; border:2px solid var(--line); border-radius:12px; font-weight:700; }
+.syncstatus.ok { border-color:var(--green); } .syncstatus.err { border-color:var(--amber); }
+.synccode { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:1.15rem; font-weight:800; letter-spacing:.04em; padding:10px 12px; margin:6px 0 8px; background:#000; border:2px dashed var(--accent); border-radius:12px; overflow-wrap:anywhere; user-select:all; }
+#syncInput { width:100%; font-family:ui-monospace, Menlo, Consolas, monospace; }

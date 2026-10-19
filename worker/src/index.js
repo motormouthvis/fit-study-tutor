@@ -4,6 +4,7 @@
 export const MODEL = "grok-4.20-0309-non-reasoning"; // cheapest current Grok chat model on docs.x.ai/docs/models (Oct 2026)
 export const LIMITS = { partChars: 4000, titleChars: 200, msgChars: 1500, maxMessages: 13, maxTokens: 700, jsonTokens: 900, promptChars: 300, perHour: 20, perDay: 100 };
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
+import SyncMerge from "../../sync-merge.js"; // v5.2: same merge rules as the app
 export const SYSTEM = "You are a patient tutor for Bill, an MBA beginner (BUS 5601 accounting basics, BUS 5421 managerial economics). " +
   "The student pressed 'explain further' on one part of a lesson. Explain it further in plain English for an MBA beginner: short paragraphs, " +
   "one concrete everyday or small-business example, define any jargon, show the arithmetic step by step if numbers are involved. " +
@@ -12,7 +13,7 @@ export const SYSTEM = "You are a patient tutor for Bill, an MBA beginner (BUS 56
 
 function origins(env) { return String(env.ALLOWED_ORIGINS || "https://motormouthvis.github.io").split(",").map(s => s.trim()).filter(Boolean); }
 function cors(origin) {
-  return { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type",
+  return { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400", "Vary": "Origin" };
 }
 function json(status, obj, origin, extra) {
@@ -105,6 +106,41 @@ export async function rateLimit(env, vk, now = Date.now()) {
   return null;
 }
 
+// ---- v5.2: flash card progress sync. GET/PUT /progress/<code>. The code is a long random string made by the app (about 148 bits);
+// KV key = "p:" + SHA-256(code), so the code itself is never stored. Free-tier friendly: PUT merges server-side and skips the write when nothing changed;
+// at most one write per code every 2 s and 400 writes per code per day (counters live inside the stored doc: no extra KV writes).
+export const SYNC = { maxBytes: 400000, minGapMs: 2000, perDay: 400, getsPerMin: 60 };
+export const CODE_RE = /^[a-z2-9]{5}(-[a-z2-9]{5}){5}$/;
+async function syncKey(code) { const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("fit-tutor-sync:" + code)); return "p:" + [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join(""); }
+const getMemo = new Map(); // per-isolate GET limiter (no KV writes)
+function getLimited(key, now) { const m = Math.floor(now / 60000), e = getMemo.get(key); if (!e || e.m !== m) { getMemo.set(key, { m, n: 1 }); if (getMemo.size > 5000) getMemo.clear(); return false; } e.n++; return e.n > SYNC.getsPerMin; }
+function cleanDoc(d) { return SyncMerge.merge(d && typeof d === "object" ? d : {}, {}); }
+export async function handleSync(request, env, origin, code, now = Date.now()) {
+  if (!env.SYNC_KV) return json(503, { error: "sync_not_configured" }, origin);
+  code = String(code || "").toLowerCase();
+  if (!CODE_RE.test(code)) return json(400, { error: "bad_code" }, origin);
+  const key = await syncKey(code), nostore = { "Cache-Control": "no-store" };
+  const stored = await env.SYNC_KV.get(key, { type: "json" });
+  if (request.method === "GET") {
+    if (getLimited(key, now)) return json(429, { error: "rate_limited", retryAfter: 30 }, origin, { "Retry-After": "30" });
+    return json(200, { doc: stored ? stored.doc : null, at: stored ? stored.w : 0 }, origin, nostore);
+  }
+  if (request.method !== "PUT") return json(405, { error: "method_not_allowed" }, origin);
+  const len = +(request.headers.get("Content-Length") || 0);
+  if (len > SYNC.maxBytes) return json(413, { error: "too_large" }, origin);
+  let body; try { const t = await request.text(); if (t.length > SYNC.maxBytes) return json(413, { error: "too_large" }, origin); body = JSON.parse(t); } catch (e) { return json(400, { error: "bad_json" }, origin); }
+  if (!body || typeof body !== "object" || !body.doc || typeof body.doc !== "object") return json(400, { error: "bad_doc" }, origin);
+  const old = stored ? stored.doc : {}, merged = cleanDoc(SyncMerge.merge(old, body.doc));
+  if (stored && SyncMerge.same(merged, cleanDoc(old))) return json(200, { doc: merged, at: stored.w, unchanged: true }, origin, nostore);
+  const day = Math.floor(now / 86400000), wn = stored && stored.day === day ? (stored.wn || 0) : 0;
+  if (stored && now - (stored.w || 0) < SYNC.minGapMs) { const ra = Math.ceil((SYNC.minGapMs - (now - stored.w)) / 1000) || 1; return json(429, { error: "too_soon", retryAfter: ra, doc: merged }, origin, { "Retry-After": String(ra) }); }
+  if (wn >= SYNC.perDay) return json(429, { error: "daily_limit", retryAfter: (day + 1) * 86400 - Math.floor(now / 1000) }, origin);
+  const out = JSON.stringify({ doc: merged, w: now, day, wn: wn + 1 });
+  if (out.length > SYNC.maxBytes + 2000) return json(413, { error: "too_large" }, origin);
+  await env.SYNC_KV.put(key, out);
+  return json(200, { doc: merged, at: now }, origin, nostore);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
@@ -113,6 +149,8 @@ export default {
     if (request.method === "OPTIONS") return ok ? new Response(null, { status: 204, headers: cors(origin) }) : new Response(null, { status: 403 });
     if (url.pathname === "/health" && request.method === "GET") return json(200, { ok: true, model: MODEL, configured: !!env.XAI_API_KEY }, ok ? origin : null);
     if (!ok) return json(403, { error: "origin_not_allowed" });
+    const pm = /^\/progress\/([^/]+)$/.exec(url.pathname);
+    if (pm) return handleSync(request, env, origin, decodeURIComponent(pm[1]));
     if (request.method !== "POST" || url.pathname !== "/ask") return json(404, { error: "not_found" }, origin);
     if (!env.XAI_API_KEY) return json(503, { error: "not_configured" }, origin);
     const len = +(request.headers.get("Content-Length") || 0);

@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.1</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.2</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -214,6 +214,25 @@
   <section id="tab-settings" class="panel">
     <button class="backbtn" data-back>&#8249; Back</button>
 
+    <!-- v5.2: sync flash card progress across devices -->
+    <div class="card" id="syncCard"><h2>Sync flash cards across my devices</h2>
+      <p class="small">Keeps your flash card results (right, wrong, restudy), section history, My cards and improved cards the same on your phone, tablet, laptop, PC and car. Each device still works offline and catches up when it is back online.</p>
+      <div id="syncStatus" class="syncstatus" role="status" aria-live="polite"></div>
+      <div id="syncOn" hidden>
+        <div class="small">Your sync code. Keep it private: anyone with it can see and change your flash card results.</div>
+        <div id="syncCode" class="synccode"></div>
+        <div class="row"><button id="btnSyncCopy" class="btn">Copy code</button><button id="btnSyncNow" class="btn go">Sync now</button></div>
+        <button id="btnSyncOff" class="btn warn">Turn off sync on this device</button>
+      </div>
+      <div id="syncOff">
+        <button id="btnSyncNew" class="btn go">Turn on sync (make a new code)</button>
+        <p class="small">Do this on your first device only. Then on each other device, enter the same code below.</p>
+        <label class="lbl" for="syncInput">Already have a code? Enter it here:</label>
+        <input id="syncInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx">
+        <button id="btnSyncUse" class="btn">Use this code</button>
+      </div>
+    </div>
+
     <div class="card"><h2>Voice unmute phrase</h2>
       <p class="small">Say this to turn listening back on after "mute". Pick something you would not say by accident, two or three words.</p>
       <input id="setKeyword" type="text" autocomplete="off">
@@ -409,6 +428,7 @@
 <script src="statements.js"></script>
 <script src="cards-v50.js"></script>
 <script src="books-data.js"></script>
+<script src="sync-merge.js"></script>
 <script src="flashcards.js"></script>
 <script src="ask-config.js"></script>
 <script src="engine.js"></script>
