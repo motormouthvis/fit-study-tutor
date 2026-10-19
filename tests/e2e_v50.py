@@ -3,7 +3,7 @@ Run: python3 tests/e2e_v50.py"""
 import os, sys, json
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import serve, FAKE_REC
+from common import serve, FAKE_REC, open_cards
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 srv, PORT = serve(ROOT); URL = f"http://127.0.0.1:{PORT}/index.html"
 fails = []
@@ -20,8 +20,8 @@ with sync_playwright() as p:
         pg.evaluate("""localStorage.setItem('tutor.v1.fc', JSON.stringify({cards:{'balance-6':{seen:2,got:1,miss:1,restudy:true}}, life:{got:1,miss:1}, sessions:1}));
           localStorage.setItem('tutor.v1.mycards', JSON.stringify({cards:[], over:{'balance-4':{f:'MY OWN FRONT', b:'MY OWN BACK'}}}));""")
         pg.reload(); pg.wait_for_timeout(500)
-        check(tag + ": v5.0 label", "v5.0" in pg.inner_text("#ver"))
-        pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])"); pg.click("#menu [data-goto=cards]"); pg.wait_for_timeout(300)
+        check(tag + ": v5.0 label", "v5.1" in pg.inner_text("#ver"))
+        open_cards(pg); pg.wait_for_timeout(300)
         def show(id_):
             pg.evaluate("document.getElementById('fcFilter').value='topic:balance'; document.getElementById('fcFilter').dispatchEvent(new Event('change'))"); pg.wait_for_timeout(200)
             pg.evaluate("window.__fc.queue=['%s'].concat(window.__fc.queue.filter(i=>i!=='%s')); window.__fc.flipped=false" % (id_, id_)); pg.evaluate("document.getElementById('fcStar').click();document.getElementById('fcStar').click()"); pg.wait_for_timeout(150)

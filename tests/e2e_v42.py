@@ -3,7 +3,7 @@ import re
 import os, sys, json
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import serve, FAKE_REC, goto
+from common import serve, FAKE_REC, goto, open_cards
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 srv, PORT = serve(ROOT); URL = f"http://127.0.0.1:{PORT}/index.html"
 fails = []
@@ -24,8 +24,9 @@ with sync_playwright() as p:
     ctx, pg = newpage(1440, 900)
     check("v4.x label", re.match(r"v[45]\.", pg.inner_text("#ver")) is not None)
     pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])")
-    check("Flash Cards is in the menu", pg.is_visible("#menu [data-goto=cards]") and "Flash Cards" in pg.inner_text("#mCards"))
-    pg.click("#menu [data-goto=cards]"); pg.wait_for_timeout(200)
+    check("Flash Cards is no longer in the menu (it is a top tab)", pg.locator("#menu [data-goto=cards]").count() == 0)
+    pg.click("#menuClose"); pg.wait_for_timeout(100)
+    open_cards(pg)
     check("Flash Cards screen opens", pg.is_visible("#fcCard") and pg.is_visible("#fcFilter"))
     nall = pg.evaluate("Flash.ALL.length"); check("deck loaded (300+ cards)", nall >= 290, nall)
     check("score shows session and lifetime", "This session" in pg.inner_text("#fcScore") and "Lifetime" in pg.inner_text("#fcScore"))
@@ -95,7 +96,7 @@ with sync_playwright() as p:
     # persistence + My Stats
     pg.reload(); pg.wait_for_timeout(500)
     goto(pg, "cards"); pg.wait_for_timeout(100)
-    check("filter and lifetime score persist after reload", pg.input_value("#fcFilter") == "topic:altman" and "Lifetime:" in pg.inner_text("#fcScore") and pg.evaluate(FC)["life"]["got"] >= 9)
+    check("lifetime score persists after reload", "Lifetime:" in pg.inner_text("#fcScore") and pg.evaluate(FC)["life"]["got"] >= 9)
     pg.click("[data-tab=progress]"); pg.wait_for_timeout(150)
     s = pg.inner_text("#fcStats")
     check("My Stats shows flash card stats", "cards seen" in s and "Restudy" in s and "BUS 5421" in s and "Statement Analysis" in s, s)

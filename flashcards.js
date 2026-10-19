@@ -456,7 +456,22 @@
   // v5.0: every course card re-worded so the front says exactly what to produce and the back is a labeled model answer (ids unchanged).
   var RW = (typeof module === "object" && module.exports) ? require("./cards-v50.js") : (typeof window !== "undefined" && window.FlashRewrite) || {};
   CARDS.forEach(function (c) { var r = RW[c.id]; if (r) { c.f = r[0]; c.b = r[1]; } });
-  var ALL = CARDS.concat(SA);
+  // v5.1: book/chapter cards from books-data.js (one section per chapter). Kept apart from CARDS (the 331 hand-written cards).
+  var BD = (typeof module === "object" && module.exports) ? require("./books-data.js") : (typeof window !== "undefined" && window.BooksData) || { books: [] };
+  var BK = [], BOOKS = BD.books || [], bkSeen = {};
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function chapterKey(b, ch) { return b.id + "-ch" + pad2(ch.n); }
+  BOOKS.forEach(function (b) {
+    b.chapters.forEach(function (ch) {
+      var key = chapterKey(b, ch); ch.key = "book:" + key;
+      ch.title_full = "Course " + b.courseNo + " - Book: " + b.title + ", Chapter " + ch.n + ": " + ch.title;
+      ch.cards.forEach(function (a) {
+        var id = key + "-" + a[0]; if (bkSeen[id]) throw new Error("duplicate book card id " + id); bkSeen[id] = 1;
+        BK.push({ id: id, topic: ch.key, course: b.course, kind: "term", book: b.id, chapter: ch.n, f: a[1], b: a[2] });
+      });
+    });
+  });
+  var ALL = CARDS.concat(BK, SA);
   var BASE = ALL.slice(); // the built-in deck exactly as shipped
 
   /* ---------- v4.9: My cards (custom AI cards) and improved-card overrides, stored by the app on the device ---------- */
@@ -482,8 +497,59 @@
   function baseCard(id) { for (var i = 0; i < BASE.length; i++) if (BASE[i].id === id) return BASE[i]; return null; }
 
   /* ---------- deck logic (pure) ---------- */
-  function topicName(key) { if (key === MINE) return MINE_NAME; for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].key === key) return TOPICS[i].name; return key; }
-  // filter: "all" | "course:acct" | "course:econ" | "topic:<key>" | "sa" | "restudy" | "unseen"
+  function bookChapter(key) { for (var i = 0; i < BOOKS.length; i++) for (var j = 0; j < BOOKS[i].chapters.length; j++) if (BOOKS[i].chapters[j].key === key) return { book: BOOKS[i], ch: BOOKS[i].chapters[j] }; return null; }
+  function topicName(key) { if (key === MINE) return MINE_NAME; var bc = bookChapter(key); if (bc) return "Book: " + bc.book.title + ", Ch " + bc.ch.n; for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].key === key) return TOPICS[i].name; return key; }
+  /* ---------- v5.1: sections (book chapters, topics, Statement Analysis, My cards) ---------- */
+  // status of a card: "unseen" | "right" (last answer was Got it) | "wrong" (last answer was Missed). Older saved progress has no lastOk: more misses than gots = wrong.
+  function cardStatus(s) {
+    if (!s || !s.seen) return "unseen";
+    if (s.lastOk === true) return "right"; if (s.lastOk === false) return "wrong";
+    return (s.miss || 0) > (s.got || 0) ? "wrong" : "right";
+  }
+  var COURSE_NO = { acct: "5601", econ: "5421" };
+  function sectionList() {
+    var groups = [], books = [], g5601 = [], g5421 = [];
+    BOOKS.forEach(function (b) { b.chapters.forEach(function (ch) { books.push({ id: ch.key, title: ch.title_full, short: "Chapter " + ch.n + ": " + ch.title, test: function (c) { return c.topic === ch.key; } }); }); });
+    TOPICS.forEach(function (t) { if (t.course === "sa") return; var sec = { id: "topic:" + t.key, title: "Course " + COURSE_NO[t.course] + " - Topic: " + t.name, test: function (c) { return c.topic === t.key; } }; (t.course === "acct" ? g5601 : g5421).push(sec); });
+    groups.push({ id: "all", title: "Everything", sections: [{ id: "all", title: "All cards", test: function () { return true; } }] });
+    if (books.length) groups.push({ id: "books", title: "Books and chapters", sections: books });
+    groups.push({ id: "t5601", title: "Course 5601 topics", sections: g5601 });
+    groups.push({ id: "t5421", title: "Course 5421 topics", sections: g5421 });
+    groups.push({ id: "other", title: "Practice and my cards", sections: [
+      { id: "sa", title: "Statement Analysis (practice companies)", test: function (c) { return c.course === "sa"; } },
+      { id: "mine", title: "My cards (AI)", test: function (c) { return !!c.custom; } }] });
+    return groups;
+  }
+  function sectionById(id) { var gs = sectionList(); for (var i = 0; i < gs.length; i++) for (var j = 0; j < gs[i].sections.length; j++) if (gs[i].sections[j].id === id) return gs[i].sections[j]; return null; }
+  // "sec:<section id>" or "sec:<section id>:all|wrong|restudy"
+  function parseSec(filter) {
+    var t = String(filter).slice(4), i = t.lastIndexOf(":"), mode = "all";
+    if (i >= 0 && /^(all|wrong|restudy)$/.test(t.slice(i + 1))) { mode = t.slice(i + 1); t = t.slice(0, i); }
+    return { id: t, mode: mode };
+  }
+  function secMatch(filter, c, s) {
+    var p = parseSec(filter), sec = sectionById(p.id); if (!sec || !sec.test(c)) return false;
+    if (p.mode === "wrong") return cardStatus(s) === "wrong"; if (p.mode === "restudy") return !!(s && s.restudy); return true;
+  }
+  // counts for one section: total, right, wrong, unseen (right + wrong + unseen = total), restudy (starred; can overlap)
+  function sectionStats(sec, st) {
+    st = st || { cards: {} }; var r = { total: 0, right: 0, wrong: 0, unseen: 0, restudy: 0 };
+    ALL.forEach(function (c) { if (!sec.test(c)) return; var s = st.cards[c.id]; r.total++; r[cardStatus(s)]++; if (s && s.restudy) r.restudy++; });
+    return r;
+  }
+  // which section a filter value belongs to (for session history); null when it does not map to one
+  function filterSection(filter) {
+    if (!filter || filter === "all") return { id: "all", mode: "all" };
+    if (filter.indexOf("sec:") === 0) { var p = parseSec(filter); return sectionById(p.id) ? p : null; }
+    if (filter.indexOf("topic:") === 0 && sectionById(filter)) return { id: filter, mode: "all" };
+    if (filter === "sa" || filter === "mine") return { id: filter, mode: "all" };
+    return null;
+  }
+  function addHistory(st, secId, mode, entry) {
+    st.hist = st.hist || {}; var a = st.hist[secId] = st.hist[secId] || []; entry.mode = mode; a.unshift(entry); if (a.length > 20) a.length = 20; return entry;
+  }
+
+  // filter: "all" | "sec:<id>[:wrong|restudy]" | "course:acct" | "course:econ" | "topic:<key>" | "sa" | "restudy" | "unseen"
   function filterCards(filter, st) {
     st = st || { cards: {} };
     return ALL.filter(function (c) {
@@ -493,6 +559,7 @@
       if (filter === "mine") return !!c.custom;
       if (filter === "restudy") return !!s.restudy;
       if (filter === "unseen") return !s.seen;
+      if (filter.indexOf("sec:") === 0) return secMatch(filter, c, s);
       if (filter.indexOf("course:") === 0) return c.course === filter.slice(7);
       if (filter.indexOf("topic:") === 0) return c.topic === filter.slice(6);
       return true;
@@ -510,11 +577,11 @@
     return weak.concat(rest);
   }
   var REQUEUE_GAP = 3;
-  function newState() { return { cards: {}, life: { got: 0, miss: 0 }, sessions: 0 }; }
+  function newState() { return { cards: {}, life: { got: 0, miss: 0 }, sessions: 0, hist: {} }; }
   // record an answer; returns the new queue. A missed card comes back REQUEUE_GAP cards later.
   function answer(st, queue, id, got, now) {
     var s = st.cards[id] || (st.cards[id] = { seen: 0, got: 0, miss: 0 });
-    s.seen++; s.last = now || Date.now();
+    s.seen++; s.last = now || Date.now(); s.lastOk = !!got;
     if (got) { s.got++; st.life.got++; } else { s.miss++; st.life.miss++; s.restudy = true; }
     var q = queue.slice(), pos = q.indexOf(id); if (pos >= 0) q.splice(pos, 1);
     if (!got) q.splice(Math.min(REQUEUE_GAP, q.length), 0, id);
@@ -533,5 +600,6 @@
     return { total: ALL.length, seen: seen, unseen: ALL.length - seen, mastered: mastered, restudy: restudy, got: st.life.got, miss: st.life.miss, acc: n ? st.life.got / n : 0, byCourse: byCourse, sessions: st.sessions || 0 };
   }
   return { MINE: MINE, MINE_NAME: MINE_NAME, setUser: setUser, baseCard: baseCard, validTopic: validTopic, BASE: BASE, COURSES: COURSES, TOPICS: TOPICS, CARDS: CARDS, SA: SA, ALL: ALL, COMPANIES: COMPANIES, SAQ: SAQ, topicName: topicName, filterCards: filterCards,
+    BOOKS: BOOKS, BK: BK, sectionList: sectionList, sectionById: sectionById, sectionStats: sectionStats, cardStatus: cardStatus, filterSection: filterSection, addHistory: addHistory, parseSec: parseSec,
     buildQueue: buildQueue, answer: answer, setRestudy: setRestudy, stats: stats, newState: newState, REQUEUE_GAP: REQUEUE_GAP, shuffle: shuffle, rng: rng };
 });

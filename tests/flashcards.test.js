@@ -4,13 +4,13 @@ const F = require("../flashcards.js");
 test("deck size: 250+ course cards and 40+ statement cards", () => {
   assert.ok(F.CARDS.length >= 250, "course cards " + F.CARDS.length);
   assert.ok(F.SA.length >= 40, "statement cards " + F.SA.length);
-  assert.equal(F.ALL.length, F.CARDS.length + F.SA.length);
+  assert.equal(F.ALL.length, F.CARDS.length + F.BK.length + F.SA.length);
 });
 test("every card has a unique id, a known topic and course, and non-empty text", () => {
   const ids = new Set(), topics = new Set(F.TOPICS.map(t => t.key));
   for (const c of F.ALL) {
     assert.ok(!ids.has(c.id), "dup " + c.id); ids.add(c.id);
-    assert.ok(topics.has(c.topic), c.id);
+    assert.ok(topics.has(c.topic) || (c.book && c.topic.indexOf("book:") === 0), c.id);
     assert.ok(["acct", "econ", "sa"].includes(c.course), c.id);
     assert.ok(c.f && c.f.length > 2 && c.b && c.b.length > 2, c.id);
   }
@@ -182,4 +182,46 @@ test("v5.0: numbers from the original cards are all still there (facts kept)", (
 });
 test("v5.0: Statement Analysis prompts say what to calculate", () => {
   for (const c of F.SA) assert.ok(/^Calculate .* from the (balance sheet|income statement|statements) below, then say what it tells you/.test(c.q), c.q);
+});
+
+/* ---------- v5.1: books/chapters and sections ---------- */
+test("v5.1: Chapter 1 key terms are built in: 80 cards, stable unique ids, course 5601, own section with the long title", () => {
+  const ch = F.BOOKS[0].chapters[0];
+  assert.equal(F.BK.length, 80); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 80);
+  assert.ok(F.BK.every(c => c.course === "acct" && /^wt16-ch01-[a-z0-9-]+$/.test(c.id) && c.f && c.b));
+  assert.equal(ch.title_full, "Course 5601 - Book: Financial & Managerial Accounting, Chapter 1: Introduction to Accounting and Business");
+  const sec = F.sectionById(ch.key); assert.equal(sec.title, ch.title_full);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 80);
+});
+test("v5.1: every card belongs to a section (course topics, book chapters, Statement Analysis) and nothing was dropped", () => {
+  const gs = F.sectionList(), secs = [].concat(...gs.map(g => g.sections)).filter(s => s.id !== "all" && s.id !== "mine");
+  for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
+  assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
+  assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 80 + 48);
+});
+test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
+  const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
+  let n = F.sectionStats(sec, st); assert.deepEqual([n.right, n.wrong, n.unseen, n.restudy], [0, 0, ids.length, 0]);
+  let q = ids.slice(); q = F.answer(st, q, ids[0], true); q = F.answer(st, q, ids[1], false); q = F.answer(st, q, ids[2], false); q = F.answer(st, q, ids[2], true);
+  n = F.sectionStats(sec, st); assert.equal(n.right, 2); assert.equal(n.wrong, 1); assert.equal(n.restudy, 2); assert.equal(n.right + n.wrong + n.unseen, n.total);
+  st.cards[ids[3]] = { seen: 3, got: 1, miss: 2 }; st.cards[ids[4]] = { seen: 2, got: 2, miss: 0 };   // saved by an older version (no lastOk)
+  n = F.sectionStats(sec, st); assert.equal(n.wrong, 2); assert.equal(n.right, 3);
+});
+test("v5.1: Study all / missed / restudy filters pick the right cards", () => {
+  const st = F.newState(), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
+  F.answer(st, ids.slice(), ids[0], true); F.answer(st, ids.slice(), ids[1], false); F.setRestudy(st, ids[0], true);
+  const f = m => F.filterCards("sec:topic:balance:" + m, st).map(c => c.id);
+  assert.equal(f("all").length, ids.length); assert.deepEqual(f("wrong"), [ids[1]]); assert.deepEqual(f("restudy").sort(), [ids[0], ids[1]].sort());
+  assert.equal(F.filterCards("sec:book:wt16-ch01:all", st).length, 80); assert.equal(F.filterCards("sec:sa:wrong", st).length, 0);
+  assert.deepEqual(F.parseSec("sec:book:wt16-ch01:wrong"), { id: "book:wt16-ch01", mode: "wrong" });
+});
+test("v5.1: session history keeps the latest 20 per section, newest first", () => {
+  const st = F.newState(); for (let i = 0; i < 25; i++) F.addHistory(st, "sa", "all", { t: i, n: 1, got: 1, miss: 0 });
+  assert.equal(st.hist.sa.length, 20); assert.equal(st.hist.sa[0].t, 24); assert.deepEqual(F.filterSection("topic:balance"), { id: "topic:balance", mode: "all" }); assert.equal(F.filterSection("restudy"), null);
+});
+test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
+  const B = require("../books-data.js"); const seen = new Set();
+  for (const b of B.books) { assert.ok(b.id && ["acct", "econ"].includes(b.course) && b.courseNo && b.title); for (const ch of b.chapters) { assert.ok(ch.n > 0 && ch.title);
+    for (const [slug, f, bk] of ch.cards) { assert.match(slug, /^[a-z0-9-]+$/); const k = b.id + ch.n + slug; assert.ok(!seen.has(k), "dup " + k); seen.add(k); assert.ok(f.length > 5 && bk.length > 5, slug); } } }
 });

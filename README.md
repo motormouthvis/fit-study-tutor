@@ -1,4 +1,7 @@
-# MBA Study Tutor (Bill's hands-free voice tutor) - v4.5
+# MBA Study Tutor (Bill's hands-free voice tutor) - v5.1
+
+**v5.1:** Flash Cards is now a top tab (Learn - Quiz - Flash Cards - My Stats) that opens on a list of **sections**, and Chapter 1 of the accounting book is built in. See "v5.1" at the bottom, including **Adding a chapter**.
+
 
 **v4.5 fix:** in desktop Read mode the article box could extend about 50 px below the bottom of the window, so the last line of a part or topic could never be scrolled fully into view. The box height is now worked out from the space actually left in the window (recalculated on layout changes, window resize and font load), the article has bottom padding and scroll-padding, and ↑/↓/PgUp/PgDn scrolling stops exactly at the real bottom. `tests/e2e_v45.py` checks every topic and the 12 tallest parts at 1366x768 and 1440x900.
 
@@ -92,3 +95,20 @@ Statement Analysis cards have no Improve (their numbers are generated and checke
 ## v5.0 — clearer flash cards
 All 331 course cards re-worded (ids unchanged, so scores, Restudy marks and your improved cards carry over). Every front now says exactly what to produce ("Define: prepaid expense, ... then give the journal entries ...", "Cash ratio: write the formula and say what a high vs low number tells you", "Calculate: ...", "Compare: ..."); every back is a labeled model answer (Definition / Formula / Example entry / Example / What it tells you / Answer / Working). Accounting term cards include a tiny balanced example journal entry. Statement Analysis prompts now say what to calculate and to say what it tells you.
 Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept in `tests/cards-v4-originals.json`, and a unit test checks that every original number survived and every example entry balances. Test: `python3 tests/e2e_v50.py`.
+
+## v5.1 - Flash Cards tab, sections, books and chapters
+- **Top tabs:** Learn - Quiz - Flash Cards - My Stats. The menu no longer has a Flash Cards item (the menu keeps the AI card actions: Create / Improve / Expand / Export / Import).
+- **Sections first:** tapping Flash Cards shows sections. Each section shows its name and **Right / Wrong / Restudy / Unseen / Total**, with three buttons: **Study all**, **Study missed**, **Study restudy** (a button is greyed out with "0 cards" when nothing fits). Right = the last answer on the card was Got it; Wrong = the last answer was Missed; Restudy = starred cards (a miss stars a card automatically). Old saved progress (no "last answer") counts as Wrong when misses > gots.
+- **Sections:** All cards; one per book chapter (e.g. "Course 5601 - Book: Financial & Managerial Accounting, Chapter 1: Introduction to Accounting and Business"); one per course topic (BUS 5601 and BUS 5421, in collapsed groups); Statement Analysis; My cards (AI). A card can be in more than one section (a My card saved under a topic shows in both).
+- **History:** each section has a collapsed "History" list: one line per study session (date, which button, cards studied, right, wrong), newest first, last 20 kept. Saved in `tutor.v1.fc` under `hist`.
+- **Study view:** same as before (flip, Got it / Missed, G/M/arrows, R, N, ?, the ... menu), plus an "All sections" button and the section name at the top. "Continue" on the sections list resumes an open session. The Which-cards dropdown is still there.
+- **Chapter 1** (80 key-term cards) is in `books-data.js`. If you had imported the earlier my-ch1 file, the app merges those copies into the built-in cards and keeps their scores.
+- **Progress carries over:** card ids did not change; saved scores, Restudy stars, My cards, improved cards and export/import all work as in v5.0.
+- Tests: `tests/e2e_v51.py` (tabs, sections, counts, buttons, history, old progress, desktop and phone) and new unit tests in `tests/flashcards.test.js`.
+
+### Adding a chapter (one file: `books-data.js`)
+1. Open `books-data.js`. Find the book (or add a new book object: `id` short and never changed, `course` "acct" for BUS 5601 or "econ" for BUS 5421, `courseNo` "5601"/"5421", `title`).
+2. Add a chapter to its `chapters` list: `{ n: 2, title: "Basic Accounting Systems", cards: [ ... ] }`.
+3. Each card is one line: `["short-unique-slug", "Front: say what to produce", "Back: short model answer in our own words"]`. The card id becomes `<book id>-ch<NN>-<slug>`, so keep slugs unique within the chapter and never rename one after Bill has studied it (the score follows the id).
+4. The chapter appears under "Books and chapters" automatically, titled "Course <courseNo> - Book: <title>, Chapter <n>: <chapter title>". Nothing else needs editing.
+5. Run `npm test` (checks unique ids and no empty text), bump `VERSION` in `sw.js` and `APP_VERSION` in `app.js`, then commit and push.

@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.0";
+  var APP_VERSION = "v5.1";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -534,8 +534,9 @@
       $("scHelp").textContent = "No sound. Try this: 1) turn the MEDIA volume up with the volume button, then tap TEST SOUND again; 2) make sure silent or Do Not Disturb is off; 3) if you use Bluetooth earbuds, check they are connected; 4) in Chrome, tap the lock icon near the address bar and make sure Sound is allowed; 5) close the app and open it again. I will not start a lesson until you hear this.";
     }
   }
-  var MAIN_TABS = { lessons: 1, tutor: 1, progress: 1 }, lastMain = "lessons";
-  function switchTab(name) {
+  var MAIN_TABS = { lessons: 1, tutor: 1, cards: 1, progress: 1 }, lastMain = "lessons";
+  function switchTab(name, keep) {
+    if (name === "cards" && fc && !(keep && fc.view === "study")) fc.view = "sections";   // v5.1: Flash Cards always opens on the sections list (the menu items keep an open session)
     var about = name === "help-about"; if (about) name = "help";
     if (MAIN_TABS[name]) lastMain = name;
     $("menu").hidden = true;
@@ -581,26 +582,31 @@
       FL.TOPICS.filter(function (t) { return t.course === co; }).forEach(function (t) { h += "<option value='topic:" + t.key + "'>" + fcEsc(t.name) + "</option>"; });
       h += "</optgroup>";
     });
+    if (/^sec:/.test(fc.filter)) h = "<option value='" + fcEsc(fc.filter) + "'>" + fcEsc(fcSecLabel(fc.filter)) + "</option>" + h;
     sel.innerHTML = h; sel.value = fc.filter; if (sel.value !== fc.filter) { fc.filter = "all"; sel.value = "all"; }
   }
   function fcStart() {
     var cards = FL.filterCards(fc.filter, fc.st);
     fc.queue = FL.buildQueue(cards, fc.st, Date.now() & 0x7fffffff, fc.shuffle);
-    fc.sess = { got: 0, miss: 0, total: cards.length }; fc.flipped = false;
+    fc.sess = { got: 0, miss: 0, total: cards.length }; fc.flipped = false; fc.histRef = null;
     if (cards.length) { fc.st.sessions = (fc.st.sessions || 0) + 1; fcSave(); }
     fcRender();
   }
   function fcCard(id) { for (var i = 0; i < FL.ALL.length; i++) if (FL.ALL[i].id === id) return FL.ALL[i]; return null; }
   function fcRender() {
+    if (fc.view !== "study" || !fc.queue) { renderSections(); return; }
+    $("fcStudy").hidden = false; $("fcSections").hidden = true;
+    $("fcSecName").textContent = fcSecLabel(fc.filter);
     var st = FL.stats(fc.st), id = fc.queue[0], c = id && fcCard(id);
     $("fcScore").innerHTML = "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
       "<br><b>Lifetime:</b> " + st.got + " got, " + st.miss + " missed" + (st.got + st.miss ? " (" + Math.round(st.acc * 100) + "%)" : "") + " &middot; " + st.restudy + " marked Restudy";
     $("fcStage").hidden = !c; $("fcEmpty").hidden = !!c;
     if (!c) {
       var none = !fc.sess.total;
-      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button>"
-        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
-      var b; if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
+      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
+        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
+      var b; if ((b = $("fcToSec"))) b.onclick = function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); };
+      if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
       if ((b = $("fcAgain"))) b.onclick = fcStart; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
       return;
     }
@@ -624,13 +630,61 @@
   function fcFlip() { if (!fc.queue.length) return; fc.flipped = !fc.flipped; fcRender(); if (fc.flipped && device !== "desktop") { var b = $("fcBack"); b.scrollIntoView && b.scrollIntoView({ block: "nearest" }); } }
   function fcAnswer(got) {
     if (!fc.queue.length || !fc.flipped) return;
-    fc.queue = FL.answer(fc.st, fc.queue, fc.queue[0], got); fc.sess[got ? "got" : "miss"]++; fc.flipped = false; fcSave(); fcRender();
+    fc.queue = FL.answer(fc.st, fc.queue, fc.queue[0], got); fc.sess[got ? "got" : "miss"]++; fcHist(got); fc.flipped = false; fcSave(); fcRender();
     if (device !== "desktop") window.scrollTo(0, 0);
   }
   function fcSkip() { if (fc.queue.length > 1) { fc.queue.push(fc.queue.shift()); fc.flipped = false; fcRender(); } }
   function fcStar() { var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}; FL.setRestudy(fc.st, id, !s.restudy); fcSave(); fcRender(); }
   function fcSetFilter(v) { fc.filter = v; $("fcFilter").value = v; fcSave(); fcStart(); }
-  function renderFlash() { if (!fc.queue) fcStart(); else fcRender(); }
+  function renderFlash() { if (fc.view === "study" && fc.queue) fcRender(); else { fc.view = "sections"; renderSections(); } }
+  /* ---- v5.1: sections list (book chapters, topics, Statement Analysis, My cards) ---- */
+  function fcSecLabel(filter) {
+    var m = /^sec:/.test(filter) ? FL.parseSec(filter) : FL.filterSection(filter); if (!m) return "";
+    var sec = FL.sectionById(m.id); if (!sec) return ""; var mode = { all: "Study all", wrong: "Study missed", restudy: "Study restudy" }[m.mode];
+    return sec.title + (mode ? " \u00B7 " + mode : "");
+  }
+  // keep a small log per section: one entry per study session (date, mode, cards studied, right, wrong)
+  function fcHist(got) {
+    var m = FL.filterSection(fc.filter); if (!m) return;
+    if (!fc.histRef) fc.histRef = FL.addHistory(fc.st, m.id, m.mode, { t: Date.now(), n: 0, got: 0, miss: 0 });
+    fc.histRef.n++; fc.histRef[got ? "got" : "miss"]++; fc.histRef.t = Date.now();
+  }
+  function fcDate(t) { var d = new Date(t), mo = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()], h = d.getHours(), ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; return mo + " " + d.getDate() + ", " + h + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes() + ap; }
+  function fcSecHtml(sec) {
+    var n = FL.sectionStats(sec, fc.st), hist = (fc.st.hist && fc.st.hist[sec.id]) || [], key = fcEsc(sec.id);
+    function btn(mode, label, count, extra) {
+      return "<button class='fcsbtn" + (extra || "") + "' data-sec='" + key + "' data-mode='" + mode + "'" + (count ? "" : " disabled") + "><b>" + label + "</b><span>" + count + (count === 1 ? " card" : " cards") + "</span></button>";
+    }
+    var h = "<div class='fcsec' data-secid='" + key + "'><div class='fcsectitle'>" + fcEsc(sec.title) + "</div>" +
+      "<div class='fcsecnums' aria-label='Counts'><span class='n right'><b>" + n.right + "</b> Right</span><span class='n wrong'><b>" + n.wrong + "</b> Wrong</span><span class='n restudy'><b>" + n.restudy + "</b> Restudy</span><span class='n unseen'><b>" + n.unseen + "</b> Unseen</span><span class='n total'><b>" + n.total + "</b> Total</span></div>" +
+      "<div class='fcsecbtns'>" + btn("all", "Study all", n.total, " go") + btn("wrong", "Study missed", n.wrong, " miss") + btn("restudy", "Study restudy", n.restudy, " rs") + "</div>";
+    h += "<details class='fchist'><summary>History (" + hist.length + (hist.length ? " session" + (hist.length === 1 ? "" : "s") : "") + ")</summary>";
+    if (!hist.length) h += "<div class='small'>No sessions yet.</div>";
+    else h += "<table class='fchtbl'><tr><th>When</th><th>Cards</th><th>Studied</th><th>Right</th><th>Wrong</th></tr>" + hist.slice(0, 10).map(function (e) {
+      return "<tr><td>" + fcDate(e.t) + "</td><td>" + ({ all: "All", wrong: "Missed", restudy: "Restudy" }[e.mode] || "All") + "</td><td>" + e.n + "</td><td class='r'>" + e.got + "</td><td class='w'>" + e.miss + "</td></tr>"; }).join("") + "</table>";
+    return h + "</details></div>";
+  }
+  function renderSections() {
+    var box = $("fcSections"); if (!box || !fc) return;
+    $("fcStudy").hidden = true; box.hidden = false;
+    var open = {}; Array.prototype.forEach.call(box.querySelectorAll("details[data-g]"), function (d) { open[d.dataset.g] = d.open; });
+    var openHist = {}; Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { var x = d.querySelector(".fchist"); if (x && x.open) openHist[d.dataset.secid] = 1; });
+    var h = "<h2 class='fcsechead'>Flash Cards</h2><p class='small fcsecintro'>Pick a section. Right = your last answer was Got it. Wrong = your last answer was Missed. Restudy = starred cards (a miss stars a card for you).</p>";
+    if (fc.queue && fc.queue.length && fc.sess && fc.sess.total) h += "<button class='bigbtn go fcresume' id='fcResume'>&#9654; Continue: " + fcEsc(fcSecLabel(fc.filter) || "your last session") + " (" + fc.queue.length + " left)</button>";
+    FL.sectionList().forEach(function (g) {
+      var inner = g.sections.map(fcSecHtml).join(""), many = g.sections.length > 2, dflt = g.id === "all" || g.id === "books" || g.id === "other";
+      if (!many && g.id === "all") { h += "<div class='fcgroup'>" + inner + "</div>"; return; }
+      var isOpen = (g.id in open) ? open[g.id] : dflt;
+      h += "<details class='fcgroup' data-g='" + g.id + "'" + (isOpen ? " open" : "") + "><summary>" + fcEsc(g.title) + " <span class='small'>(" + g.sections.length + " section" + (g.sections.length === 1 ? "" : "s") + ")</span></summary>" + inner + "</details>";
+    });
+    box.innerHTML = h;
+    Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { if (openHist[d.dataset.secid]) d.querySelector(".fchist").open = true; });
+    Array.prototype.forEach.call(box.querySelectorAll(".fcsbtn"), function (b) { b.addEventListener("click", function () { if (!b.disabled) fcOpenSection(b.dataset.sec, b.dataset.mode); }); });
+    var r = $("fcResume"); if (r) r.onclick = function () { fc.view = "study"; fcRender(); window.scrollTo(0, 0); };
+  }
+  function fcOpenSection(secId, mode) {
+    fc.view = "study"; fc.filter = "sec:" + secId + ":" + mode; fcFilterOptions(); fcSave(); fcStart(); window.scrollTo(0, 0);
+  }
   function renderFcStats() {
     var box = $("fcStats"); if (!box || !FL) return;
     var s = FL.stats(fc.st), h = "<div style='font-size:1.6rem;font-weight:900'>" + s.seen + " of " + s.total + " <span class='small'>cards seen</span></div>" +
@@ -642,18 +696,20 @@
   }
   function initFlash() {
     if (!FL) return;
-    fc = { st: storage.load("fc", null) || FL.newState(), filter: storage.load("fcFilter", "all"), shuffle: storage.load("fcShuffle", true), queue: null, sess: null, flipped: false };
+    fc = { st: storage.load("fc", null) || FL.newState(), filter: storage.load("fcFilter", "all"), shuffle: storage.load("fcShuffle", true), queue: null, sess: null, flipped: false, view: "sections", histRef: null };
+    if (!fc.st.hist || typeof fc.st.hist !== "object") fc.st.hist = {};
     if (!fc.st.cards) fc.st = FL.newState(); if (!fc.st.life) fc.st.life = { got: 0, miss: 0 };
-    initAiCards(); fcFilterOptions();
+    initAiCards(); migrateOldChapterCards(); fcFilterOptions();
     var sh = $("fcShuffle"); function shLabel() { sh.innerHTML = fc.shuffle ? "&#128256; Shuffle on" : "&#10145; In order"; sh.setAttribute("aria-pressed", fc.shuffle ? "true" : "false"); } shLabel();
     sh.addEventListener("click", function () { fc.shuffle = !fc.shuffle; shLabel(); fcSave(); fcStart(); });
+    $("fcBackSec").addEventListener("click", function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); });
     $("fcFilter").addEventListener("change", function () { fcSetFilter($("fcFilter").value); });
     $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar")) return; fcFlip(); });
     $("fcStar").addEventListener("click", function (e) { e.stopPropagation(); fcStar(); });
     $("fcGot").addEventListener("click", function () { fcAnswer(true); });
     $("fcMissed").addEventListener("click", function () { fcAnswer(false); });
     document.addEventListener("keydown", function (e) {
-      if (!$("tab-cards").classList.contains("active") || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!$("tab-cards").classList.contains("active") || fc.view !== "study" || e.ctrlKey || e.metaKey || e.altKey) return;
       var tg = e.target, tag = tg && tg.tagName; if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
       if (!$("menu").hidden || !$("fcMore").hidden || (document.querySelector(".sheet:not([hidden])"))) return;
       var k = e.key;
@@ -675,6 +731,15 @@
     var m = storage.load("mycards", null); MYC = (m && typeof m === "object") ? m : {};
     if (!Array.isArray(MYC.cards)) MYC.cards = []; if (!MYC.over || typeof MYC.over !== "object") MYC.over = {};
     FL.setUser(MYC);
+  }
+  // v5.1: the Chapter 1 key-term cards are now built in. If Bill had already imported the earlier "my-ch1-..." file, drop those copies and move their scores to the built-in cards.
+  function migrateOldChapterCards() {
+    if (!fc || !FL.BK.length) return; var byFront = {}; FL.BK.forEach(function (c) { byFront[c.f] = c.id; }); var moved = 0;
+    MYC.cards = MYC.cards.filter(function (c) {
+      var nid = /^my-ch\d+-/.test(c.id) && byFront[c.f]; if (!nid) return true;
+      var o = fc.st.cards[c.id]; if (o && !fc.st.cards[nid]) fc.st.cards[nid] = o; delete fc.st.cards[c.id]; moved++; return false;
+    });
+    if (moved) { mycSave(); fcSave(); }
   }
   function mycSave() { storage.save("mycards", MYC); FL.setUser(MYC); }
   function mycNewId() { var id; do { id = "my-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 46656).toString(36); } while (MYC.cards.some(function (c) { return c.id === id; })); return id; }
@@ -713,7 +778,7 @@
         return cards;
       });
   }
-  function fcCurrent() { var id = fc && fc.queue && fc.queue[0]; return id ? fcCard(id) : null; }
+  function fcCurrent() { var id = fc && fc.view === "study" && fc.queue && fc.queue[0]; return id ? fcCard(id) : null; }
   function fcSay(t) { var m = $("fcImpMsg"); if (!m) return; m.textContent = t; m.hidden = !t; clearTimeout(fcSay.t); if (t) fcSay.t = setTimeout(function () { m.hidden = true; }, 9000); }
   function fcAddToQueue(ids) {
     if (!fc.queue || !fc.queue.length) { fcStart(); return; }
@@ -842,7 +907,7 @@
     });
     var ov = d.over && typeof d.over === "object" ? d.over : {};
     Object.keys(ov).forEach(function (id) { var o = ov[id], bc = FL.baseCard(id); if (!bc || bc.kind === "statement" || !o || typeof o.f !== "string" || typeof o.b !== "string" || !o.f.trim() || !o.b.trim()) return; MYC.over[id] = { f: o.f.trim().slice(0, 600), b: o.b.trim().slice(0, 1500), ts: +o.ts || Date.now() }; imp++; });
-    mycSave(); fcFilterOptions(); if (fc.queue) fcStart();
+    mycSave(); migrateOldChapterCards(); fcFilterOptions(); if (fc.queue && fc.view === "study") fcStart(); else renderSections();
     return { added: added, replaced: replaced, improved: imp, skipped: skipped };
   }
   function initAiCards() {
@@ -855,7 +920,7 @@
     $("fcmExpand").addEventListener("click", function () { aiOpen("expand", fcCurrent()); });
     $("fcmCreate").addEventListener("click", function () { aiOpen("create", fcCurrent()); });
     $("fcmReset").addEventListener("click", fcResetCard); $("fcmDelete").addEventListener("click", fcDeleteCard);
-    function viaCards(fn) { return function () { $("menu").hidden = true; switchTab("cards"); fn(); }; }
+    function viaCards(fn) { return function () { $("menu").hidden = true; switchTab("cards", true); fn(); }; }
     $("mCreate").addEventListener("click", viaCards(function () { aiOpen("create", fcCurrent()); }));
     $("mImprove").addEventListener("click", viaCards(function () { aiOpen("improve", fcCurrent()); }));
     $("mExpand").addEventListener("click", viaCards(function () { aiOpen("expand", fcCurrent()); }));

@@ -2,7 +2,7 @@
 import os, sys, json, time, threading, subprocess, http.server, socketserver
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import serve, FAKE_REC, goto
+from common import serve, FAKE_REC, goto, open_cards
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 srv, PORT = serve(ROOT); APP = f"http://127.0.0.1:{PORT}"; URL = APP + "/index.html"
 fails = []
@@ -53,7 +53,7 @@ with sync_playwright() as p:
 
     MYC = "JSON.parse(localStorage.getItem('tutor.v1.mycards')||'{\"cards\":[],\"over\":{}}')"
     def to_cards(pg):
-        pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])"); pg.click("#menu [data-goto=cards]"); pg.wait_for_timeout(300)
+        open_cards(pg); pg.wait_for_timeout(300)
     for (w, h, mobile, tag) in [(1440, 900, False, "desktop"), (390, 844, True, "phone")]:
         T = lambda sel: pg.tap(sel) if mobile else pg.click(sel)
         ctx, pg = newpage(w, h, mobile, ask=f"http://127.0.0.1:{W1}")

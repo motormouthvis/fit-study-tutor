@@ -30,7 +30,7 @@ with sync_playwright() as p:
 
     # ===== 1. the main screen is simple
     ctx, pg = newpage()
-    check("exactly 3 tabs: Learn, Quiz, My Stats", [t.strip() for t in pg.locator(".tab").all_inner_texts()] == ["Learn", "Quiz", "My Stats"])
+    check("exactly 4 tabs (v5.1): Learn, Quiz, Flash Cards, My Stats", [t.strip() for t in pg.locator(".tab").all_inner_texts()] == ["Learn", "Quiz", "Flash Cards", "My Stats"])
     ids = ["btnPlay", "btnBack10", "btnFwd10", "btnSpeed"]
     check("main screen shows PLAY, back 10, forward 10, speed", all(pg.is_visible("#" + i) for i in ids))
     n = vis(pg, "#lessonCard button")

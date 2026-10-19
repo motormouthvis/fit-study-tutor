@@ -51,7 +51,14 @@ def dbg(pg):
     return pg.evaluate("document.getElementById('dbgLine').textContent")
 
 
+def open_cards(pg):
+    """v5.1: Flash Cards is a top tab that opens on the sections list; start 'Study all' of the 'All cards' section (the old study view)"""
+    pg.click(".tab[data-tab=cards]"); pg.wait_for_selector("#fcSections .fcsbtn[data-sec=all][data-mode=all]", timeout=3000)
+    pg.click("#fcSections .fcsbtn[data-sec=all][data-mode=all]"); pg.wait_for_selector("#fcStudy:not([hidden])", timeout=3000); pg.wait_for_timeout(150)
+
+
 def goto(pg, name):
     """open a menu-only page (log, settings, help, help-about)"""
+    if name == "cards": return open_cards(pg)
     pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])", timeout=3000)
     pg.click("#menu [data-goto=%s]" % name); pg.wait_for_timeout(120)
