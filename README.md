@@ -130,3 +130,6 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The "Which cards" dropdown is gone from the study screen (pick cards from the sections list). The READY bar, the key list and extra header spacing are hidden only while studying.
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
+
+## v5.4
+- Each flash card deck remembers where you are (per section and mode) and resumes at the next card, even on another device with the same sync code. Shows "Card 26 of 80", a finished-deck screen (Start over / Study missed), and a Start over button on the study row. Tests: tests/e2e_v54.py.

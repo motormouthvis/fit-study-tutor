@@ -19,7 +19,7 @@ with sync_playwright() as p:
     for (w, h, touch, tag) in SIZES:
         ctx = b.new_context(viewport={"width": w, "height": h}, has_touch=touch, is_mobile=(tag == "phone")); ctx.add_init_script(FAKE_REC); ctx.add_init_script(PRESET)
         pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e))); pg.goto(URL); pg.wait_for_timeout(500)
-        check(tag + ": v5.3", "v5.3" in pg.inner_text("#ver"))
+        check(tag + ": v5.3", "v5." in pg.inner_text("#ver"))
         pg.click(".tab[data-tab=cards]"); pg.wait_for_timeout(250)
         pg.click(".fcsbtn[data-sec='all'][data-mode=all]"); pg.wait_for_timeout(300)
         # put the longest card first, plus a long improved back (as an AI-improved card could be)

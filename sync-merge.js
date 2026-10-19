@@ -2,7 +2,7 @@
    doc = { v: 1, cards: { <cardId>: { seen, got, miss, restudy, lastOk, last, u } },
            hist: { <sectionId>: [ { id, t, mode, n, got, miss } ] },
            my: { cards: { <id>: { id, topic, f, b, ai, ts, orig?, u } }, over: { <baseId>: { f, b, ts, u } }, del: { "c:<id>" | "o:<id>": time } },
-           sessions: n }
+           pass: { <section:mode>: { id, order, done, u } }, sessions: n }
    Rules: per card the newest change wins (u = updated time; older saves without u use the last-answer time).
    History: union by session id (same session on two devices: the one with more cards studied wins), newest first, 20 per section.
    My cards / improved cards: newest wins; a delete (or "reset to original") wins over anything older than it.
@@ -47,10 +47,27 @@
     for (k in over) if (del["o:" + k] && del["o:" + k] >= ts(over[k])) delete over[k];
     return { cards: cards, over: over, del: del };
   }
+  // v5.4: where you are in each section deck. pass = { "sec:<id>:<mode>": { id, order: [cardIds], done: { cardId: 1 }, u } }
+  // Different pass ids: the newest (u) wins. Same pass id: done cards are combined, the newer order is kept (plus any ids only the other has).
+  function mergePass(a, b) {
+    a = isObj(a) ? a : {}; b = isObj(b) ? b : {}; var out = {}, keys = {}, k;
+    for (k in a) keys[k] = 1; for (k in b) keys[k] = 1;
+    Object.keys(keys).forEach(function (key) {
+      var x = a[key], y = b[key];
+      if (!isObj(x) || !Array.isArray(x.order)) { if (isObj(y) && Array.isArray(y.order)) out[key] = y; return; }
+      if (!isObj(y) || !Array.isArray(y.order)) { out[key] = x; return; }
+      if (x.id !== y.id) { out[key] = pick(x, y); return; }
+      var nw = pick(x, y), old = nw === x ? y : x, order = nw.order.slice(), has = {}, done = {};
+      order.forEach(function (i) { has[i] = 1; }); old.order.forEach(function (i) { if (!has[i]) { has[i] = 1; order.push(i); } });
+      [x.done, y.done].forEach(function (d) { if (isObj(d)) for (var q in d) if (d[q]) done[q] = 1; });
+      out[key] = { id: x.id, order: order, done: done, u: Math.max(+x.u || 0, +y.u || 0) };
+    });
+    return out;
+  }
   function merge(a, b) {
     a = isObj(a) ? a : {}; b = isObj(b) ? b : {};
-    return { v: 1, cards: mergeMap(a.cards, b.cards), hist: mergeHist(a.hist, b.hist), my: mergeMy(a.my, b.my), sessions: Math.max(+a.sessions || 0, +b.sessions || 0) };
+    return { v: 1, cards: mergeMap(a.cards, b.cards), hist: mergeHist(a.hist, b.hist), my: mergeMy(a.my, b.my), pass: mergePass(a.pass, b.pass), sessions: Math.max(+a.sessions || 0, +b.sessions || 0) };
   }
   function same(a, b) { return stable(a) === stable(b); }
-  return { merge: merge, same: same, stable: stable, ts: ts, MAXH: MAXH };
+  return { merge: merge, mergePass: mergePass, same: same, stable: stable, ts: ts, MAXH: MAXH };
 });

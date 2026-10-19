@@ -16,3 +16,14 @@ test("v5.2 sync merge: history keeps 20 per section; a card re-added after a del
   const m = M.merge({ my: { cards: { m: { id: "m", f: "a", b: "b", u: 9 } } } }, { my: { del: { "c:m": 5 } } }); assert.ok(m.my.cards.m);
   const o = M.merge({ my: { over: { "balance-4": { f: "x", b: "y", u: 3 } } } }, { my: { del: { "o:balance-4": 4 } } }); assert.deepEqual(o.my.over, {});
 });
+
+test("v5.4 mergePass: same pass combines done cards, different pass newest wins", () => {
+  const SM = require("../sync-merge.js");
+  const a = { id: "p1", order: ["x", "y", "z"], done: { x: 1 }, u: 10 };
+  const b = { id: "p1", order: ["x", "y", "z"], done: { y: 1 }, u: 20 };
+  const m = SM.mergePass({ "sec:a:all": a }, { "sec:a:all": b })["sec:a:all"];
+  require("assert").deepStrictEqual(Object.keys(m.done).sort(), ["x", "y"]); require("assert").strictEqual(m.u, 20);
+  const c = { id: "p2", order: ["z"], done: {}, u: 30 };
+  require("assert").strictEqual(SM.mergePass({ k: a }, { k: c }).k.id, "p2");
+  require("assert").ok(SM.merge({ pass: { k: a } }, {}).pass.k);
+});

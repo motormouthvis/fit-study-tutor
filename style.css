@@ -385,3 +385,8 @@ body.fcstudy #fcEmpty { margin:0; }
 @media (min-width:900px) { body.fcstudy .fccard.statement.flipped { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); column-gap:16px; align-content:start; }
   body.fcstudy .fccard.statement.flipped .fcmeta, body.fcstudy .fccard.statement.flipped .fchint { grid-column:1 / -1; }
   body.fcstudy .fccard.statement.flipped .fcback { border-top:0; border-left:2px dashed var(--line); padding:0 0 0 14px; margin-top:10px; } }
+
+/* ===== v5.4 resume: Start over button ===== */
+.fctop .fcrestart.sure { background:#7a3f00; border-color:var(--amber); }
+@media (max-width:760px) { .fctop .fcrtxt { display:none; } .fctop .fcrestart.sure .fcrtxt { display:inline; } }
+@media (max-width:640px) { .fctop .fcrestart { padding-left:10px; padding-right:10px; min-width:0; } .fctop .fcrow { gap:6px; flex-wrap:nowrap; } }

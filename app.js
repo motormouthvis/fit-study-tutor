@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.3";
+  var APP_VERSION = "v5.4";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -586,30 +586,70 @@
     if (/^sec:/.test(fc.filter)) h = "<option value='" + fcEsc(fc.filter) + "'>" + fcEsc(fcSecLabel(fc.filter)) + "</option>" + h;
     sel.innerHTML = h; sel.value = fc.filter; if (sel.value !== fc.filter) { fc.filter = "all"; sel.value = "all"; }
   }
-  function fcStart() {
-    var cards = FL.filterCards(fc.filter, fc.st);
-    fc.queue = FL.buildQueue(cards, fc.st, Date.now() & 0x7fffffff, fc.shuffle);
-    fc.sess = { got: 0, miss: 0, total: cards.length }; fc.flipped = false; fc.histRef = null;
-    if (cards.length) { fc.st.sessions = (fc.st.sessions || 0) + 1; fcSave(); }
-    fcRender();
+  /* v5.4: each section + mode keeps its deck order and which cards you got right in this pass ("pass"), so the next trip resumes where you stopped.
+     Saved in fc.st.pass (synced). Missed cards stay in the pass until you get them right. */
+  function fcPassKey(f) { f = f || fc.filter; if (!/^sec:/.test(f)) return null; var m = FL.parseSec(f); return "sec:" + m.id + ":" + m.mode; }
+  function fcPassInfo(key) {
+    var p = fc.st.pass && fc.st.pass[key]; if (!p || !Array.isArray(p.order)) return null;
+    var ids = p.order.filter(function (id) { return !!fcCard(id); }), done = ids.filter(function (id) { return p.done && p.done[id]; }).length;
+    return { total: ids.length, done: done, pos: Math.min(done + 1, ids.length), left: ids.length - done, u: p.u || 0 };
   }
+  function fcNewPass(key, cards) {
+    var now = Date.now(); fc.st.pass = fc.st.pass || {};
+    return (fc.st.pass[key] = { id: "p" + now.toString(36) + Math.floor(Math.random() * 1679616).toString(36), order: FL.buildQueue(cards, fc.st, now & 0x7fffffff, fc.shuffle), done: {}, u: now });
+  }
+  function fcStart(fresh) {
+    var cards = FL.filterCards(fc.filter, fc.st), key = fcPassKey();
+    fc.flipped = false; fc.histRef = null;
+    if (key) {
+      fc.st.pass = fc.st.pass || {}; var p = fc.st.pass[key], inF = {}, mode = FL.parseSec(fc.filter).mode;
+      cards.forEach(function (c) { inF[c.id] = 1; });
+      if (fresh || !p || !Array.isArray(p.order)) p = fcNewPass(key, cards);
+      else {
+        if (!p.done || typeof p.done !== "object") p.done = {};
+        var has = {}; p.order.forEach(function (id) { has[id] = 1; });
+        var add = cards.filter(function (c) { return !has[c.id]; }).map(function (c) { return c.id; });   // new cards in the section join the pass
+        if (add.length) { p.order = p.order.concat(add); p.u = Date.now(); }
+      }
+      fc.queue = p.order.filter(function (id) { return !p.done[id] && inF[id]; });
+      if (!fc.queue.length && cards.length && mode !== "all") { p = fcNewPass(key, cards); fc.queue = p.order.slice(); }   // missed / restudy: a new round when cards need it again
+      fc.sess = { got: 0, miss: 0, total: fc.queue.length, pass: true };
+    } else {
+      fc.queue = FL.buildQueue(cards, fc.st, Date.now() & 0x7fffffff, fc.shuffle);
+      fc.sess = { got: 0, miss: 0, total: cards.length };
+    }
+    if (cards.length) fc.st.sessions = (fc.st.sessions || 0) + 1;
+    fcSave(); fcRender();
+  }
+  function fcStartOver() { fcStart(true); }
   function fcCard(id) { for (var i = 0; i < FL.ALL.length; i++) if (FL.ALL[i].id === id) return FL.ALL[i]; return null; }
   function fcRender() {
     if (fc.view !== "study" || !fc.queue) { renderSections(); return; }
     $("fcStudy").hidden = false; $("fcSections").hidden = true;
     $("fcSecName").textContent = fcSecLabel(fc.filter); $("fcSecName").title = fcSecLabel(fc.filter); document.body.classList.add("fcstudy");
     var st = FL.stats(fc.st), id = fc.queue[0], c = id && fcCard(id);
-    $("fcScore").innerHTML = "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
+    var pinf = fcPassKey() && fcPassInfo(fcPassKey());
+    $("fcScore").innerHTML = (pinf && pinf.left ? "<b>Card " + pinf.pos + " of " + pinf.total + "</b> &middot; " : "") + "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
       " &middot; <b>Lifetime:</b> " + (st.got + st.miss ? Math.round(st.acc * 100) + "%" : "new") + " &middot; " + st.restudy + " Restudy";
     $("fcScore").title = "Lifetime: " + st.got + " got, " + st.miss + " missed";
     $("fcStage").hidden = !c; $("fcEmpty").hidden = !!c;
+    var fpk = fcPassKey(), finf = fpk && fcPassInfo(fpk);
+    if (!c && finf && finf.total) {
+      var fm = FL.parseSec(fc.filter), fsec = FL.sectionById(fm.id), nw = fsec ? FL.sectionStats(fsec, fc.st).wrong : 0;
+      $("fcStage").hidden = true; $("fcEmpty").hidden = false;
+      $("fcEmpty").innerHTML = "<h2>You finished this deck</h2><p style='font-size:1.15rem'>" + finf.total + " of " + finf.total + " cards done" + (fc.sess.got + fc.sess.miss ? " &middot; this session " + fc.sess.got + " got it, " + fc.sess.miss + " missed" : "") + ".</p>" +
+        "<button class='bigbtn go' id='fcOver'>&#8635; Start over</button><button class='bigbtn' id='fcFinMissed'" + (nw ? "" : " disabled") + ">Study missed (" + nw + ")</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>";
+      $("fcOver").onclick = fcStartOver; $("fcFinMissed").onclick = function () { fcOpenSection(fm.id, "wrong", true); };
+      $("fcToSec").onclick = function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); };
+      fcFit(); return;
+    }
     if (!c) {
       var none = !fc.sess.total;
       $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
         : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
       var b; if ((b = $("fcToSec"))) b.onclick = function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); };
       if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
-      if ((b = $("fcAgain"))) b.onclick = fcStart; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
+      if ((b = $("fcAgain"))) b.onclick = function () { fcStart(); }; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
       return;
     }
     var s = fc.st.cards[c.id] || {};
@@ -633,6 +673,8 @@
   function fcFlip() { if (!fc.queue.length) return; fc.flipped = !fc.flipped; fcRender(); if (fc.flipped && device !== "desktop") { var b = $("fcBack"); b.scrollIntoView && b.scrollIntoView({ block: "nearest" }); } }
   function fcAnswer(got) {
     if (!fc.queue.length || !fc.flipped) return;
+    var aid = fc.queue[0], pk = fcPassKey(), pp = pk && fc.st.pass && fc.st.pass[pk];
+    if (pp && got) { if (!pp.done) pp.done = {}; pp.done[aid] = 1; pp.u = Date.now(); }
     fc.queue = FL.answer(fc.st, fc.queue, fc.queue[0], got); fc.sess[got ? "got" : "miss"]++; fcHist(got); fc.flipped = false; fcSave(); fcRender();
     if (device !== "desktop") window.scrollTo(0, 0);
   }
@@ -656,7 +698,8 @@
   function fcSecHtml(sec) {
     var n = FL.sectionStats(sec, fc.st), hist = (fc.st.hist && fc.st.hist[sec.id]) || [], key = fcEsc(sec.id);
     function btn(mode, label, count, extra) {
-      return "<button class='fcsbtn" + (extra || "") + "' data-sec='" + key + "' data-mode='" + mode + "'" + (count ? "" : " disabled") + "><b>" + label + "</b><span>" + count + (count === 1 ? " card" : " cards") + "</span></button>";
+      var pi = fcPassInfo("sec:" + sec.id + ":" + mode), at = pi && pi.done > 0 && pi.left > 0 ? " &middot; at " + pi.pos : "";
+      return "<button class='fcsbtn" + (extra || "") + "' data-sec='" + key + "' data-mode='" + mode + "'" + (count ? "" : " disabled") + "><b>" + label + "</b><span>" + count + (count === 1 ? " card" : " cards") + at + "</span></button>";
     }
     var h = "<div class='fcsec' data-secid='" + key + "'><div class='fcsectitle'>" + fcEsc(sec.title) + "</div>" +
       "<div class='fcsecnums' aria-label='Counts'><span class='n right'><b>" + n.right + "</b> Right</span><span class='n wrong'><b>" + n.wrong + "</b> Wrong</span><span class='n restudy'><b>" + n.restudy + "</b> Restudy</span><span class='n unseen'><b>" + n.unseen + "</b> Unseen</span><span class='n total'><b>" + n.total + "</b> Total</span></div>" +
@@ -684,7 +727,8 @@
     var open = {}; Array.prototype.forEach.call(box.querySelectorAll("details[data-g]"), function (d) { open[d.dataset.g] = d.open; });
     var openHist = {}; Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { var x = d.querySelector(".fchist"); if (x && x.open) openHist[d.dataset.secid] = 1; });
     var h = "<h2 class='fcsechead'>Flash Cards</h2><p class='small fcsecintro'>Pick a section. Right = your last answer was Got it. Wrong = your last answer was Missed. Restudy = starred cards (a miss stars a card for you).</p>";
-    if (fc.queue && fc.queue.length && fc.sess && fc.sess.total) h += "<button class='bigbtn go fcresume' id='fcResume'>&#9654; Continue: " + fcEsc(fcSecLabel(fc.filter) || "your last session") + " (" + fc.queue.length + " left)</button>";
+    var best = null; Object.keys(fc.st.pass || {}).forEach(function (k) { var inf = fcPassInfo(k), m = FL.parseSec(k); if (inf && inf.left > 0 && inf.done > 0 && FL.sectionById(m.id) && (!best || inf.u > best.inf.u)) best = { k: k, inf: inf, m: m }; });
+    if (best) h += "<button class='bigbtn go fcresume' id='fcResume' data-sec='" + fcEsc(best.m.id) + "' data-mode='" + best.m.mode + "'>&#9654; Continue &middot; " + fcEsc(fcSecLabel(best.k)) + " &middot; " + best.inf.pos + " of " + best.inf.total + "</button>";
     FL.sectionList().forEach(function (g) {
       var inner = g.sections.map(fcSecHtml).join(""), many = g.sections.length > 2, dflt = g.id === "all" || g.id === "books" || g.id === "other";
       if (!many && g.id === "all") { h += "<div class='fcgroup'>" + inner + "</div>"; return; }
@@ -694,10 +738,10 @@
     box.innerHTML = h;
     Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { if (openHist[d.dataset.secid]) d.querySelector(".fchist").open = true; });
     Array.prototype.forEach.call(box.querySelectorAll(".fcsbtn"), function (b) { b.addEventListener("click", function () { if (!b.disabled) fcOpenSection(b.dataset.sec, b.dataset.mode); }); });
-    var r = $("fcResume"); if (r) r.onclick = function () { fc.view = "study"; fcRender(); window.scrollTo(0, 0); };
+    var r = $("fcResume"); if (r) r.onclick = function () { fcOpenSection(r.dataset.sec, r.dataset.mode); };
   }
-  function fcOpenSection(secId, mode) {
-    fc.view = "study"; fc.filter = "sec:" + secId + ":" + mode; fcFilterOptions(); fcSave(); fcStart(); window.scrollTo(0, 0);
+  function fcOpenSection(secId, mode, fresh) {
+    fc.view = "study"; fc.filter = "sec:" + secId + ":" + mode; fcFilterOptions(); fcSave(); fcStart(fresh); window.scrollTo(0, 0);
   }
   function renderFcStats() {
     var box = $("fcStats"); if (!box || !FL) return;
@@ -715,7 +759,9 @@
     if (!fc.st.cards) fc.st = FL.newState(); if (!fc.st.life) fc.st.life = { got: 0, miss: 0 };
     initAiCards(); migrateOldChapterCards(); fcFilterOptions();
     var sh = $("fcShuffle"); function shLabel() { sh.innerHTML = fc.shuffle ? "&#128256; Shuffle on" : "&#10145; In order"; sh.setAttribute("aria-pressed", fc.shuffle ? "true" : "false"); } shLabel();
-    sh.addEventListener("click", function () { fc.shuffle = !fc.shuffle; shLabel(); fcSave(); fcStart(); });
+    sh.addEventListener("click", function () { fc.shuffle = !fc.shuffle; shLabel(); fcSave(); fcStart(true); });   // a new order = a new pass
+    $("fcRestart").addEventListener("click", function () { var b = $("fcRestart"); if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.classList.add("sure"); b.querySelector(".fcrtxt").textContent = " Tap again"; setTimeout(function () { b.dataset.sure = ""; b.classList.remove("sure"); b.querySelector(".fcrtxt").textContent = " Start over"; }, 3000); return; }
+      b.dataset.sure = ""; b.classList.remove("sure"); b.querySelector(".fcrtxt").textContent = " Start over"; fcStartOver(); });
     $("fcBackSec").addEventListener("click", function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); });
     $("fcFilter").addEventListener("change", function () { fcSetFilter($("fcFilter").value); });
     $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar")) return; fcFlip(); });
@@ -748,7 +794,7 @@
   function syncUrl() { var u = window.__SYNC_URL || (window.ASK_CONFIG && window.ASK_CONFIG.url) || ""; return u.replace(/\/+$/, ""); }
   function sigNoU(o) { var c = {}; for (var k in o) if (k !== "u") c[k] = o[k]; return SM.stable(c); }
   function syncSnap() {
-    if (!fc || !SM) return; SY.snapFc = {}; for (var id in fc.st.cards) SY.snapFc[id] = sigNoU(fc.st.cards[id]); SY.snapH = SM.stable(fc.st.hist || {});
+    if (!fc || !SM) return; SY.snapFc = {}; for (var id in fc.st.cards) SY.snapFc[id] = sigNoU(fc.st.cards[id]); SY.snapH = SM.stable(fc.st.hist || {}); SY.snapP = SM.stable(fc.st.pass || {});
     SY.snapC = {}; MYC.cards.forEach(function (c) { SY.snapC[c.id] = sigNoU(c); }); SY.snapO = {}; for (var o in MYC.over) SY.snapO[o] = sigNoU(MYC.over[o]);
   }
   function syncStampFc() {
@@ -756,6 +802,7 @@
     for (id in fc.st.cards) { var g = sigNoU(fc.st.cards[id]); if (SY.snapFc[id] !== g) { fc.st.cards[id].u = now; SY.snapFc[id] = g; ch = true; } }
     var h = fc.st.hist || {}; for (var sec in h) h[sec].forEach(function (e) { if (!e.id) e.id = "s" + (e.t || now).toString(36) + Math.floor(Math.random() * 1679616).toString(36); });
     var hs = SM.stable(h); if (hs !== SY.snapH) { SY.snapH = hs; ch = true; }
+    var ps = SM.stable(fc.st.pass || {}); if (ps !== SY.snapP) { SY.snapP = ps; ch = true; }
     if (ch) syncDirty();
   }
   function syncStampMy() {
@@ -769,12 +816,12 @@
   function syncSchedule(ms) { clearTimeout(SY.timer); SY.timer = setTimeout(function () { syncNow(); }, ms); }
   function syncLocalDoc() {
     var cards = {}; MYC.cards.forEach(function (c) { cards[c.id] = c; });
-    return { v: 1, cards: fc.st.cards, hist: fc.st.hist || {}, my: { cards: cards, over: MYC.over, del: MYC.del || {} }, sessions: fc.st.sessions || 0 };
+    return { v: 1, cards: fc.st.cards, hist: fc.st.hist || {}, pass: fc.st.pass || {}, my: { cards: cards, over: MYC.over, del: MYC.del || {} }, sessions: fc.st.sessions || 0 };
   }
   function sumGM(cards) { var g = 0, m = 0; for (var id in cards) { g += +cards[id].got || 0; m += +cards[id].miss || 0; } return { g: g, m: m }; }
   function syncApply(d) {
     var before = sumGM(fc.st.cards), offG = Math.max(0, (fc.st.life.got || 0) - before.g), offM = Math.max(0, (fc.st.life.miss || 0) - before.m);
-    fc.st.cards = d.cards || {}; fc.st.hist = d.hist || {}; fc.st.sessions = Math.max(fc.st.sessions || 0, d.sessions || 0);
+    fc.st.cards = d.cards || {}; fc.st.hist = d.hist || {}; fc.st.pass = d.pass || {}; fc.st.sessions = Math.max(fc.st.sessions || 0, d.sessions || 0);
     var after = sumGM(fc.st.cards); fc.st.life = { got: after.g + offG, miss: after.m + offM };
     if (fc.histRef && fc.histRef.id) { var hr = null; for (var sec in fc.st.hist) fc.st.hist[sec].forEach(function (e) { if (e.id === fc.histRef.id) hr = e; }); fc.histRef = hr; }
     var my = d.my || {}; MYC.cards = Object.keys(my.cards || {}).map(function (k) { return my.cards[k]; }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
