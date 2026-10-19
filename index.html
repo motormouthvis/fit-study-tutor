@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.2</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.3</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -170,13 +170,12 @@
     <div id="fcSections" class="fcsections" aria-label="Flash card sections"></div>
     <div id="fcStudy" hidden>
     <div class="card fchead">
-      <div class="fcrow">
-        <button id="fcBackSec" class="btn fcbacksec">&#8249; All sections</button>
-        <button id="fcShuffle" class="btn" aria-pressed="true">&#128256; Shuffle on</button>
+      <div class="fcrow fctop">
+        <button id="fcBackSec" class="btn fcbacksec">&#8249; Sections</button>
+        <div class="fcmid"><div id="fcSecName" class="fcsecname"></div><div class="fcscore" id="fcScore" aria-live="polite"></div></div>
+        <button id="fcShuffle" class="btn fcshuf" aria-pressed="true">&#128256; Shuffle on</button>
       </div>
-      <div id="fcSecName" class="fcsecname"></div>
-      <div class="fcrow"><select id="fcFilter" aria-label="Which cards"></select></div>
-      <div class="fcscore" id="fcScore" aria-live="polite"></div>
+      <select id="fcFilter" aria-label="Which cards" hidden></select>
     </div>
     <div id="fcEmpty" class="card" hidden></div>
     <div id="fcStage">
@@ -214,7 +213,7 @@
   <section id="tab-settings" class="panel">
     <button class="backbtn" data-back>&#8249; Back</button>
 
-    <!-- v5.2: sync flash card progress across devices -->
+    <!-- v5.3: sync flash card progress across devices -->
     <div class="card" id="syncCard"><h2>Sync flash cards across my devices</h2>
       <p class="small">Keeps your flash card results (right, wrong, restudy), section history, My cards and improved cards the same on your phone, tablet, laptop, PC and car. Each device still works offline and catches up when it is back online.</p>
       <div id="syncStatus" class="syncstatus" role="status" aria-live="polite"></div>

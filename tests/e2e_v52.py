@@ -39,7 +39,7 @@ try:
     # Device A = phone (fresh). Device B = laptop that already has older v5.1 progress (no update stamps) on a balance-sheet card.
     ca, A = device(b, 390, 844, True)
     cb, B = device(b, 1440, 900, False, "localStorage.setItem('tutor.v1.fc', JSON.stringify({cards:{'balance-6':{seen:3,got:1,miss:2,restudy:true,last:1000}}, life:{got:1,miss:2}, sessions:1}))")
-    check("v5.2 label", "v5.2" in A.inner_text("#ver"))
+    check("v5.2 label", "v5." in A.inner_text("#ver"))
     settings(A); check("A: sync starts off with a plain message", "Sync is off" in A.inner_text("#syncStatus") and A.is_visible("#btnSyncNew"))
     A.click("#btnSyncNew"); settle(A)
     code = A.inner_text("#syncCode").strip()

@@ -358,3 +358,30 @@ details.fcgroup > summary .small { margin-left:auto; white-space:nowrap; }
 .syncstatus.ok { border-color:var(--green); } .syncstatus.err { border-color:var(--amber); }
 .synccode { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:1.15rem; font-weight:800; letter-spacing:.04em; padding:10px 12px; margin:6px 0 8px; background:#000; border:2px dashed var(--accent); border-radius:12px; overflow-wrap:anywhere; user-select:all; }
 #syncInput { width:100%; font-family:ui-monospace, Menlo, Consolas, monospace; }
+
+/* ===== v5.3 compact study screen (fits the window: truck screen, phones, laptops) ===== */
+.fctop { flex-wrap:nowrap; gap:8px; }
+.fctop .btn { flex:0 0 auto; width:auto; margin:0; min-height:44px; padding:6px 12px; }
+.fcmid { flex:1 1 auto; min-width:0; }
+.fctop .fcsecname, .fctop .fcscore { margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fctop .fcsecname { font-size:.95rem; }
+.fctop .fcscore { font-size:.82rem; margin-top:2px; }
+body.fcstudy { padding-bottom:0; }
+body.fcstudy #statusBanner { display:none; }
+body.fcstudy .top { padding:4px 12px; }
+body.fcstudy .tabs { padding:4px 10px; }
+body.fcstudy .tab { min-height:40px; }
+body.fcstudy #tab-cards { padding-top:4px; padding-bottom:0; }
+body.fcstudy .fchead { padding:6px 8px; margin:0 0 6px; }
+body.fcstudy #fcStudy { display:flex; flex-direction:column; min-height:0; }
+body.fcstudy #fcStage { flex:1 1 auto; display:flex; flex-direction:column; min-height:0; }
+body.fcstudy #fcStage .fccard { flex:1 1 auto; min-height:0; margin:0 0 6px; overflow:hidden; padding:10px 14px; }
+body.fcstudy #fcStage .fccard.fcover { overflow-y:auto; }
+body.fcstudy .fcq.big { margin:8px 0; }
+body.fcstudy .fcbtns .bigbtn { min-height:52px; padding:6px; }
+body.fcstudy .fckeys { display:none; }
+body.fcstudy #fcEmpty { margin:0; }
+@media (max-width:640px) { .fctop { flex-wrap:wrap; row-gap:4px; } .fctop .fcmid { order:3; flex:1 0 100%; } }
+@media (min-width:900px) { body.fcstudy .fccard.statement.flipped { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); column-gap:16px; align-content:start; }
+  body.fcstudy .fccard.statement.flipped .fcmeta, body.fcstudy .fccard.statement.flipped .fchint { grid-column:1 / -1; }
+  body.fcstudy .fccard.statement.flipped .fcback { border-top:0; border-left:2px dashed var(--line); padding:0 0 0 14px; margin-top:10px; } }

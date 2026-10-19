@@ -20,7 +20,7 @@ with sync_playwright() as p:
         pg.evaluate("""localStorage.setItem('tutor.v1.fc', JSON.stringify({cards:{'balance-6':{seen:2,got:1,miss:1,restudy:true}}, life:{got:1,miss:1}, sessions:1}));
           localStorage.setItem('tutor.v1.mycards', JSON.stringify({cards:[], over:{'balance-4':{f:'MY OWN FRONT', b:'MY OWN BACK'}}}));""")
         pg.reload(); pg.wait_for_timeout(500)
-        check(tag + ": v5.0 label", "v5.2" in pg.inner_text("#ver"))
+        check(tag + ": v5.0 label", "v5." in pg.inner_text("#ver"))
         open_cards(pg); pg.wait_for_timeout(300)
         def show(id_):
             pg.evaluate("document.getElementById('fcFilter').value='topic:balance'; document.getElementById('fcFilter').dispatchEvent(new Event('change'))"); pg.wait_for_timeout(200)

@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.2";
+  var APP_VERSION = "v5.3";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -542,6 +542,7 @@
     $("menu").hidden = true;
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) { b.classList.toggle("active", b.dataset.tab === name); });
     Array.prototype.forEach.call(document.querySelectorAll(".panel"), function (p) { var on = p.id === "tab-" + name; p.classList.toggle("active", on); p.hidden = !on; });
+    if (name !== "cards") fcUnfit();
     if (name === "progress") { renderProgress(); renderFcStats(); } if (name === "cards") renderFlash(); if (name === "log") renderLog(); if (name === "lessons") renderLessons(); if (name === "settings") renderSettings(); if (name === "help") renderHelp();
     if (window.__v4ready) updateLearnLayout();
     if (about) { var dd = $("dbgLine").parentNode; dd.open = true; renderDbg(); dd.scrollIntoView && dd.scrollIntoView(); } else window.scrollTo(0, 0);
@@ -596,10 +597,11 @@
   function fcRender() {
     if (fc.view !== "study" || !fc.queue) { renderSections(); return; }
     $("fcStudy").hidden = false; $("fcSections").hidden = true;
-    $("fcSecName").textContent = fcSecLabel(fc.filter);
+    $("fcSecName").textContent = fcSecLabel(fc.filter); $("fcSecName").title = fcSecLabel(fc.filter); document.body.classList.add("fcstudy");
     var st = FL.stats(fc.st), id = fc.queue[0], c = id && fcCard(id);
     $("fcScore").innerHTML = "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
-      "<br><b>Lifetime:</b> " + st.got + " got, " + st.miss + " missed" + (st.got + st.miss ? " (" + Math.round(st.acc * 100) + "%)" : "") + " &middot; " + st.restudy + " marked Restudy";
+      " &middot; <b>Lifetime:</b> " + (st.got + st.miss ? Math.round(st.acc * 100) + "%" : "new") + " &middot; " + st.restudy + " Restudy";
+    $("fcScore").title = "Lifetime: " + st.got + " got, " + st.miss + " missed";
     $("fcStage").hidden = !c; $("fcEmpty").hidden = !!c;
     if (!c) {
       var none = !fc.sess.total;
@@ -626,6 +628,7 @@
     $("fcBack").hidden = !fc.flipped; $("fcCard").classList.toggle("flipped", fc.flipped);
     $("fcHint").textContent = fc.flipped ? (device === "desktop" ? "Did you get it? G or → got it, M or ← missed" : "Did you get it?") : (device === "desktop" ? "Click the card or press Space to flip" : "Tap the card to flip");
     $("fcGot").disabled = $("fcMissed").disabled = !fc.flipped;
+    fcFit();
   }
   function fcFlip() { if (!fc.queue.length) return; fc.flipped = !fc.flipped; fcRender(); if (fc.flipped && device !== "desktop") { var b = $("fcBack"); b.scrollIntoView && b.scrollIntoView({ block: "nearest" }); } }
   function fcAnswer(got) {
@@ -664,8 +667,19 @@
       return "<tr><td>" + fcDate(e.t) + "</td><td>" + ({ all: "All", wrong: "Missed", restudy: "Restudy" }[e.mode] || "All") + "</td><td>" + e.n + "</td><td class='r'>" + e.got + "</td><td class='w'>" + e.miss + "</td></tr>"; }).join("") + "</table>";
     return h + "</details></div>";
   }
+  // v5.3: the study screen fits the window: the card fills the space left above the grade buttons, and its text shrinks until it all fits (no page scrolling)
+  function fcFit() {
+    var stg = $("fcStudy"), card = $("fcCard"); if (!stg || stg.hidden || !document.body.classList.contains("fcstudy")) return;
+    window.scrollTo(0, 0); var top = stg.getBoundingClientRect().top; stg.style.height = Math.max(320, window.innerHeight - top - 6) + "px";
+    var faces = card.querySelectorAll(".fcmeta, .fcface, .fchint"), z = 1;
+    function setZ(v) { Array.prototype.forEach.call(faces, function (f) { f.style.zoom = v; }); }
+    setZ(1); while (card.scrollHeight > card.clientHeight + 1 && z > 0.42) { z = Math.round((z - 0.04) * 100) / 100; setZ(z); }
+    card.classList.toggle("fcover", card.scrollHeight > card.clientHeight + 1);
+  }
+  function fcUnfit() { document.body.classList.remove("fcstudy"); var stg = $("fcStudy"); if (stg) stg.style.height = ""; }
+  window.addEventListener("resize", function () { if (fc && fc.view === "study") { clearTimeout(fcFit.t); fcFit.t = setTimeout(fcFit, 80); } });
   function renderSections() {
-    var box = $("fcSections"); if (!box || !fc) return;
+    var box = $("fcSections"); if (!box || !fc) return; fcUnfit();
     $("fcStudy").hidden = true; box.hidden = false;
     var open = {}; Array.prototype.forEach.call(box.querySelectorAll("details[data-g]"), function (d) { open[d.dataset.g] = d.open; });
     var openHist = {}; Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { var x = d.querySelector(".fchist"); if (x && x.open) openHist[d.dataset.secid] = 1; });

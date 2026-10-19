@@ -1,4 +1,6 @@
-# MBA Study Tutor (Bill's hands-free voice tutor) - v5.2
+# MBA Study Tutor (Bill's hands-free voice tutor) - v5.3
+
+**v5.3:** the flash card study screen fits the window (truck screen, phones, laptops) with no scrolling. See "v5.3" at the bottom.
 
 **v5.2:** flash card progress can sync across devices (Settings > "Sync flash cards across my devices"). See "v5.2" at the bottom.
 
@@ -122,3 +124,9 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - How: the Worker `fit-tutor-ask` has `GET/PUT /progress/<code>` (same origin check; 400 KB cap; one write per code every 2 s, 400 writes per code per day; KV key is a SHA-256 of the code). Storage is the free-plan KV namespace `SYNC_KV`. The merge rules live in `sync-merge.js` and are shared by the app and the Worker: newest change per card wins (each result has an update time), history is a union by session id, deletes win over older edits. The app syncs on load, about 20 s after you stop grading (at most every 90 s while you keep going), when the app is hidden or shown again, and when the connection comes back. Offline grading is kept on the device and sent later.
 - KV reads can lag up to about a minute between far-apart places; tap **Sync now** if a device looks behind.
 - Tests: `tests/sync.test.js` (merge rules), `worker/test/sync.test.js` (endpoints), `tests/e2e_v52.py` (two devices: turn on, enter code, offline then online, same card on both, My cards add/delete, turn off).
+
+## v5.3 - compact flash card study screen
+- One compact row: "‹ Sections", the section name (once, cut off with ... if long; full name on hover) with a one-line session/lifetime summary under it, and Shuffle. On phones the name and summary sit on one short block under the two buttons.
+- The "Which cards" dropdown is gone from the study screen (pick cards from the sections list). The READY bar, the key list and extra header spacing are hidden only while studying.
+- The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
+- Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
