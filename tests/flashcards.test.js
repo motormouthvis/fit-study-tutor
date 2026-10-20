@@ -185,20 +185,20 @@ test("v5.0: Statement Analysis prompts say what to calculate", () => {
 });
 
 /* ---------- v5.1: books/chapters and sections ---------- */
-test("v5.1: Chapter 1 key terms are built in: 80 cards, stable unique ids, course 5601, own section with the long title", () => {
+test("v5.1: Chapter 1 key terms are built in: 81 cards, stable unique ids, course 5601, own section with the long title", () => {
   const ch = F.BOOKS[0].chapters[0];
-  assert.equal(F.BK.length, 80); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 80);
+  assert.equal(F.BK.length, 81); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 81);
   assert.ok(F.BK.every(c => c.course === "acct" && /^wt16-ch01-[a-z0-9-]+$/.test(c.id) && c.f && c.b));
   assert.equal(ch.title_full, "Course 5601 - Book: Financial & Managerial Accounting, Chapter 1: Introduction to Accounting and Business");
   const sec = F.sectionById(ch.key); assert.equal(sec.title, ch.title_full);
-  assert.equal(F.sectionStats(sec, F.newState()).total, 80);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 81);
 });
 test("v5.1: every card belongs to a section (course topics, book chapters, Statement Analysis) and nothing was dropped", () => {
   const gs = F.sectionList(), secs = [].concat(...gs.map(g => g.sections)).filter(s => s.id !== "all" && s.id !== "mine");
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 80 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 81 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -213,7 +213,7 @@ test("v5.1: Study all / missed / restudy filters pick the right cards", () => {
   F.answer(st, ids.slice(), ids[0], true); F.answer(st, ids.slice(), ids[1], false); F.setRestudy(st, ids[0], true);
   const f = m => F.filterCards("sec:topic:balance:" + m, st).map(c => c.id);
   assert.equal(f("all").length, ids.length); assert.deepEqual(f("wrong"), [ids[1]]); assert.deepEqual(f("restudy").sort(), [ids[0], ids[1]].sort());
-  assert.equal(F.filterCards("sec:book:wt16-ch01:all", st).length, 80); assert.equal(F.filterCards("sec:sa:wrong", st).length, 0);
+  assert.equal(F.filterCards("sec:book:wt16-ch01:all", st).length, 81); assert.equal(F.filterCards("sec:sa:wrong", st).length, 0);
   assert.deepEqual(F.parseSec("sec:book:wt16-ch01:wrong"), { id: "book:wt16-ch01", mode: "wrong" });
 });
 test("v5.1: session history keeps the latest 20 per section, newest first", () => {
