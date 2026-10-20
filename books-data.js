@@ -11,6 +11,7 @@ return { books: [
         ["account-receivable", "In one sentence, say what \"Account receivable\" means.", "Money a customer owes the business for a sale or service made on credit. It is an asset."],
         ["accounting", "In one sentence, say what \"Accounting\" means.", "The system that records, summarizes and reports a business's financial activity to the people who use that information."],
         ["five-account-classifications", "What are the five account classifications in the fundamental accounting equation?", "Assets, Liabilities, Owner's Equity, Revenue, and Expenses."],
+        ["debit-credit-rules", "Which account categories increase with a debit, and which increase with a credit?", "Debits are always on the LEFT side of a T account; credits on the right.\nAED increases with Debits: Assets, Expenses, Drawing (they decrease with credits).\nLCR increases with Credits: Liabilities, Capital (Owner's Equity), Revenue (they decrease with debits)."],
         ["the-four-accounting-assumptions", "List the four accounting assumptions.", "The basic premises financial reporting rests on: business entity, going concern, monetary unit and time period."],
         ["the-accounting-equation", "Write the accounting equation.", "Assets = Liabilities + Owners' (Stockholders') Equity."],
         ["accounting-principles", "In one sentence, say what \"Accounting principles\" means.", "Rules that guide how transactions are recorded and reported, such as cost, revenue recognition and expense recognition."],
