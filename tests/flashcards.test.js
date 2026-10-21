@@ -103,7 +103,7 @@ test("missed card returns sooner; got card leaves the session; scores tally", ()
   const st = F.newState(), cards = F.ALL.slice(0, 8);
   let q = F.buildQueue(cards, st, 7, false);
   const first = q[0]; q = F.answer(st, q, first, false);
-  assert.equal(q.indexOf(first), F.REQUEUE_GAP); assert.equal(q.length, 8);
+  assert.equal(q.indexOf(first), 7); assert.equal(q.length, 8);
   assert.ok(st.cards[first].restudy);
   const second = q[0]; q = F.answer(st, q, second, true);
   assert.equal(q.indexOf(second), -1); assert.equal(q.length, 7);
@@ -234,4 +234,14 @@ test("v5.7: Froeb Chapters 1-3 cards: 62 cards, course 5421, page refs, long sec
   const b = F.BOOKS.find(x => x.id === "froeb");
   assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [21, 21, 20]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
+});
+
+test("v5.7.2: missed card is requeued to the end, after every remaining card", () => {
+  const st = F.newState(), ids = ["a", "b", "c", "d", "e"];
+  let q = F.answer(st, ids, "a", false);
+  assert.deepEqual(q, ["b", "c", "d", "e", "a"]);
+  q = F.answer(st, q, "b", false); assert.deepEqual(q, ["c", "d", "e", "a", "b"]);
+  q = F.answer(st, q, "c", true); assert.deepEqual(q, ["d", "e", "a", "b"]);
+  assert.deepEqual(F.answer(st, ["z"], "z", false), ["z"]);
+  assert.equal(st.life.miss, 3); assert.equal(st.life.got, 1); assert.equal(st.cards.a.miss, 1);
 });

@@ -578,13 +578,13 @@
   }
   var REQUEUE_GAP = 3;
   function newState() { return { cards: {}, life: { got: 0, miss: 0 }, sessions: 0, hist: {} }; }
-  // record an answer; returns the new queue. A missed card comes back REQUEUE_GAP cards later.
+  // record an answer; returns the new queue. A missed card goes to the END of the session queue (v5.7.2).
   function answer(st, queue, id, got, now) {
     var s = st.cards[id] || (st.cards[id] = { seen: 0, got: 0, miss: 0 });
     s.seen++; s.last = now || Date.now(); s.lastOk = !!got;
     if (got) { s.got++; st.life.got++; } else { s.miss++; st.life.miss++; s.restudy = true; }
     var q = queue.slice(), pos = q.indexOf(id); if (pos >= 0) q.splice(pos, 1);
-    if (!got) q.splice(Math.min(REQUEUE_GAP, q.length), 0, id);
+    if (!got) q.push(id);
     return q;
   }
   function setRestudy(st, id, on) { var s = st.cards[id] || (st.cards[id] = { seen: 0, got: 0, miss: 0 }); s.restudy = !!on; }
