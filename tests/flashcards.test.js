@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 62 + 66 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 62 + 67 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-3 cards: 62 cards, course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 62); assert.equal(F.BK.length, 210);
+  assert.equal(FR.length, 62); assert.equal(F.BK.length, 211);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \(p\. \d+\)$/.test(c.b)));
   const b = F.BOOKS.find(x => x.id === "froeb");
   assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [21, 21, 20]);
@@ -248,9 +248,9 @@ test("v5.7.2: missed card is requeued to the end, after every remaining card", (
 
 test("v5.7.3: Scott Chapters 1-3 cards: 66 cards, course 5601, page refs, no Q: prefix", () => {
   const S = F.BK.filter(c => c.book === "scott");
-  assert.equal(S.length, 66);
-  assert.ok(S.every(c => c.course === "acct" && /^scott-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \(p\. \d+\)$/.test(c.b) && !/^Q:/.test(c.f)));
+  assert.equal(S.length, 67);
+  assert.ok(S.every(c => c.course === "acct" && /^scott-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \((p\. \d+|page not given)\)$/.test(c.b) && !/^Q:/.test(c.f)));
   const b = F.BOOKS.find(x => x.id === "scott");
-  assert.deepEqual(b.chapters.map(ch => S.filter(c => c.topic === ch.key).length), [30, 22, 14]);
+  assert.deepEqual(b.chapters.map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 14]);
   assert.equal(b.chapters[2].title_full, "Course 5601 - Book: College Accounting: A Career Approach (Scott, 13th ed.), Chapter 3: The General Journal and the General Ledger");
 });
