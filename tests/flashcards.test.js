@@ -187,8 +187,9 @@ test("v5.0: Statement Analysis prompts say what to calculate", () => {
 /* ---------- v5.1: books/chapters and sections ---------- */
 test("v5.1: Chapter 1 key terms are built in: 82 cards, stable unique ids, course 5601, own section with the long title", () => {
   const ch = F.BOOKS[0].chapters[0];
-  assert.equal(F.BK.length, 82); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 82);
-  assert.ok(F.BK.every(c => c.course === "acct" && /^wt16-ch01-[a-z0-9-]+$/.test(c.id) && c.f && c.b));
+  const W = F.BK.filter(c => c.book === "wt16");
+  assert.equal(W.length, 82); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 82);
+  assert.ok(W.every(c => c.course === "acct" && /^wt16-ch01-[a-z0-9-]+$/.test(c.id) && c.f && c.b));
   assert.equal(ch.title_full, "Course 5601 - Book: Financial & Managerial Accounting, Chapter 1: Introduction to Accounting and Business");
   const sec = F.sectionById(ch.key); assert.equal(sec.title, ch.title_full);
   assert.equal(F.sectionStats(sec, F.newState()).total, 82);
@@ -198,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 62 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -224,4 +225,13 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
   const B = require("../books-data.js"); const seen = new Set();
   for (const b of B.books) { assert.ok(b.id && ["acct", "econ"].includes(b.course) && b.courseNo && b.title); for (const ch of b.chapters) { assert.ok(ch.n > 0 && ch.title);
     for (const [slug, f, bk] of ch.cards) { assert.match(slug, /^[a-z0-9-]+$/); const k = b.id + ch.n + slug; assert.ok(!seen.has(k), "dup " + k); seen.add(k); assert.ok(f.length > 5 && bk.length > 5, slug); } } }
+});
+
+test("v5.7: Froeb Chapters 1-3 cards: 62 cards, course 5421, page refs, long section titles", () => {
+  const FR = F.BK.filter(c => c.book === "froeb");
+  assert.equal(FR.length, 62); assert.equal(F.BK.length, 144);
+  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \(p\. \d+\)$/.test(c.b)));
+  const b = F.BOOKS.find(x => x.id === "froeb");
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [21, 21, 20]);
+  assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
