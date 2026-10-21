@@ -401,3 +401,5 @@ body.fcstudy #fcEmpty { margin:0; }
 .pqres { margin-top:6px; padding:8px; border-radius:8px; }
 .pqres.ok { background:#0a3b1d; } .pqres.bad { background:#4a1010; }
 .pqscore { font-size:1.2rem; margin:8px 0; }
+
+#soundCard .grid2 .bigbtn { width:100%; margin:8px 0; }

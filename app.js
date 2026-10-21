@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.8.1";
+  var APP_VERSION = "v5.8.2";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -494,7 +494,7 @@
   var pendingStart = null, soundFail = "", soundCardMode = "";
   function startSession(opts) {
     opts = opts || {};
-    if (!tutor.settings.soundOk) { pendingStart = opts; openSoundCard("First, a quick sound check."); return; }
+    if (!soundConfirmed()) { pendingStart = opts; openSoundCard("First, a quick sound check."); return; }
     doStart(opts);
   }
   function doStart(opts) {
@@ -508,13 +508,17 @@
     syncMic();
   }
   /* ---------- sound check ---------- */
+  // v5.8.2: YES/NO is visible as soon as the sound check opens (it used to appear only after the test clip
+  // reported "played to the end", so on phones where that never fired there was no YES button at all).
+  var SOUND_OK_KEY = "studyTutor.soundOk";
+  function soundConfirmed() { try { if (localStorage.getItem(SOUND_OK_KEY) === "1") return true; } catch (e) {} return !!tutor.settings.soundOk; }
   function openSoundCard(msg) {
-    $("soundCard").hidden = false; $("scMsg").textContent = msg || ""; $("scAsk").hidden = true; $("scHelp").hidden = true;
+    $("soundCard").hidden = false; $("scMsg").textContent = msg || ""; $("scAsk").hidden = false; $("scHelp").hidden = true;
   }
   function testSound() {
     // plays a beep and then a spoken sentence. Always a direct result of a tap.
     if (tutor.running) tutor.hardStopSpeech();
-    soundFail = ""; $("soundCard").hidden = false; $("scAsk").hidden = true; $("scHelp").hidden = true; $("scMsg").textContent = "Playing... you should hear a beep, then my voice.";
+    soundFail = ""; $("soundCard").hidden = false; $("scAsk").hidden = false; $("scHelp").hidden = true; $("scMsg").textContent = "Playing... you should hear a beep, then my voice.";
     speak(E.SOUND_CLIPS.slice(0, 2), function (ok, why) {
       if (ok) { $("scMsg").textContent = ""; $("scAsk").hidden = false; ev("test sound played to the end"); }
       else { soundFail = "I couldn't play sound. " + why; $("scMsg").textContent = ""; $("scHelp").hidden = false; $("scHelp").textContent = "I couldn't play sound. Tap TEST SOUND to try again. Check: phone volume (media volume, not ringer) is up, silent/Do Not Disturb is off, Bluetooth is connected to the right device, and Chrome is not muted for this site. Details: " + why; }
@@ -523,8 +527,8 @@
     });
   }
   function soundAnswer(yes) {
-    $("scAsk").hidden = true;
     if (yes) {
+      $("scAsk").hidden = true; try { localStorage.setItem(SOUND_OK_KEY, "1"); } catch (e) {}
       soundFail = ""; tutor.setSetting("soundOk", true); $("soundCard").hidden = true; ev("sound check: YES");
       var o = pendingStart; pendingStart = null;
       if (o) doStart(o); else { $("startCard").hidden = tutor.running; showAlert("Great, the sound works."); }
