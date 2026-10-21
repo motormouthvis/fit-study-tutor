@@ -15,7 +15,7 @@
 <body>
 <div id="chrome" class="chrome">
 <header class="top">
-  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.7.3</span></span></div>
+  <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.8</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
@@ -109,6 +109,16 @@
 
   <!-- QUIZ -->
   <section id="tab-tutor" class="panel">
+    <div id="pqPick" class="card">
+      <h2>Practice tests (end of chapter)</h2>
+      <label class="lbl" for="pqBook">Book</label><select id="pqBook"></select>
+      <label class="lbl" for="pqCh">Chapter</label><select id="pqCh"></select>
+      <label class="lbl" for="pqType">Quiz type</label>
+      <select id="pqType"><option value="all">All three</option><option value="summary">Summary points</option><option value="mc">Multiple choice</option><option value="problems">Individual problems</option></select>
+      <button id="pqStart" class="bigbtn go">START PRACTICE TEST</button>
+      <p class="small">You write your own answers. Multiple choice is graded here; copy written answers into Grok Bot for grading.</p>
+    </div>
+    <div id="pqWork" class="card" hidden></div>
     <div id="startCard" class="card">
       <h2>Quiz me</h2>
       <label class="lbl" for="focusSel">Practice</label>
@@ -430,6 +440,8 @@
 <script src="books-data.js"></script>
 <script src="sync-merge.js"></script>
 <script src="flashcards.js"></script>
+<script src="practice-data.js"></script>
+<script src="practice.js"></script>
 <script src="ask-config.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
