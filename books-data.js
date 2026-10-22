@@ -160,6 +160,11 @@ return { books: [
         ["why-is-the-sunk-cost-fallacy-hard-to-fix", "Why is the sunk-cost fallacy hard to fix?", "Trade-off: ignoring sunk costs yields the right decision now but signals managers that bad investments carry no penalty. (p. 31)"],
         ["final-warning-how-to-avoid-cost-mistakes", "What is the final warning on \"how to avoid cost mistakes\"?", "Recognize the relevant benefits and costs, and consider the decision from the organization's point of view. (p. 33)"],
         ["key-maxim-of-chapter-3", "In one sentence, say what \"Key maxim of Chapter 3\" means.", "\"If you begin with the costs, you will always get confused; but if you begin with the decision, you will never get confused.\" (p. 33)"]
+      ] },
+      { n: 6, title: "Simple Pricing", cards: [
+        ["elasticity-sign-size-direction", "A study finds the price elasticity of demand for coffee is -1.5. What does the minus sign tell you, and what does the 1.5 tell you?", "The minus sign gives the direction: price and quantity move opposite ways (price up, buying down), which is why demand elasticities are normally negative. The 1.5 gives the size, meaning how sensitive buyers are: a 1% price rise cuts quantity about 1.5%. (page not given)"],
+        ["gasoline-short-vs-long-run-elasticity", "Gas prices jump 10% and in the short run purchases fall about 2-3%. What's the elasticity, and why is it bigger in the long run?", "Short run: about -2.5% / 10% = -0.25 (studies put it around -0.2 to -0.3), so demand is inelastic because people still have to drive. Long run: about -0.6 to -0.9, because people adjust by buying more fuel-efficient cars, moving closer to work, or carpooling. Demand gets more elastic over time. (page not given)"],
+        ["positive-price-elasticity-is-rare", "An analyst reports that a product's price elasticity of demand is +0.8. Why should you be suspicious?", "A positive number would mean people buy more when the price goes up, which is an upward-sloping demand curve. That's very rare, so first check the data (e.g. did demand shift at the same time the price rose?). (page not given)"]
       ] }
     ] },
   { id: "scott", course: "acct", courseNo: "5601", title: "College Accounting: A Career Approach (Scott, 13th ed.)", edition: "13th Edition (Scott; Cengage)",
