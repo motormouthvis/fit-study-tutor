@@ -251,6 +251,6 @@ test("v5.7.3: Scott Chapters 1-3 cards: 66 cards, course 5601, page refs, no Q: 
   assert.equal(S.length, 68);
   assert.ok(S.every(c => c.course === "acct" && /^scott-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \((p\. \d+|page not given)\)$/.test(c.b) && !/^Q:/.test(c.f)));
   const b = F.BOOKS.find(x => x.id === "scott");
-  assert.deepEqual(b.chapters.map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 14]);
+  assert.deepEqual(b.chapters.map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 15]);
   assert.equal(b.chapters[2].title_full, "Course 5601 - Book: College Accounting: A Career Approach (Scott, 13th ed.), Chapter 3: The General Journal and the General Ledger");
 });
