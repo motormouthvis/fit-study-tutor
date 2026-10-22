@@ -240,7 +240,8 @@ return { books: [
         ["how-is-the-general-ledger-organized", "How is the general ledger organized?", "It holds all accounts, arranged according to the chart of accounts. (p. 111)"],
         ["how-do-you-fix-an-error-using-the-ruling-method", "How do you fix an error using the ruling method?", "Draw a line through the wrong account title or amount, write the correct one immediately above, and initial the correction. (p. 114)"],
         ["when-is-the-correcting-entry-method-used", "When is the correcting entry method used?", "When an incorrectly journalized entry was already posted; a new entry cancels the wrong accounts and enters the right ones, with an explanation. (p. 114)"],
-        ["why-use-cross-referencing-between-journal-and-ledg", "Why use cross-referencing between journal and ledger?", "It links each posted amount back to its journal page and each journal line to its ledger account number. (p. 106)"]
+        ["why-use-cross-referencing-between-journal-and-ledg", "Why use cross-referencing between journal and ledger?", "It links each posted amount back to its journal page and each journal line to its ledger account number. (p. 106)"],
+        ["accounting-cycle-eight-steps", "You've just finished a month of business transactions. List, in order, the 8 steps from recording them to the finished financial statements.", "1. Journalize each transaction (journal entries). 2. Post to the ledger accounts. 3. Prepare the trial balance (total debits = total credits). 4. Record adjusting entries and prepare the adjusted trial balance. 5. Income statement (net income). 6. Statement of owner's equity (net income goes into ending capital). 7. Balance sheet (ending capital goes into equity). 8. Statement of cash flows (ending cash matches the balance sheet). (page not given)"]
       ] }
     ] }
 ] };
