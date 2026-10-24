@@ -257,3 +257,60 @@ test("v5.7.3: Scott Chapters 1-3 cards: 66 cards, course 5601, page refs, no Q: 
   assert.deepEqual(b.chapters.map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 15]);
   assert.equal(b.chapters[2].title_full, "Course 5601 - Book: College Accounting: A Career Approach (Scott, 13th ed.), Chapter 3: The General Journal and the General Ledger");
 });
+
+/* ---------- v5.9: Froeb Ch 3 wealth/government card, and the Important star ---------- */
+test("v5.9: Froeb Ch 2 has the 'Does the Government Create Wealth?' card, word for word from the textbook", () => {
+  const c = F.ALL.find(x => x.id === "froeb-ch02-does-the-government-create-wealth");
+  assert.ok(c, "card missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch02");
+  assert.equal(c.f, "Does the Government Create Wealth?");
+  assert.equal(c.b, "Governments play a critical role in the wealth-creating process by enforcing property rights and contracts\u2014legal mechanisms that facilitate voluntary transactions. By making sure that buyers and sellers can keep the gains from trade, our legal system makes trade more likely, which contributes to America's enormous wealth-creating ability.");
+  assert.equal(F.BOOKS.find(x => x.id === "froeb").chapters.filter(ch => ch.n === 3).length, 1);   // no new chapter was created
+});
+
+test("v5.9: the other three Froeb Ch 2 cards are word for word from the textbook too", () => {
+  const want = {
+    "froeb-ch02-what-is-the-one-lesson-of-economics": ["What is the one lesson of economics?",
+      "The art of economics consists in looking not merely at the immediate but at the longer effects of any act or policy; it consists of tracing the consequences of that policy not merely for one group but for all groups."],
+    "froeb-ch02-what-is-the-opposite-of-a-tax": ["What is the opposite of a tax, and what does it do to wealth?",
+      "A subsidy. By encouraging low-value consumers to buy or high-value sellers to sell, subsidies destroy wealth by moving assets from higher- to lower-valued uses\u2014in exactly the wrong direction."],
+    "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades": ["How do taxes destroy wealth?",
+      "A tax raises the cost of something, so fewer people buy and some trades that should have happened don't \u2014 it blocks good trades that would have created wealth."]
+  };
+  for (const id of Object.keys(want)) {
+    const c = F.ALL.find(x => x.id === id);
+    assert.ok(c, id + " missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch02");
+    assert.equal(c.f, want[id][0]); assert.equal(c.b, want[id][1]);
+  }
+});
+
+test("v5.9: Important is a separate star: set, clear, count per section and lifetime, and it never changes on a miss", () => {
+  const st = F.newState(), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id), sec = F.sectionById("topic:balance");
+  assert.equal(F.sectionStats(sec, st).important, 0);
+  F.setImportant(st, ids[0], true); F.setImportant(st, ids[1], true);
+  assert.ok(F.isImportant(st, ids[0])); assert.equal(F.sectionStats(sec, st).important, 2);
+  assert.equal(F.stats(st).important, 2);
+  F.setImportant(st, ids[1], false);
+  assert.ok(!F.isImportant(st, ids[1])); assert.equal(F.sectionStats(sec, st).important, 1);
+  F.answer(st, ids.slice(), ids[2], false);                       // a miss sets Restudy, never Important
+  assert.ok(st.cards[ids[2]].restudy); assert.ok(!F.isImportant(st, ids[2]));
+  const n = F.sectionStats(sec, st); assert.equal(n.right + n.wrong + n.unseen, n.total);   // Important overlaps, it is not a status
+});
+
+test("v5.9: Study important picks only the starred cards, in a section and across all sections", () => {
+  const st = F.newState(), bal = F.ALL.filter(c => c.topic === "balance").map(c => c.id), sa = F.SA[0].id;
+  F.setImportant(st, bal[0], true); F.setImportant(st, sa, true);
+  assert.deepEqual(F.parseSec("sec:topic:balance:important"), { id: "topic:balance", mode: "important" });
+  assert.deepEqual(F.filterCards("sec:topic:balance:important", st).map(c => c.id), [bal[0]]);
+  assert.deepEqual(F.filterCards("sec:all:important", st).map(c => c.id).sort(), [bal[0], sa].sort());
+  assert.deepEqual(F.filterCards("important", st).map(c => c.id).sort(), [bal[0], sa].sort());
+  assert.deepEqual(F.filterSection("sec:topic:balance:important"), { id: "topic:balance", mode: "important" });
+});
+
+test("v5.9: old saved progress still works and Important rides along with the existing sync merge", () => {
+  const SMx = require("../sync-merge.js"), st = F.newState();
+  st.cards["balance-1"] = { seen: 2, got: 1, miss: 1 };                                  // saved by an older version: no imp, no lastOk
+  assert.equal(F.cardStatus(st.cards["balance-1"]), "right"); assert.ok(!F.isImportant(st, "balance-1"));
+  F.setImportant(st, "balance-1", true); st.cards["balance-1"].u = 2000;
+  const merged = SMx.merge({ cards: { "balance-1": { seen: 2, got: 1, miss: 1, u: 1000 } } }, { cards: st.cards });
+  assert.equal(merged.cards["balance-1"].imp, true);                                     // newest write wins, Important included
+});

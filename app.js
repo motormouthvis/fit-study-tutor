@@ -581,7 +581,7 @@
   }
   function fcFilterOptions() {
     var sel = $("fcFilter"), h = "<option value='all'>All cards</option><option value='course:acct'>BUS 5601 Accounting (all)</option><option value='course:econ'>BUS 5421 Economics (all)</option>" +
-      "<option value='sa'>Statement Analysis</option><option value='mine'>My cards (AI) (" + FL.filterCards("mine").length + ")</option><option value='restudy'>Restudy only</option><option value='unseen'>Unseen</option>";
+      "<option value='sa'>Statement Analysis</option><option value='mine'>My cards (AI) (" + FL.filterCards("mine").length + ")</option><option value='restudy'>Restudy only</option><option value='important'>Important only</option><option value='unseen'>Unseen</option>";
     ["acct", "econ"].forEach(function (co) {
       h += "<optgroup label='" + (co === "acct" ? "BUS 5601 topics" : "BUS 5421 topics") + "'>";
       FL.TOPICS.filter(function (t) { return t.course === co; }).forEach(function (t) { h += "<option value='topic:" + t.key + "'>" + fcEsc(t.name) + "</option>"; });
@@ -649,17 +649,20 @@
     }
     if (!c) {
       var none = !fc.sess.total;
-      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
-        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
+      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "important" ? ". No cards are marked Important yet. Tap \u2606 Important on a card to add one." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
+        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "") + (st.important ? "<button class='bigbtn' id='fcImpOnly'>&#9733; Important only (" + st.important + ")</button>" : "");
       var b; if ((b = $("fcToSec"))) b.onclick = function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); };
       if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
       if ((b = $("fcAgain"))) b.onclick = function () { fcStart(); }; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
+      if ((b = $("fcImpOnly"))) b.onclick = function () { fcSetFilter("important"); };
       return;
     }
     var s = fc.st.cards[c.id] || {};
     var ttl = c.course === "sa" ? "Statement Analysis · " + c.health : c.custom ? (c.course === "acct" ? "BUS 5601 · " : c.course === "econ" ? "BUS 5421 · " : "") + FL.topicName(c.topic) + " · My card" : (c.course === "acct" ? "BUS 5601 · " : "BUS 5421 · ") + FL.topicName(c.topic);
     $("fcTopic").innerHTML = fcEsc(ttl + (s.seen ? "" : " · new")) + (c.custom ? "<span class='aibadge' title='Written with Grok'>AI</span>" : "") + (c.improved ? "<span class='aibadge imp' title='Improved with Grok on this device'>" + (c.custom ? "IMPROVED" : "AI IMPROVED") + "</span>" : "");
     $("fcStar").innerHTML = s.restudy ? "&#9733; Restudy" : "&#9734; Restudy"; $("fcStar").setAttribute("aria-pressed", s.restudy ? "true" : "false"); $("fcStar").classList.toggle("on", !!s.restudy);
+    $("fcImp").innerHTML = s.imp ? "&#9733; Important" : "&#9734; Important"; $("fcImp").setAttribute("aria-pressed", s.imp ? "true" : "false"); $("fcImp").classList.toggle("on", !!s.imp);
+    $("fcImp").title = s.imp ? "Important: tap to unmark (I)" : "Mark this card Important (I)";
     if (c.kind === "statement") {
       $("fcFront").innerHTML = "<div class='fcq'>" + fcEsc(c.company) + ": " + fcEsc(c.q) + "</div><div class='fctbls'>" + c.tables.map(fcTable).join("") + "</div>";
       $("fcBack").innerHTML = "<div class='fcans'>" + fcEsc(c.answer) + "</div><div class='fcwork'><b>Working:</b> " + fcEsc(c.work) + "</div><div class='fcint'><b>What it means:</b> " + fcEsc(c.interp) + "</div>";
@@ -684,12 +687,18 @@
   }
   function fcSkip() { if (fc.queue.length > 1) { fc.queue.push(fc.queue.shift()); fc.flipped = false; fcRender(); } }
   function fcStar() { var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}; FL.setRestudy(fc.st, id, !s.restudy); fcSave(); fcRender(); }
+  // v5.9: Bill's own Important star. Saved with the other card progress (so it syncs across his devices).
+  function fcImportant() {
+    var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}, on = !s.imp;
+    FL.setImportant(fc.st, id, on); fcSave(); fcRender();
+    fcSay(on ? "Marked Important. Study them with \u201cStudy important\u201d on the sections list." : "Important mark removed.");
+  }
   function fcSetFilter(v) { fc.filter = v; $("fcFilter").value = v; fcSave(); fcStart(); }
   function renderFlash() { if (fc.view === "study" && fc.queue) fcRender(); else { fc.view = "sections"; renderSections(); } }
   /* ---- v5.1: sections list (book chapters, topics, Statement Analysis, My cards) ---- */
   function fcSecLabel(filter) {
     var m = /^sec:/.test(filter) ? FL.parseSec(filter) : FL.filterSection(filter); if (!m) return "";
-    var sec = FL.sectionById(m.id); if (!sec) return ""; var mode = { all: "Study all", wrong: "Study missed", restudy: "Study restudy" }[m.mode];
+    var sec = FL.sectionById(m.id); if (!sec) return ""; var mode = { all: "Study all", wrong: "Study missed", restudy: "Study restudy", important: "Study important" }[m.mode];
     return sec.title + (mode ? " \u00B7 " + mode : "");
   }
   // keep a small log per section: one entry per study session (date, mode, cards studied, right, wrong)
@@ -706,12 +715,12 @@
       return "<button class='fcsbtn" + (extra || "") + "' data-sec='" + key + "' data-mode='" + mode + "'" + (count ? "" : " disabled") + "><b>" + label + "</b><span>" + count + (count === 1 ? " card" : " cards") + at + "</span></button>";
     }
     var h = "<div class='fcsec' data-secid='" + key + "'><div class='fcsectitle'>" + fcEsc(sec.title) + "</div>" +
-      "<div class='fcsecnums' aria-label='Counts'><span class='n right'><b>" + n.right + "</b> Right</span><span class='n wrong'><b>" + n.wrong + "</b> Wrong</span><span class='n restudy'><b>" + n.restudy + "</b> Restudy</span><span class='n unseen'><b>" + n.unseen + "</b> Unseen</span><span class='n total'><b>" + n.total + "</b> Total</span></div>" +
-      "<div class='fcsecbtns'>" + btn("all", "Study all", n.total, " go") + btn("wrong", "Study missed", n.wrong, " miss") + btn("restudy", "Study restudy", n.restudy, " rs") + "</div>";
+      "<div class='fcsecnums' aria-label='Counts'><span class='n right'><b>" + n.right + "</b> Right</span><span class='n wrong'><b>" + n.wrong + "</b> Wrong</span><span class='n restudy'><b>" + n.restudy + "</b> Restudy</span><span class='n important'><b>" + n.important + "</b> Important</span><span class='n unseen'><b>" + n.unseen + "</b> Unseen</span><span class='n total'><b>" + n.total + "</b> Total</span></div>" +
+      "<div class='fcsecbtns'>" + btn("all", "Study all", n.total, " go") + btn("wrong", "Study missed", n.wrong, " miss") + btn("restudy", "Study restudy", n.restudy, " rs") + btn("important", "Study important", n.important, " imp") + "</div>";
     h += "<details class='fchist'><summary>History (" + hist.length + (hist.length ? " session" + (hist.length === 1 ? "" : "s") : "") + ")</summary>";
     if (!hist.length) h += "<div class='small'>No sessions yet.</div>";
     else h += "<table class='fchtbl'><tr><th>When</th><th>Cards</th><th>Studied</th><th>Right</th><th>Wrong</th></tr>" + hist.slice(0, 10).map(function (e) {
-      return "<tr><td>" + fcDate(e.t) + "</td><td>" + ({ all: "All", wrong: "Missed", restudy: "Restudy" }[e.mode] || "All") + "</td><td>" + e.n + "</td><td class='r'>" + e.got + "</td><td class='w'>" + e.miss + "</td></tr>"; }).join("") + "</table>";
+      return "<tr><td>" + fcDate(e.t) + "</td><td>" + ({ all: "All", wrong: "Missed", restudy: "Restudy", important: "Important" }[e.mode] || "All") + "</td><td>" + e.n + "</td><td class='r'>" + e.got + "</td><td class='w'>" + e.miss + "</td></tr>"; }).join("") + "</table>";
     return h + "</details></div>";
   }
   // v5.3: the study screen fits the window: the card fills the space left above the grade buttons, and its text shrinks until it all fits (no page scrolling)
@@ -730,7 +739,7 @@
     $("fcStudy").hidden = true; box.hidden = false;
     var open = {}; Array.prototype.forEach.call(box.querySelectorAll("details[data-g]"), function (d) { open[d.dataset.g] = d.open; });
     var openHist = {}; Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { var x = d.querySelector(".fchist"); if (x && x.open) openHist[d.dataset.secid] = 1; });
-    var h = "<h2 class='fcsechead'>Flash Cards</h2><p class='small fcsecintro'>Pick a section. Right = your last answer was Got it. Wrong = your last answer was Missed. Restudy = starred cards (a miss stars a card for you).</p>";
+    var h = "<h2 class='fcsechead'>Flash Cards</h2><p class='small fcsecintro'>Pick a section. Right = your last answer was Got it. Wrong = your last answer was Missed. Restudy = starred cards (a miss stars a card for you). Important = cards you starred yourself with the \u2606 Important button on the card.</p>";
     var best = null; Object.keys(fc.st.pass || {}).forEach(function (k) { var inf = fcPassInfo(k), m = FL.parseSec(k); if (inf && inf.left > 0 && inf.done > 0 && FL.sectionById(m.id) && (!best || inf.u > best.inf.u)) best = { k: k, inf: inf, m: m }; });
     if (best) h += "<button class='bigbtn go fcresume' id='fcResume' data-sec='" + fcEsc(best.m.id) + "' data-mode='" + best.m.mode + "'>&#9654; Continue &middot; " + fcEsc(fcSecLabel(best.k)) + " &middot; " + best.inf.pos + " of " + best.inf.total + "</button>";
     FL.sectionList().forEach(function (g) {
@@ -750,7 +759,7 @@
   function renderFcStats() {
     var box = $("fcStats"); if (!box || !FL) return;
     var s = FL.stats(fc.st), h = "<div style='font-size:1.6rem;font-weight:900'>" + s.seen + " of " + s.total + " <span class='small'>cards seen</span></div>" +
-      "<div class='small'>Lifetime: " + s.got + " got it, " + s.miss + " missed" + (s.got + s.miss ? " (" + Math.round(s.acc * 100) + "%)" : "") + " &middot; " + s.mastered + " mastered &middot; " + s.restudy + " marked Restudy &middot; " + s.sessions + " sessions</div>";
+      "<div class='small'>Lifetime: " + s.got + " got it, " + s.miss + " missed" + (s.got + s.miss ? " (" + Math.round(s.acc * 100) + "%)" : "") + " &middot; " + s.mastered + " mastered &middot; " + s.restudy + " marked Restudy &middot; " + s.important + " marked Important &middot; " + s.sessions + " sessions</div>";
     Object.keys(FL.COURSES).forEach(function (k) { var b = s.byCourse[k]; if (!b) return; var n = b.got + b.miss;
       h += "<div class='small'>" + fcEsc(FL.COURSES[k]) + ": seen " + b.seen + "/" + b.total + (n ? ", " + Math.round(b.got / n * 100) + "% got" : "") + "</div>"; });
     if (s.byCourse.mine) { var bm = s.byCourse.mine, nm = bm.got + bm.miss; h += "<div class='small'>My cards (AI): " + bm.total + " saved, seen " + bm.seen + (nm ? ", " + Math.round(bm.got / nm * 100) + "% got" : "") + "</div>"; }
@@ -768,8 +777,9 @@
       b.dataset.sure = ""; b.classList.remove("sure"); b.querySelector(".fcrtxt").textContent = " Start over"; fcStartOver(); });
     $("fcBackSec").addEventListener("click", function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); });
     $("fcFilter").addEventListener("change", function () { fcSetFilter($("fcFilter").value); });
-    $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar")) return; fcFlip(); });
+    $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar") || e.target.closest("#fcImp")) return; fcFlip(); });
     $("fcStar").addEventListener("click", function (e) { e.stopPropagation(); fcStar(); });
+    $("fcImp").addEventListener("click", function (e) { e.stopPropagation(); fcImportant(); });
     $("fcGot").addEventListener("click", function () { fcAnswer(true); });
     $("fcMissed").addEventListener("click", function () { fcAnswer(false); });
     document.addEventListener("keydown", function (e) {
@@ -783,6 +793,7 @@
       else if (k === "g" || k === "G" || k === "ArrowRight") { e.preventDefault(); fcAnswer(true); }
       else if (k === "m" || k === "M" || k === "ArrowLeft") { e.preventDefault(); fcAnswer(false); }
       else if (k === "r" || k === "R") { e.preventDefault(); fcStar(); }
+      else if (k === "i" || k === "I") { e.preventDefault(); fcImportant(); }
       else if (k === "n" || k === "N") { e.preventDefault(); fcSkip(); }
     });
     window.__fc = fc;
