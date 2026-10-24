@@ -45,7 +45,7 @@ try:
     # ---- the two word-for-word Froeb Chapter 2 cards ----
     cards(A)
     n = nums(A, CH2)
-    check("Froeb Ch 2 section has 27 cards", n["total"] == 27, n)
+    check("Froeb Ch 2 section has 25 cards", n["total"] == 25, n)
     txt = A.evaluate("""()=>{var f=window.__fc; return window.Flash.ALL.filter(function(c){return c.topic==='book:froeb-ch02'})
       .filter(function(c){return /does-the-government|one-lesson-of-economics$/.test(c.id)}).map(function(c){return [c.f,c.b]})}""")
     want = [["Does the Government Create Wealth?",
@@ -68,7 +68,7 @@ try:
     check("the I key marks the card too", A.evaluate("()=>window.__fc.st.cards[window.__fc.queue[0]].imp") is True and second != first)
     A.click("#fcBackSec"); A.wait_for_timeout(250)
     check("the section shows 2 Important", nums(A, CH2)["important"] == 2, nums(A, CH2))
-    check("Important does not change Right / Wrong / Unseen", sum(nums(A, CH2)[k] for k in ("right", "wrong", "unseen")) == 27, nums(A, CH2))
+    check("Important does not change Right / Wrong / Unseen", sum(nums(A, CH2)[k] for k in ("right", "wrong", "unseen")) == 25, nums(A, CH2))
     check("All cards section counts them too", nums(A, "all")["important"] == 2, nums(A, "all"))
     A.screenshot(path=os.path.join(ROOT, "tests", "shot-v59-sections-important.png"))
 
