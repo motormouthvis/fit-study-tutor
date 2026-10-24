@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 65 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 69 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -227,12 +227,15 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
     for (const [slug, f, bk] of ch.cards) { assert.match(slug, /^[a-z0-9-]+$/); const k = b.id + ch.n + slug; assert.ok(!seen.has(k), "dup " + k); seen.add(k); assert.ok(f.length > 5 && bk.length > 5, slug); } } }
 });
 
-test("v5.7: Froeb Chapters 1-3 cards: 62 cards, course 5421, page refs, long section titles", () => {
+test("v5.7: Froeb Chapters 1-3 and 6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 65); assert.equal(F.BK.length, 215);
-  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-36]-[a-z0-9-]+$/.test(c.id) && / \((p\. \d+|page not given)\)$/.test(c.b)));
+  assert.equal(FR.length, 69); assert.equal(F.BK.length, 219);
+  // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
+  const VERBATIM = ["froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
+    "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades"];
+  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-36]-[a-z0-9-]+$/.test(c.id) && (VERBATIM.includes(c.id) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [21, 21, 20, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [21, 25, 20, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 

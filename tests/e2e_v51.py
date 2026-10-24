@@ -41,28 +41,28 @@ with sync_playwright() as p:
         # the Chapter 1 section: name, counts, 3 buttons
         s = sec(pg, CH)
         check(tag + ": Chapter 1 section has the full title", s.locator(".fcsectitle").inner_text() == TITLE, s.locator(".fcsectitle").inner_text())
-        n = nums(pg, CH); check(tag + ": Chapter 1 has 80 cards (1 already seen via the merged old import)", n == {"right": 1, "wrong": 0, "restudy": 0, "unseen": 79, "total": 80}, n)
-        check(tag + ": Study all enabled; Study missed and Study restudy disabled with a 0 count", btn(pg, CH, "all").is_enabled() and btn(pg, CH, "wrong").is_disabled() and btn(pg, CH, "restudy").is_disabled() and "0 cards" in btn(pg, CH, "wrong").inner_text() and "80 cards" in btn(pg, CH, "all").inner_text())
+        n = nums(pg, CH); check(tag + ": Chapter 1 has 82 cards (1 already seen via the merged old import)", n == {"right": 1, "wrong": 0, "restudy": 0, "unseen": 81, "total": 82}, n)
+        check(tag + ": Study all enabled; Study missed and Study restudy disabled with a 0 count", btn(pg, CH, "all").is_enabled() and btn(pg, CH, "wrong").is_disabled() and btn(pg, CH, "restudy").is_disabled() and "0 cards" in btn(pg, CH, "wrong").inner_text() and "82 cards" in btn(pg, CH, "all").inner_text())
         # old progress carried over: balance topic counts; and the old imported card migrated to the built-in one (no duplicates)
         nb = nums(pg, "topic:balance")
         check(tag + ": old scores carry over into the topic section (balance-6 wrong+restudy, balance-1 right; plus my own card)", nb["wrong"] == 1 and nb["right"] == 1 and nb["restudy"] == 1 and nb["total"] == 17, nb)
-        check(tag + ": earlier imported Chapter 1 copy was merged (still 80, its score moved to the built-in card)", n["total"] == 80 and pg.evaluate("JSON.parse(localStorage.getItem('tutor.v1.mycards')).cards.length") == 1 and pg.evaluate("JSON.parse(localStorage.getItem('tutor.v1.fc')).cards['wt16-ch01-account-payable'].seen") == 2)
+        check(tag + ": earlier imported Chapter 1 copy was merged (no duplicate, its score moved to the built-in card)", n["total"] == 82 and pg.evaluate("JSON.parse(localStorage.getItem('tutor.v1.mycards')).cards.length") == 1 and pg.evaluate("JSON.parse(localStorage.getItem('tutor.v1.fc')).cards['wt16-ch01-account-payable'].seen") == 2)
         check(tag + ": improved card override still applies", pg.evaluate("Flash.ALL.find(c=>c.id==='balance-4').f") == "MY OWN FRONT")
         sa = nums(pg, "sa"); check(tag + ": Statement Analysis section has 48 cards", sa["total"] == 48, sa)
         check(tag + ": My cards (AI) section counts the saved card", nums(pg, "mine")["total"] == 1)
-        total_all = nums(pg, "all")["total"]; check(tag + ": All cards = 331 + 80 + 48 + 1 my card", total_all == 460, total_all)
+        total_all = nums(pg, "all")["total"]; check(tag + ": All cards = every built-in card + 1 my card", total_all == 599, total_all)
         pg.screenshot(path=os.path.join(ROOT, "tests", "shot-v51-%s-sections.png" % tag))
         # topic groups
         check(tag + ": topic groups exist for both courses", pg.locator("details.fcgroup[data-g=t5601]").count() == 1 and pg.locator("details.fcgroup[data-g=t5421]").count() == 1)
         # Study all on Chapter 1: do a session: got, missed, got
         btn(pg, CH, "all").click(); pg.wait_for_timeout(300)
         check(tag + ": Study all opens the card view for that chapter", pg.is_visible("#fcCard") and not pg.is_visible("#fcSections") and TITLE in pg.inner_text("#fcSecName"), pg.inner_text("#fcSecName"))
-        check(tag + ": session has the 80 chapter cards", pg.evaluate("window.__fc.queue.length") == 80 and pg.evaluate("window.__fc.queue.every(i=>i.indexOf('wt16-ch01-')===0)"))
+        check(tag + ": session has the 82 chapter cards", pg.evaluate("window.__fc.queue.length") == 82 and pg.evaluate("window.__fc.queue.every(i=>i.indexOf('wt16-ch01-')===0)"))
         for got in (True, False, True):
             pg.keyboard.press("Space"); pg.wait_for_timeout(60); pg.keyboard.press("g" if got else "m"); pg.wait_for_timeout(80)
         check(tag + ": Space / G / M still work", "2 got, 1 missed" in pg.inner_text("#fcScore"), pg.inner_text("#fcScore"))
         pg.click("#fcBackSec"); pg.wait_for_timeout(200)
-        n = nums(pg, CH); check(tag + ": counts updated after the session (3 right, 1 wrong, 1 restudy, 76 unseen)", n == {"right": 3, "wrong": 1, "restudy": 1, "unseen": 76, "total": 80}, n)
+        n = nums(pg, CH); check(tag + ": counts updated after the session (3 right, 1 wrong, 1 restudy, 78 unseen)", n == {"right": 3, "wrong": 1, "restudy": 1, "unseen": 78, "total": 82}, n)
         check(tag + ": Continue button offers the open session", pg.is_visible("#fcResume"))
         check(tag + ": Study missed and Study restudy now enabled with counts", btn(pg, CH, "wrong").is_enabled() and "1 card" in btn(pg, CH, "wrong").inner_text() and btn(pg, CH, "restudy").is_enabled())
         # history: collapsed by default, expands with one session
@@ -106,7 +106,7 @@ with sync_playwright() as p:
         check(tag + ": My Stats > Open flash cards lands on the sections", pg.is_visible("#fcSections"))
         # persistence + export/import
         pg.reload(); pg.wait_for_timeout(500); pg.click(".tab[data-tab=cards]"); pg.wait_for_timeout(300)
-        n = nums(pg, CH); check(tag + ": progress survives a reload", n["right"] == 4 and n["unseen"] == 76, n)
+        n = nums(pg, CH); check(tag + ": progress survives a reload", n["right"] == 4 and n["unseen"] == 78, n)
         check(tag + ": history survives a reload", pg.evaluate("JSON.parse(localStorage.getItem('tutor.v1.fc')).hist['book:wt16-ch01'].length") >= 2)
         if mobile:
             ov = pg.evaluate("document.documentElement.scrollWidth"); check("phone: no sideways scroll on the sections list", ov <= 391, ov)
