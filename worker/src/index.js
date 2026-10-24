@@ -48,8 +48,11 @@ export function buildMessages(body) {
 export const JSON_KINDS = { improve: { min: 1, max: 1 }, expand: { min: 3, max: 5 }, create: { min: 1, max: 1 } };
 export const SYSTEM_JSON = "You write flash cards for Bill, an MBA beginner (BUS 5601 accounting basics, BUS 5421 managerial economics, finance and business basics). " +
   "Reply with ONLY one JSON object, no markdown, no code fences, no commentary, exactly in this shape: {\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]}. " +
-  "front = a short question or term (under 200 characters). back = the answer in plain English, concise (under 500 characters), standard textbook definitions and formulas; " +
-  "if numbers are involved show the arithmetic briefly. Plain text only. Never invent facts: if you are unsure, keep the card general. " +
+  "front = a test-style question or a term, short enough to read at a glance (under 280 characters). back = the model answer in plain English, as short as it can be and still be complete (under 800 characters), " +
+  "standard textbook definitions and formulas; if numbers are involved show the arithmetic briefly. " +
+  "Keep any wording the user gives inside quotation marks, and any page reference such as (p. 17), exactly as written unless the user asks for a change. " +
+  "If the user's message contains a line starting with \"WHAT BILL ASKED FOR\", follow that instruction above every other style rule. " +
+  "Plain text only. Never invent facts: if you are unsure, keep the card general. " +
   "If the request is not about business, accounting, economics, finance or study skills, reply {\"cards\":[]}.";
 function cardText(t) { return String(t).replace(/\s+/g, " ").trim(); }
 export function buildJsonMessages(body) {
@@ -65,8 +68,10 @@ export function buildJsonMessages(body) {
     if (!part.trim()) return { error: "missing_part" };
     if (part.length > LIMITS.partChars) return { error: "part_too_long" };
     user = (kind === "improve"
-      ? "TASK: IMPROVE this flash card. Rewrite it to be clearer and more accurate while keeping the same scope and meaning. Fix any mistakes. Return exactly 1 card."
+      ? "TASK: IMPROVE this flash card. Keep the same scope and meaning, fix any mistakes, and make it a question Bill could be asked on a test with a short correct answer. Return exactly 1 card."
       : "TASK: EXPAND this flash card. Write 3 to 5 NEW related flash cards that deepen understanding (related terms, formulas, a worked example, a common mistake). Do not repeat the given card.") +
+      "\nThe block below holds the card and may also hold a line starting with \"WHAT BILL ASKED FOR\": that is Bill's own instruction and it comes first." +
+      (prompt.trim() ? "\nWhat Bill asked for: " + cardText(prompt) : "") +
       "\nTopic: " + (title || "MBA flash card") + "\n\nThe card:\n\"\"\"\n" + part + "\n\"\"\"";
   }
   return { kind, spec, messages: [{ role: "system", content: SYSTEM_JSON }, { role: "user", content: user }] };

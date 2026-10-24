@@ -97,6 +97,17 @@ test("json modes: improve/expand/create build fixed prompts and enforce caps", (
   assert.equal(buildJsonMessages({ kind: "create", prompt: "x".repeat(301) }).error, "prompt_too_long");
   assert.equal(buildJsonMessages({ kind: "improve", partText: "x".repeat(4001) }).error, "part_too_long");
 });
+test("v5.9: improve/expand carry Bill's own instruction through to the model", () => {
+  const card = "THE CARD\nFront: a\n\nBack: b\n\nWHAT BILL ASKED FOR (follow this instruction above anything else):\nmake the question harder";
+  const i = buildJsonMessages({ kind: "improve", topic: "Liquidity", partText: card });
+  assert.match(i.messages[1].content, /WHAT BILL ASKED FOR/);          // the instruction reaches the model inside the card block
+  assert.match(i.messages[1].content, /make the question harder/);
+  assert.match(i.messages[1].content, /that is Bill's own instruction and it comes first/);
+  assert.match(i.messages[0].content, /follow that instruction above every other style rule/);
+  const e = buildJsonMessages({ kind: "expand", partText: "x", prompt: "only formulas" });
+  assert.match(e.messages[1].content, /What Bill asked for: only formulas/);   // a separate prompt field works too
+  assert.ok(!/What Bill asked for/.test(buildJsonMessages({ kind: "improve", partText: "x" }).messages[1].content));
+});
 test("parseCards: strict JSON, tolerates fences, drops bad entries, caps count, null on garbage", () => {
   const spec = JSON_KINDS.expand;
   assert.deepEqual(parseCards('{"cards":[{"front":"A","back":"B"}]}', spec), [{ front: "A", back: "B" }]);

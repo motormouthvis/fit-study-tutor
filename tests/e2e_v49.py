@@ -1,4 +1,4 @@
-"""v4.9: AI flash cards - Improve / Expand / Create, My cards, reset, delete, export/import. Local Worker + fake xAI. Run: python3 tests/e2e_v49.py"""
+"""v4.9 (updated for v5.9: Improve / Expand ask for an instruction first): AI flash cards - Improve / Expand / Create, My cards, reset, delete, export/import. Local Worker + fake xAI. Run: python3 tests/e2e_v49.py"""
 import os, sys, json, time, threading, subprocess, http.server, socketserver
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -78,7 +78,8 @@ with sync_playwright() as p:
         pg.keyboard.press("Escape"); check(tag + ": Escape closes the menu", pg.is_hidden("#fcMore"))
         # ---- IMPROVE ----
         before = pg.inner_text("#fcFront"); n0 = len(SEEN)
-        T("#fcFront > .fcmorebtn"); T("#fcmImprove"); pg.wait_for_selector(".aicol.new", timeout=10000)
+        T("#fcFront > .fcmorebtn"); T("#fcmImprove"); pg.wait_for_selector("#aiInstr", timeout=5000)
+        pg.fill("#aiInstr", "make it shorter"); T("#aiGo"); pg.wait_for_selector(".aicol.new", timeout=10000)
         j = SEEN[-1]["body"]
         check(tag + ": Improve sends the card to the fixed model in JSON mode", j["model"] == "grok-4.20-0309-non-reasoning" and j.get("stream") is False and "TASK: IMPROVE" in j["messages"][1]["content"] and "Back:" in j["messages"][1]["content"], str(j)[:200])
         check(tag + ": shows Before and After", "before" in pg.inner_text(".aicol").lower() and "IMPROVED FRONT" in pg.inner_text(".aicol.new"))
@@ -87,7 +88,8 @@ with sync_playwright() as p:
         pg.screenshot(path=os.path.join(ROOT, "tests", "shot-v49-%s-improve.png" % tag))
         T("#aiDiscard"); pg.wait_for_timeout(200)
         check(tag + ": Discard changes nothing", pg.inner_text("#fcFront") == before and not pg.evaluate(MYC)["over"])
-        T("#fcFront > .fcmorebtn"); T("#fcmImprove"); pg.wait_for_selector(".aicol.new", timeout=10000); T("#aiSave"); pg.wait_for_timeout(300)
+        T("#fcFront > .fcmorebtn"); T("#fcmImprove"); pg.wait_for_selector("#aiInstr", timeout=5000)
+        pg.fill("#aiInstr", "make it shorter"); T("#aiGo"); pg.wait_for_selector(".aicol.new", timeout=10000); T("#aiSave"); pg.wait_for_timeout(300)
         check(tag + ": Save replaces the card on this device", "IMPROVED FRONT" in pg.inner_text("#fcFront") and cid in pg.evaluate(MYC)["over"])
         check(tag + ": 'AI IMPROVED' badge", "AI IMPROVED" in pg.inner_text("#fcTopic"))
         check(tag + ": original deck copy untouched", pg.evaluate("Flash.baseCard('%s').f" % cid) == before.replace("\n", " ").strip() or "IMPROVED" not in pg.evaluate("Flash.baseCard('%s').f" % cid))
@@ -100,7 +102,7 @@ with sync_playwright() as p:
         T("#fcmReset"); pg.wait_for_timeout(300)
         check(tag + ": Reset to original restores the card", cid not in pg.evaluate(MYC)["over"] and "IMPROVED" not in pg.inner_text("#fcFront"))
         # ---- EXPAND ----
-        T("#fcFront > .fcmorebtn"); T("#fcmExpand"); pg.wait_for_selector(".aipick", timeout=10000)
+        T("#fcFront > .fcmorebtn"); T("#fcmExpand"); pg.wait_for_selector("#aiInstr", timeout=5000); T("#aiGo"); pg.wait_for_selector(".aipick", timeout=10000)
         check(tag + ": Expand sends TASK: EXPAND", "TASK: EXPAND" in SEEN[-1]["body"]["messages"][1]["content"])
         check(tag + ": Expand previews 4 cards, all ticked", pg.locator(".aipick").count() == 4 and pg.locator(".aipick input:checked").count() == 4)
         pg.screenshot(path=os.path.join(ROOT, "tests", "shot-v49-%s-expand.png" % tag))
@@ -125,7 +127,7 @@ with sync_playwright() as p:
         pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])"); check(tag + ": main menu has Create / Improve / Expand / Export / Import", all(pg.is_visible(x) for x in ("#mCreate", "#mImprove", "#mExpand", "#mExport", "#mImport")))
         T("#mCreate"); pg.wait_for_selector("#aiPrompt", timeout=5000)
         T("#aiDraft"); pg.wait_for_timeout(150)
-        check(tag + ": empty topic is refused politely", "Type a topic" in pg.inner_text("#fcAiBody"))
+        check(tag + ": empty topic is refused politely", "Say or type what the card should be about" in pg.inner_text("#fcAiBody"))
         pg.fill("#aiPrompt", "what is working capital"); pg.select_option("#aiTopic", "liquidity"); T("#aiDraft"); pg.wait_for_selector("#aiF", timeout=10000)
         check(tag + ": Create sends the typed topic", "TASK: CREATE" in SEEN[-1]["body"]["messages"][1]["content"] and "what is working capital" in SEEN[-1]["body"]["messages"][1]["content"])
         check(tag + ": draft is editable", "Created: what is working capital" in pg.input_value("#aiF"))
@@ -167,7 +169,7 @@ with sync_playwright() as p:
     pg.evaluate("document.getElementById('fcFilter').value='sa'; document.getElementById('fcFilter').dispatchEvent(new Event('change'))"); pg.wait_for_timeout(300)
     pg.click("#fcFront > .fcmorebtn"); check("Statement Analysis cards: Improve hidden (generated arithmetic), Expand still there", pg.is_hidden("#fcmImprove") and pg.is_visible("#fcmExpand"))
     # coming soon (no worker url)
-    ctx.close(); ctx, pg = newpage(1440, 900, False, ask=""); to_cards(pg); pg.click("#fcFront > .fcmorebtn"); pg.click("#fcmExpand"); pg.wait_for_selector(".aierr", timeout=5000)
+    ctx.close(); ctx, pg = newpage(1440, 900, False, ask=""); to_cards(pg); pg.click("#fcFront > .fcmorebtn"); pg.click("#fcmExpand"); pg.wait_for_selector("#aiInstr", timeout=5000); pg.click("#aiGo"); pg.wait_for_selector(".aierr", timeout=5000)
     check("no Worker address: friendly message, no crash", "not switched on" in pg.inner_text(".aierr"))
     b.close()
 print("FAILED: " + (", ".join(fails) if fails else "none")); sys.exit(1 if fails else 0)
