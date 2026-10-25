@@ -79,8 +79,11 @@ with sync_playwright() as p:
     check("back 10 s near the start of a part goes to the previous part", pg.evaluate("__tutor.lesson.si") == 0)
     # mic toggle
     pg.click("#tab-lessons .micbtn"); pg.wait_for_timeout(200)
-    check("small Mute toggle mutes everything", word(pg) == "MUTED" and pg.evaluate("__player.state().audio") != "playing" and "Unmute" in pg.inner_text("#tab-lessons .micbtn"))
-    pg.click("#tab-lessons .micbtn"); pg.wait_for_timeout(500); check("and unmutes", word(pg) != "MUTED")
+    # v5.9.6: the pill is a microphone switch. The lesson keeps playing; only the mic goes quiet.
+    check("small Mute toggle switches the mic off and keeps the lesson playing",
+          pg.evaluate("__mic.off()") is True and pg.evaluate("__tutor.muted") is False and not pg.evaluate("__recActive()")
+          and "Mic off" in pg.inner_text("#tab-lessons .micbtn"), pg.inner_text("#tab-lessons .micbtn"))
+    pg.click("#tab-lessons .micbtn"); pg.wait_for_timeout(500); check("and listens again", pg.evaluate("__mic.off()") is False)
     # menu while a lesson runs
     pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])")
     check("menu (lesson) has prev/next topic, repeat, simpler, quiz me, stop", all(pg.locator("#menu [data-ui=%s]:visible" % u).count() >= 1 for u in ["prev", "next", "repeat", "simpler", "quiz", "stop"]))
@@ -106,7 +109,7 @@ with sync_playwright() as p:
     adv = pg.evaluate("__tutor.lesson.ti*10+__tutor.lesson.si"); check("playback not disturbed (audio still playing / advancing)", pg.evaluate("__tutor.running") and pg.evaluate("__tutor.lesson") is not None and not pg.evaluate("!!__tutor.audioError"))
     pg.click("#btnPlay"); pg.wait_for_timeout(300); check("PLAY/PAUSE still works with voice off", pg.evaluate("__tutor.audioPaused") is True)
     pg.click("#btnPlay"); pg.wait_for_timeout(300); check("resume works", pg.evaluate("__tutor.audioPaused") is False)
-    pg.click("#tab-lessons .micbtn"); pg.wait_for_timeout(200); check("Mute button works with voice off", word(pg) == "MUTED" and "Tap Unmute" in pg.inner_text("#statusBanner"), pg.inner_text("#statusBanner"))
+    pg.click("#tab-lessons .micbtn"); pg.wait_for_timeout(200); check("Mute button switches the mic off with voice off", pg.evaluate("__mic.off()") is True and "Mic off" in pg.inner_text("#tab-lessons .micbtn"), pg.inner_text("#tab-lessons .micbtn"))
     pg.click("#tab-lessons .micbtn"); pg.wait_for_timeout(300)
     pg.evaluate("__tutor.ui('nextpart')"); pg.wait_for_timeout(400)
     n0 = pg.evaluate("__recStarts"); mid(pg, "btnMicRetry"); pg.wait_for_timeout(800)

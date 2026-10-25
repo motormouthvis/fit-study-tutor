@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.5";
+  var APP_VERSION = "v5.9.6";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -161,6 +161,16 @@
   /* ---------- microphone / speech recognition ---------- */
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var netFails = 0, rec = null, recOn = false, consumed = false, micError = "", restartTimer = null, userMicOff = false, lastHeard = "";
+  /* v5.9.6: "Mute" means the microphone, not the tutor. William listens in noisy places, where any sound the phone
+     half-hears used to be parsed as mute / pause / next and stop the lesson. Mic off closes the recognizer, blocks
+     every restart, and leaves the audio and the on-screen buttons working. It is saved, so it survives a reload. */
+  function micIsOff() { return !!userMicOff; }
+  function setMicOff(off) {
+    userMicOff = !!off; tutor.setSetting("micOff", userMicOff);
+    if (userMicOff) { stopRec(); lastHeard = ""; } else { micError = micError === "fatal" ? "fatal" : ""; netFails = 0; recStats.quick = 0; tutor.voiceOff = micError === "fatal"; }
+    ev(userMicOff ? "microphone switched OFF by the user (lesson keeps playing)" : "microphone switched back on");
+    syncMic(); render(tutor.snapshot());
+  }
   var recStartedAt = 0, recGotResult = false, micHoldUntil = 0, wasSpeaking = false;
   function maxQuick() { return window.__maxQuick || 25; }   // consecutive sessions that ended within 4 s with nothing heard
   function shouldListen() {
@@ -182,7 +192,7 @@
     updateBanner();
   }
   function startRec() {
-    if (!SR) return;
+    if (!SR || !shouldListen()) return;
     try {
       consumed = false; rec = new SR(); rec.lang = "en-US"; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 3;
       rec.onstart = function () { recOn = true; consumed = false; recStarts(); if (micError !== "fatal" && micError !== "loop" && micError !== "voice-off") micError = ""; updateBanner(); };
@@ -216,6 +226,7 @@
   function stopRec() { try { if (rec) { rec.onend = null; rec.abort(); } } catch (e) {} rec = null; recOn = false; clearTimeout(restartTimer); restartTimer = null; updateBanner(); }
   function restartMic() { micError = micError === "fatal" ? "fatal" : ""; netFails = 0; tutor.voiceOff = micError === "fatal"; recStats.quick = 0; stopRec(); syncMic(); ev("mic restarted by button"); }
   function onResult(ev2) {
+    if (userMicOff) return;                                   // mic off: nothing heard may touch the lesson
     var res = ev2.results[ev2.results.length - 1]; if (!res) return;
     var alts = []; for (var i = 0; i < res.length; i++) if (res[i].transcript) alts.push(res[i].transcript);
     if (!alts.length) return;
@@ -273,7 +284,12 @@
     updateLessonsView(s);
     if (window.__v4ready) updateLearnLayout();
     syncMic();
-    Array.prototype.forEach.call(document.querySelectorAll(".micbtn"), function (b) { b.hidden = !running; b.textContent = s.muted ? "\uD83C\uDFA4 Unmute" : "\uD83C\uDFA4 Mute"; b.classList.toggle("muted", !!s.muted); });
+    Array.prototype.forEach.call(document.querySelectorAll(".micbtn"), function (b) {
+      b.hidden = !running; var off = userMicOff || s.muted;
+      b.textContent = userMicOff ? "\uD83D\uDD07 Mic off \u2013 tap to listen" : s.muted ? "\uD83C\uDFA4 Unmute" : "\uD83C\uDFA4 Mute the mic";
+      b.title = userMicOff ? "The microphone is off, so noise cannot interrupt the lesson. Tap to listen for commands again." : "Switch the microphone off so noise cannot interrupt the lesson";
+      b.classList.toggle("muted", off); b.setAttribute("aria-pressed", off ? "true" : "false");
+    });
     var mi = $("menu"); Array.prototype.forEach.call(mi.querySelectorAll(".m-lesson"), function (e) { e.hidden = !(running && s.mode === "lesson"); });
     Array.prototype.forEach.call(mi.querySelectorAll(".m-quiz"), function (e) { e.hidden = !(running && s.mode === "quiz"); });
     Array.prototype.forEach.call(mi.querySelectorAll(".m-run"), function (e) { e.hidden = !running; });
@@ -331,7 +347,8 @@
       if (s.muted) { cls = "muted"; word = "MUTED"; text = tutor.settings.muteMode === "off" || micError === "voice-off" || micError === "fatal" ? "Tap Unmute to continue." : 'Say "' + tutor.settings.unmuteKeyword + '" or tap Unmute.'; }
       else if (s.audioError) { cls = "error"; word = "NO SOUND"; text = "I couldn't play sound."; }
       else if (s.audioPaused) { cls = "paused"; word = "PAUSED"; text = "Tap PLAY to continue."; }
-      else if (!SR || micError === "fatal" || userMicOff) { cls = "micoff"; word = s.speaking ? "PLAYING" : "BUTTONS ONLY"; text = "Voice not available \u2013 use the buttons."; }
+      else if (userMicOff) { cls = "micoff"; word = s.speaking ? "PLAYING" : "MIC OFF"; text = "Microphone off, so noise cannot stop the lesson. Tap \u201cMic off\u201d to listen again."; }
+      else if (!SR || micError === "fatal") { cls = "micoff"; word = s.speaking ? "PLAYING" : "BUTTONS ONLY"; text = "Voice not available \u2013 use the buttons."; }
       else if (micError === "voice-off" || micError === "loop") { cls = "voiceoff"; word = s.speaking ? "PLAYING" : (micError === "loop" ? "MIC PAUSED" : "WAITING"); text = micError === "loop" ? "Voice paused \u2013 use the buttons, or Menu > Restart microphone." : voiceMsg; }
       else if (s.speaking) { cls = "speaking"; word = "PLAYING"; text = tutor.settings.bargeIn ? "You can say mute." : ""; }
       else { cls = recOn ? "listening" : "micoff"; word = recOn ? "LISTENING" : "STARTING MIC"; text = recOn ? "Go ahead and speak." : ""; }
@@ -502,7 +519,6 @@
     micError = micError === "fatal" ? "fatal" : ""; recStats.quick = 0; soundFail = "";
     if (!opts.lesson) opts.focus = focus; else opts.focus = {};
     switchTab(opts.lesson ? "lessons" : "tutor");
-    userMicOff = false;
     tutor.start(opts);
     acquireWake();
     syncMic();
@@ -1652,7 +1668,7 @@
     $("btnPlay").addEventListener("click", onPlay);
     $("btnBack10").addEventListener("click", function () { seek(-10); }); $("btnFwd10").addEventListener("click", function () { seek(10); });
     $("btnSpeed").addEventListener("click", function () { var steps = [0.8, 1, 1.25, 1.5], r = tutor.settings.rate || 1, nx = steps.filter(function (x) { return x > r + 0.001; })[0] || steps[0]; tutor.setSetting("rate", nx); renderSettings(); });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-mic]"), function (b) { b.addEventListener("click", function () { if (tutor.muted) tutor.unmute(); else tutor.mute(); syncMic(); ev("mic toggle: " + (tutor.muted ? "muted" : "unmuted")); }); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-mic]"), function (b) { b.addEventListener("click", function () { if (tutor.muted) tutor.unmute(); setMicOff(!userMicOff); }); });
     $("btnMenu").addEventListener("click", function () { $("menu").hidden = false; render(); });
     $("menuClose").addEventListener("click", function () { $("menu").hidden = true; });
     $("menu").addEventListener("click", function (e) { if (e.target === $("menu")) $("menu").hidden = true; });
@@ -1734,7 +1750,9 @@
     $("installSheet").addEventListener("click", function (e) { if (e.target === $("installSheet")) $("installSheet").hidden = true; });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("installSheet").hidden) $("installSheet").hidden = true; });
     window.__install = { isInstalled: isInstalled, platform: installPlatform, hasPrompt: function () { return !!dip; } };
+    window.__mic = { off: micIsOff, set: setMicOff, on: function () { return recOn; } };
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
+    userMicOff = !!tutor.settings.micOff;                      // v5.9.6: the mic switch is remembered between sessions
     initFlash(); initSync(); initAsk(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
     if ("serviceWorker" in navigator && location.protocol !== "file:") {

@@ -183,7 +183,9 @@ test("mute during speech cancels it and drops the pending callbacks (no auto adv
   const { io, tu } = makeTutor({ seed: 2 });
   tu.start(); io.endSpeech(); // intro done -> question being spoken
   assert.ok(tu.speaking); const q1 = tu.cur.id;
-  tu.heard(["mute"], false); // interim mute is honoured immediately
+  tu.heard(["mute"], false); // v5.9.6: a half-heard word is not enough, so noise cannot stop a lesson
+  assert.equal(tu.muted, false, "interim result does not mute"); assert.ok(tu.speaking, "still talking");
+  tu.heard(["mute"], true);  // the finished phrase does mute
   assert.ok(tu.muted); assert.equal(tu.speaking, false);
   io.endSpeech(); io.fire(); assert.equal(tu.cur.id, q1); assert.equal(tu.log.length, 0);
 });
@@ -471,9 +473,11 @@ test("PAUSE AUDIO button freezes the audio and any pending advance; RESUME carri
   assert.equal(tu.lesson.si, 0); tu.heard(["resume"], true); assert.equal(tu.audioPaused, false); assert.equal(tu.lesson.si, 1, "advance resumed");
   tu.ui("pauseaudio"); assert.equal(io.paused, 2); tu.ui("pauseaudio"); assert.equal(io.resumed, 1, "toggle resumes the audio where it was");
 });
-test("mute (voice, even interim) while a clip plays stops audio at once and nothing continues", () => {
+test("mute (voice, on a finished phrase) while a clip plays stops audio at once and nothing continues", () => {
   const { io, tu } = lessonStarted(); const c = io.cancels; assert.ok(tu.speaking);
-  assert.equal(tu.heard(["mute"], false).action, "mute"); assert.ok(io.cancels > c); assert.equal(tu.speaking, false); assert.ok(tu.muted);
+  assert.equal(tu.heard(["mute"], false).action, "interim", "v5.9.6: half-heard noise does not stop the clip");
+  assert.equal(io.cancels, c); assert.ok(tu.speaking);
+  assert.equal(tu.heard(["mute"], true).action, "mute"); assert.ok(io.cancels > c); assert.equal(tu.speaking, false); assert.ok(tu.muted);
   io.endSpeech(); for (let i = 0; i < 5; i++) io.fire(); assert.equal(tu.lesson.si, 0);
 });
 test("tolerant mute: likely mis-hearings of mute and pause stop the tutor", () => {
@@ -550,4 +554,55 @@ test("lesson timing: part and topic durations come from the clip durations the i
   const plan = tu.plan(); assert.equal(plan.topicSecs.length, B.TOPICS.length); assert.ok(plan.total > 600, "total " + plan.total);
   tu.running = true; tu.startLesson("balance"); const L = tu.snapshot().lesson; assert.equal(L.partSecs.length, L.count); assert.ok(L.partSecs.every(s => s > 0)); assert.ok(L.titleSecs > 0);
   const topicSum = L.partSecs.reduce((a, b) => a + b, 0) + L.titleSecs; assert.ok(Math.abs(topicSum - plan.topicSecs[tu.lesson.ti]) < 0.01);
+});
+
+/* ---------------- v5.9.6: Mute means the microphone, and noise must never stop a lesson ---------------- */
+test("v5.9.6: with the mic off, nothing heard reaches the tutor: no mute, no command, no answer", () => {
+  const { io, tu } = startAsked({ seed: 5 });
+  tu.setSetting("micOff", true);
+  const spoken = io.spoken.length, logN = tu.log.length, timers = io.timerCount();
+  ["mute", "pause", "stop", "next", "skip", "repeat", "a", "forty percent", "resume tutor", "teach me balance sheet"].forEach(s => {
+    assert.equal(tu.heard([s], true).action, "ignored-mic-off", s);
+    assert.equal(tu.heard([s], false).action, "ignored-mic-off", s + " (interim)");
+  });
+  assert.equal(tu.muted, false, "the tutor was never muted");
+  assert.equal(tu.running, true); assert.equal(tu.audioPaused, false, "playback was never paused");
+  assert.equal(io.cancels, 0, "speech was never cancelled");
+  assert.equal(io.spoken.length, spoken); assert.equal(tu.log.length, logN); assert.equal(io.timerCount(), timers);
+});
+test("v5.9.6: buttons keep working with the mic off, and the lesson keeps moving by itself", () => {
+  const { io, tu } = makeTutor({ seed: 5, auto: true });
+  tu.setSetting("micOff", true);
+  tu.start({ lesson: "balance" }); settle(io, 3);
+  assert.equal(tu.mode, "lesson");
+  const at = tu.lesson.si;
+  tu.ui("nextpart"); settle(io, 2);
+  assert.notEqual(tu.lesson.si, at, "the next-part button moved the lesson on");
+  tu.ui("pauseaudio"); assert.equal(tu.audioPaused, true, "pause button works");
+  tu.ui("pauseaudio"); assert.equal(tu.audioPaused, false, "and so does resume");
+  tu.ui("nexttopic"); settle(io, 2); assert.equal(tu.mode, "lesson", "next topic still works");
+  assert.equal(tu.settings.micOff, true, "changing topic does not switch the mic back on");
+});
+test("v5.9.6: the mic switch is remembered between sessions", () => {
+  const x = makeTutor({ seed: 5 }); x.tu.setSetting("micOff", true);
+  const again = new E.Tutor(makeIO({ store: x.io.store }), { topics: B.TOPICS, questions: B.QUESTIONS, generators: B.GENERATORS, lessons: LD, subjects: B.SUBJECTS });
+  assert.equal(again.settings.micOff, true);
+  again.start(); assert.equal(again.settings.micOff, true, "starting a session does not switch it back on");
+});
+test("v5.9.6: an interim mis-hearing cannot mute; only a finished phrase can", () => {
+  const { io, tu } = startAsked({ seed: 5 });
+  ["mood", "paws", "moot", "shush"].forEach(s => {
+    assert.equal(tu.heard([s], false).action, "interim", s + " heard half-said");
+    assert.equal(tu.muted, false, "still not muted after " + s);
+  });
+  assert.equal(io.cancels, 0, "nothing stopped the audio");
+  assert.equal(tu.heard(["mute"], true).action, "mute");   // a finished phrase still works
+  assert.equal(tu.muted, true);
+});
+test("v5.9.6: with the mic off a lesson leaves no listening gap between parts", () => {
+  const { tu } = makeTutor({ seed: 5 });
+  tu.setSetting("bargeIn", false);
+  assert.equal(tu.lessonGap(), Math.max(tu.settings.lessonGapMs, tu.settings.listenGapMs), "a gap is left while the mic listens");
+  tu.setSetting("micOff", true);
+  assert.equal(tu.lessonGap(), tu.settings.lessonGapMs, "no gap when nobody is listening");
 });

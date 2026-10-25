@@ -61,7 +61,7 @@ with sync_playwright() as p:
     check("wake lock requested", pg.evaluate("__wake") >= 1)
     check("mic started", pg.evaluate("__recStarts") >= 1)
     check("banner LISTENING", word() == "LISTENING", word())
-    check("small Mute toggle visible and says Mute", pg.is_visible("#tab-tutor .micbtn") and pg.inner_text("#tab-tutor .micbtn").endswith("Mute"))
+    check("small Mute toggle visible and offers to mute the mic", pg.is_visible("#tab-tutor .micbtn") and "Mute the mic" in pg.inner_text("#tab-tutor .micbtn"))
     pg.screenshot(path="/workspace/study-tutor/tests/shot-quiz.png")
 
     # --- spoken answer (voice) -> logged
@@ -101,8 +101,10 @@ with sync_playwright() as p:
     pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
 
     # --- tap mute / unmute buttons
-    pg.click("#tab-tutor .micbtn"); pg.wait_for_timeout(100); check("tap MUTE works", word() == "MUTED")
-    pg.click("#tab-tutor .micbtn"); pg.wait_for_timeout(200); check("tap UNMUTE works", word() != "MUTED")
+    # v5.9.6: the pill switches the microphone off (the tutor keeps talking); tapping it again listens once more
+    pg.click("#tab-tutor .micbtn"); pg.wait_for_timeout(200)
+    check("tap Mute switches the mic off, not the tutor", pg.evaluate("__mic.off()") is True and pg.evaluate("__tutor.muted") is False and not pg.evaluate("__recActive()"))
+    pg.click("#tab-tutor .micbtn"); pg.wait_for_timeout(300); check("tapping again listens again", pg.evaluate("__mic.off()") is False)
     pg.wait_for_function("__tutor.phase==='asking' && !__tutor.speaking && __recActive()", timeout=20000)
 
     # --- tap answer for MC / typed answers

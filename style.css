@@ -115,9 +115,12 @@ input[type=range] { width:100%; height:44px; }
 .ctl span { display:block; font-size:1.7rem; }
 .playbtn { flex:1 1 auto; min-height:92px; border-radius:24px; border:4px solid #7dffa8; background:#0a6b2d; color:#fff; font-weight:900; font-size:1.7rem; cursor:pointer; }
 .playbtn.pausing { background:#6b5300; border-color:#ffe14d; }
-.ctlrow2 { display:flex; gap:10px; justify-content:center; margin-bottom:10px; }
+.ctlrow2 { display:flex; gap:10px; justify-content:center; margin-bottom:10px; flex-wrap:wrap; }
+/* v5.9.6: "Mic off - tap to listen" is a sentence, so give it the width to stay on one or two lines */
+.micbtn.muted { flex:1 1 100%; order:3; white-space:normal; line-height:1.2; }
 .pill { min-height:48px; padding:6px 18px; border-radius:24px; border:3px solid #fff; background:#23262d; color:#fff; font-weight:800; font-size:1rem; cursor:pointer; }
 .pill.muted { background:#7a1010; border-color:#ff9c9c; }
+.pill.micbtn { padding:6px 14px; }
 .quizbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:8px 0; }
 .sheet { position:fixed; inset:0; background:rgba(0,0,0,.82); z-index:45; display:flex; align-items:flex-end; justify-content:center; }
 .sheet[hidden] { display:none; }
