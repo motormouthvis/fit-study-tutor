@@ -131,6 +131,9 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.4 - every point of Froeb Chapter 3's Summary of Main Points
+Eight more cards in BUS 5421 Froeb **Chapter 3**, one per point of the chapter's "Summary of Main Points", with the book's sentences as the answers and no paraphrase. The page the summary sits on is not known, so these carry **no page reference**, unlike the rest of the chapter; the unit test that insists on a page ref knows about them. Ids are `froeb-ch03-ch3-summary-1` to `-8`. Chapter 3 goes from 24 cards to 32 and nothing existing was changed.
+
 ## v5.9.3 - Froeb Chapter 3 cost cards
 Four cards added to BUS 5421 Froeb **Chapter 3** (Benefits, Costs, and Decisions), question and answer word for word from the textbook with the page numbers as given: explicit costs (what the book calls accounting costs, p. 28), implicit costs (p. 28), the relevant costs and benefits of a decision (p. 30), and accounting profit versus economic loss (p. 29). Chapter 3 goes from 20 cards to 24; nothing existing was changed or removed, and the new ids sit alongside the older `implicit-costs`, `accounting-costs` and `relevant-costs-and-benefits-the-general-rule` cards rather than replacing them.
 
