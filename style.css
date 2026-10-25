@@ -328,6 +328,8 @@ body.dev-desktop.asking main { margin-right:min(460px, 38vw); }
 .aiwide { width:100%; }
 .aicol.now { max-height:32vh; overflow:auto; }
 .aiasked { color:var(--mut); margin:0 0 6px; }
+.aiecho { border:3px solid var(--red); border-radius:12px; background:#2a0f0f; padding:10px 12px; margin:6px 0 10px; font-size:1rem; line-height:1.4; }
+.aiecho b { color:#ff9a9a; }
 #fcImpMsg { margin-top:8px; color:var(--accent); }
 
 /* v5.0: clearer cards - task label on the front, labeled answer parts on the back */

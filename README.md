@@ -131,6 +131,17 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.2 - a question in the Improve box is feedback, not words to paste on the card
+Bill typed "begin with what decision? im confused" on the Froeb Ch 3 "begin with the decision" card. Grok did not explain anything: it pasted his words on top of the old answer.
+
+Why: v5.9.1 introduced the note as "Bill has told you exactly what he wants" and then said "make the change he asked for, make it clearly visible". That reads fine for an order ("make it shorter") and badly for a question or a complaint, where the only visible change the model can see to make is to put the words themselves on the card. Replayed against the live proxy, the v5.9.1 wrapper did exactly that on one of two tries, and pasted the front of the card into the back on the other.
+
+The fix, in two parts:
+- **The note is framed as feedback.** The wrapper now says the note may be an order, a question, or just "I'm confused", that it is always feedback about the card and never text to put in the card, and that a question or confusion means the card is at fault: add one short plain sentence spelling out whatever the card assumed he knew, in this card's own example. A hard rule forbids copying, quoting or paraphrasing any of his words into the card, and quoted textbook wording keeps its quotation marks.
+- **A safety net on the device.** The app compares the answer with the note on words alone (case, punctuation and spacing ignored). If the note, or a run of eight words from it, turns up in the new card, the app silently asks Grok again with an extra rule saying its last answer broke rule 1. If the second answer still parrots the note, the preview shows a red warning, the After panel is labelled "not safe to save", and **Save is switched off** so a card made of Bill's own words can never be saved.
+
+Measured on Bill's card and note, calling the live proxy: v5.9.1 parroted the note (1 of 2 tries, and mangled the card on the other); v5.9.2 parroted it 0 times in 6 tries and every answer added the missing explanation ("decide whether to keep or drop the product"), keeping the textbook quote and (p. 33). Grok still occasionally drops the quotation marks around the quote while keeping its words, which the Before / After preview lets you catch.
+
 ## v5.9.1 - Grok actually does what you asked
 Bill asked Grok to "name the opportunity cost explicitly and keep the book's wording" on a Froeb Ch 3 card. Grok named the opportunity cost but rewrote the book's sentence, i.e. it did half the job and then did its usual rewrite.
 

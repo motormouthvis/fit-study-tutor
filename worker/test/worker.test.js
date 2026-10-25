@@ -107,6 +107,11 @@ test("v5.9.1: Bill's instruction reaches the model and outranks the default rewr
   assert.match(body, /reproduce its other sentences word for word/);
   assert.match(body, /beats every rule about how a flash card should look/);
   assert.match(i.messages[0].content, /outranks every rule in this message/);            // and so does the system prompt
+  // v5.9.2: a note can be a question or "I'm confused". It is still feedback, never card text.
+  assert.match(body, /never text to copy into the card/);
+  assert.match(body, /when he is confused, fix whatever the card assumed he already knew/);
+  assert.match(i.messages[0].content, /Never copy the user's note into a card/);
+  assert.match(i.messages[0].content, /the card is at fault: fix the card so the question is answered/);
   const e = buildJsonMessages({ kind: "expand", partText: "x", prompt: "only formulas" });
   assert.ok(e.messages[1].content.startsWith("BILL'S INSTRUCTION"), e.messages[1].content.slice(0, 60));   // prompt field, when used, goes first too
   assert.ok(!/BILL'S INSTRUCTION/.test(buildJsonMessages({ kind: "improve", partText: "x" }).messages[1].content));
