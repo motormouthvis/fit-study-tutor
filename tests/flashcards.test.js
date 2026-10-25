@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 84 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 115 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -227,18 +227,20 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
     for (const [slug, f, bk] of ch.cards) { assert.match(slug, /^[a-z0-9-]+$/); const k = b.id + ch.n + slug; assert.ok(!seen.has(k), "dup " + k); seen.add(k); assert.ok(f.length > 5 && bk.length > 5, slug); } } }
 });
 
-test("v5.7: Froeb Chapters 1-3 and 6 cards: course 5421, page refs, long section titles", () => {
+test("v5.7: Froeb Chapters 1-4 and 6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 84); assert.equal(F.BK.length, 234);
+  assert.equal(FR.length, 115); assert.equal(F.BK.length, 265);
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
     "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades"];
   // the Ch 3 "Summary of Main Points" cards are quoted word for word from a page we do not know, so they carry no page ref either
   const noPage = c => VERBATIM.includes(c.id) || /^froeb-ch03-ch3-summary-\d+$/.test(c.id);
-  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-36]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
+  // Chapter 4 is written in our own words from the chapter, so its answers end with a section reference instead of a page
+  const ch4ref = c => /^froeb-ch04-/.test(c.id) && / \(Ch 4, [^)]+\)$/.test(c.b);
+  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-46]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 31, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -395,4 +397,67 @@ test("v5.9.5: the problem 3-1 card teaches profit given up, not the price of the
   assert.ok(c.b.includes("\"The opportunity cost of an alternative is what you give up to pursue it,\""), "book principle missing");
   assert.ok(c.b.includes("\"the forgone opportunity to earn profit from the other.\""), "book wording missing");
   assert.match(c.b, / \(p\. 29\)$/);
+});
+
+test("v5.9.7: Froeb Chapter 4 is a chapter like the others: 31 cards, stable ids, in every chapter filter", () => {
+  const b = F.BOOKS.find(x => x.id === "froeb"), ch = b.chapters.find(c => c.n === 4);
+  assert.ok(ch, "no chapter 4"); assert.equal(ch.title, "Extent (How Much) Decisions");
+  assert.equal(ch.key, "book:froeb-ch04");
+  assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 4: Extent (How Much) Decisions");
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04");
+  assert.equal(cards.length, 31);
+  assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 4 && /^froeb-ch04-[a-z0-9-]+$/.test(c.id)));
+  // the sections list builds the chapter pickers, so Chapter 4 gets Study all / missed / restudy / important for free
+  const sec = F.sectionById("book:froeb-ch04");
+  assert.ok(sec, "chapter 4 has no section"); assert.equal(sec.title, ch.title_full);
+  const books = F.sectionList().find(g => g.id === "books");
+  assert.ok(books.sections.some(s => s.id === "book:froeb-ch04"), "chapter 4 missing from Books and chapters");
+  assert.equal(F.sectionStats(sec, F.newState()).total, 31);
+  const st = F.newState(); F.setImportant(st, cards[0].id, true);
+  assert.deepEqual(F.filterCards("sec:book:froeb-ch04:important", st).map(c => c.id), [cards[0].id]);
+  assert.equal(F.sectionStats(sec, st).important, 1);
+  assert.equal(F.filterCards("sec:book:froeb-ch04:all", st).length, 31);
+});
+test("v5.9.7: every Chapter 4 card matches the written wording, front and back, in order", () => {
+  const want = [
+    ["extent-decision-vs-discrete", "What is an extent decision, and how is it different from a discrete decision?", "An extent decision asks HOW MUCH to do: how many units to make, how much to spend, how hard to work. A discrete decision asks WHETHER to do something at all.\nExample: \"Should we open a store in a new city?\" is discrete. \"How many staff should we schedule on Saturday?\" is extent. (Ch 4, p. 36)"],
+    ["marginal-cost", "What is marginal cost (MC)?", "The extra cost of producing one more unit. Think \"the next one,\" not the average of all of them. (Ch 4, sect 4.2, pp. 39-40; summary)"],
+    ["marginal-revenue", "What is marginal revenue (MR)?", "The extra revenue you get from selling one more unit. (Ch 4, sect 4.2, pp. 39-40; summary)"],
+    ["decision-rule-mr-vs-mc", "What is the decision rule for how much to do?", "If MR is more than MC, do more. If MR is less than MC, do less. You are at the right amount when MR equals MC.\nExample: The next unit adds $22 of revenue and $18 of cost. Do more, because that unit adds $4 of profit. (Ch 4, sect 4.2; summary)"],
+    ["why-mr-mc-does-not-say-how-far", "The MR vs. MC rule tells you which direction to go. Why doesn't it tell you how far?", "Because MC usually rises and MR usually falls as you do more. So the answer changes with every step. Take a step, recheck MR and MC, and stop when they meet. (Ch 4, sect 4.2, pp. 39-40)"],
+    ["average-cost-vs-marginal-cost", "Average cost vs. marginal cost: what is the difference?", "Average cost is total cost (fixed plus variable) divided by the number of units. Marginal cost is only the extra cost of one more unit. For a \"do one more?\" decision, use marginal cost. Do not mix them up.\nExample: Total cost for 10 units is $100, so average cost is $10. If unit 11 pushes total cost to $108, the marginal cost of unit 11 is $8. (Ch 4, summary)"],
+    ["fixed-cost-part-is-irrelevant", "Which part of average cost is irrelevant to an extent decision?", "The fixed-cost part. Fixed costs do not change when you do one more, so they play no role in the how-much decision. Only marginal cost matters. (Ch 4, sect 4.1, pp. 37-38; summary)"],
+    ["hospital-fixed-cost-fallacy", "A hospital's average cost per delivery is higher than its average revenue per delivery, so the CEO refuses to expand. What mistake is this?", "The fixed-cost fallacy. Average cost includes fixed overhead that does not change with one more delivery. The right test is whether the marginal revenue of one more delivery beats its marginal cost. (Ch 4, sect 4.1, pp. 37-38)"],
+    ["rising-average-cost", "What does it mean when average cost is rising? How does that connect to marginal cost?", "Average cost rises only when the marginal cost of the latest unit is above the current average. If MC is below the average, the average falls. (Ch 4, end-of-chapter questions)"],
+    ["how-much-to-spend-on-advertising", "How do you decide how much to spend on advertising?", "Keep spending as long as the extra revenue from the next ad dollar is bigger than its cost. Stop where the marginal cost of winning one more customer equals the marginal revenue from that customer.\nExample (the radio-station case): Each new listener is worth about $21 in donations. Ad spending stops being worth it when the cost of winning one more listener rises to $21. (Ch 4, sect 4.2, pp. 39-40)"],
+    ["customer-acquisition-cost", "What is \"customer acquisition cost\" in this chapter's language?", "The marginal cost of winning one more customer. It is the number you compare to the marginal revenue from that customer. (Ch 4, sect 4.2, pp. 39-40)"],
+    ["splitting-a-fixed-budget", "You have a fixed budget to split between two options. How do you divide it?", "Move dollars toward the option where the next dollar wins more (lower marginal cost). Keep shifting until the marginal costs of the two options are equal. At that point, no move can improve the result. (Ch 4, sect 4.3, pp. 40-43)"],
+    ["opportunity-cost-of-a-budget-dollar", "With a fixed budget, what is the opportunity cost of a dollar spent on option A?", "The benefit that same dollar would have produced on option B. That is why the two marginal costs must be equal at the best split. (Ch 4, sect 4.3, pp. 40-43)"],
+    ["comparing-plants-cost-per-hour", "When you compare plants by cost per hour of work, what should you check before shifting production?", "(1) Take fixed overhead out, since it is not marginal. (2) Check that cost per hour is a good stand-in for true marginal cost. (3) Watch for hidden costs, such as politics or disruption, that limit how far you can shift. (Ch 4, sect 4.3, pp. 40-43)"],
+    ["when-to-cut-a-growing-tree", "When should you cut a tree that is still growing in value?", "When its value stops growing faster than your next-best return. While growth beats that return, wait. Once growth falls below it, harvest and invest the money. (Ch 4, sect 4.2, p. 40)"],
+    ["fixed-fee-does-not-change-effort", "Why doesn't a fixed fee change how hard someone works?", "Effort is an extent decision. A fixed fee does not change what one more unit of effort earns, so the marginal benefit of effort is the same either way. Only pay that moves with output changes behavior. (Ch 4, sect 4.4, pp. 43-44; summary)"],
+    ["fixed-fee-vs-per-tree-charge", "A logger pays a fixed fee for the right to cut trees. How does that differ from paying per tree?", "The fixed fee is a sunk cost, so the logger cuts every tree that earns any profit. A per-tree charge raises the marginal cost of each tree, so the least valuable trees are left standing. (Ch 4, sect 4.4, pp. 43-44)"],
+    ["lower-commission-and-shirking", "Why can a lower commission rate make a salesperson shirk, even with a salary added?", "The salary does not change the payoff from one more sale. A lower commission cuts the marginal benefit of each sale. Hard sales stop being worth the effort, so only the easy ones get made. (Ch 4, sect 4.4, pp. 43-44)"],
+    ["incentives-that-increase-effort", "What kind of incentive increases effort?", "One that raises the marginal benefit (MR) of effort or lowers its marginal cost (MC). Fixed fees and flat pay do neither. (Ch 4, summary)"],
+    ["pay-on-measures-that-reflect-effort", "What does \"tie pay to performance measures that reflect effort\" mean?", "Pay people on results they can actually influence. If the measure moves for reasons they do not control, the pay does not reward effort.\nExample: A manager is measured on revenue and only the costs he controls, not shared overhead. (Ch 4, sect 4.5, pp. 44-45; summary)"],
+    ["incentive-must-reach-the-worker", "Why does it matter that an incentive reaches the person who does the work?", "Effort responds to the share of the gain that person keeps. If part of the payoff goes to someone else, the marginal incentive shrinks and so does effort. (Ch 4, sect 4.5, pp. 44-45)"],
+    ["limits-of-incentive-pay", "What limits incentive pay?", "(1) Performance can be hard to measure, so people chase the measure instead of the goal. (2) It works best where effort really changes results. (3) Some jobs cover many tasks, so recognition and other non-money rewards also matter. (Ch 4, sect 4.5, pp. 44-45)"],
+    ["procedural-vs-outcome-fairness", "Procedural fairness vs. outcome fairness: what is the difference?", "Procedural fairness means everyone gets the same rules and the same chance. Outcome fairness means everyone ends up with the same result. Incentive pay is fair in the first sense but produces unequal results. (Ch 4, sect 4.6, pp. 45-46)"],
+    ["trade-offs-of-incentive-pay", "What are the trade-offs of incentive pay?", "Benefit: higher productivity. Costs: more inequality in outcomes and more risk for workers, since pay moves with results. (Ch 4, sect 4.6, pp. 45-46)"],
+    ["one-more-shift-marginal-not-average", "\"Should we add one more shift this week?\" Is that a marginal question or an average-cost question?", "Marginal. Compare the extra revenue of the added shift to its extra cost. The average cost of the shifts you already run does not matter. (Ch 4, summary)"],
+    ["marginal-cost-from-a-total-cost-table", "How do you find marginal cost from a table of total costs?", "Subtract: MC of a unit = total cost with that unit minus total cost without it. Do not divide.\nExample: Total cost is $30 at 1 unit, $34 at 2 units, and $39 at 3 units. The MC of unit 2 is $4, and the MC of unit 3 is $5. (Ch 4, practice-problem skill)"],
+    ["price-below-marginal-cost", "If the price of the last unit is less than its marginal cost, what should you do?", "Make fewer. That unit loses money at the margin.\nExample: A caterer can sell a meal for $20, but the next meal costs $25 to make. Each extra meal loses $5. (Ch 4, summary)"],
+    ["marginal-cost-of-one-more-worker", "When hiring one more worker means raising the wage of everyone already working, what is the worker's marginal cost?", "The new worker's pay plus the raises given to all the others. Do not use only the new worker's wage.\nExample: 9 workers earn $10 an hour, and a tenth would only join at $12, which is then paid to all 10. Total pay goes from $90 to $120, so the marginal cost is $30 an hour, not $12. (Ch 4, practice-problem skill)"],
+    ["which-facility-to-cut", "Sales volume falls and you must cut capacity at one of two facilities. Which costs guide the choice?", "Compare the variable (marginal) cost per unit at each facility, and cut where it is highest. Ignore the fixed costs, since they do not change with the volume you shift. (Unless the choice would actually shut a facility and avoid its fixed costs.) (Ch 4, practice-problem skill; sect 4.1)"],
+    ["more-workers-or-more-machines", "You can add either more workers or more machines. How do you decide?", "Compare how much extra output each adds PER DOLLAR it costs. Put the next dollar where output per dollar is higher. Stop shifting when the two are equal. (Ch 4, practice-problem skill; sect 4.3)"],
+    ["decision-rule-for-effort", "The decision rule for effort: when does a worker put in more effort?", "When the marginal benefit to the worker of the extra effort (MR) is greater than its marginal cost to the worker (MC). To get more effort, raise the first or lower the second. (Ch 4, sect 4.4; summary)"]
+  ];
+  assert.equal(want.length, 31);
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04");
+  want.forEach(([slug, f, b], i) => {
+    const c = cards[i];
+    assert.equal(c.id, "froeb-ch04-" + slug);
+    assert.equal(c.f, f, "front " + slug); assert.equal(c.b, b, "back " + slug);
+    assert.ok(!/[*\\]/.test(c.f + c.b), "markdown left in " + slug);
+  });
 });
