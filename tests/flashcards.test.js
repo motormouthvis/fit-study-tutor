@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 75 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 83 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,14 +229,16 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-3 and 6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 75); assert.equal(F.BK.length, 225);
+  assert.equal(FR.length, 83); assert.equal(F.BK.length, 233);
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
     "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades"];
-  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-36]-[a-z0-9-]+$/.test(c.id) && (VERBATIM.includes(c.id) || / \((p\. \d+|page not given)\)$/.test(c.b))));
+  // the Ch 3 "Summary of Main Points" cards are quoted word for word from a page we do not know, so they carry no page ref either
+  const noPage = c => VERBATIM.includes(c.id) || /^froeb-ch03-ch3-summary-\d+$/.test(c.id);
+  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-36]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 24, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 32, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -349,7 +351,36 @@ test("v5.9.3: Froeb Ch 3 cost cards are word for word from the textbook, and not
     assert.equal(c.f, want[id][0]); assert.equal(c.b, want[id][1]);
   }
   const ch3 = F.ALL.filter(c => c.topic === "book:froeb-ch03");
-  assert.equal(ch3.length, 24);                                                   // 20 before, 4 added
+  assert.equal(ch3.length, 32);                                                   // 20, then 4 cost cards, then the 8 summary cards
   for (const old of ["opportunity-cost", "implicit-costs", "accounting-costs", "economic-profit", "key-maxim-of-chapter-3"])
     assert.ok(ch3.some(c => c.id === "froeb-ch03-" + old), "existing card lost: " + old);
+});
+
+test("v5.9.4: every point of the Froeb Ch 3 Summary of Main Points is a card, word for word and with no page ref", () => {
+  const want = [
+    ["Chapter 3 summary: how are costs related to decisions?",
+      "Costs are associated with decisions."],
+    ["Chapter 3 summary: what is the opportunity cost of an alternative?",
+      "The opportunity cost of an alternative is the profit you give up to pursue it."],
+    ["Chapter 3 summary: which costs and benefits should you consider in a decision, and what are they called?",
+      "Consider all costs and benefits that vary with the consequences of a decision and only costs and benefits that vary with the consequences of a decision. These are the relevant costs and relevant benefits of a decision."],
+    ["Chapter 3 summary: fixed costs vs variable costs, and which change when a decision changes output?",
+      "Fixed costs do not vary with the amount of output. Variable costs change as output changes. Decisions that change output change only variable costs."],
+    ["Chapter 3 summary: does accounting profit equal economic profit?",
+      "Accounting profit does not necessarily correspond to economic profit."],
+    ["Chapter 3 summary: what is the fixed-cost fallacy (sunk-cost fallacy), and what is a common example?",
+      "The fixed-cost fallacy or sunk-cost fallacy means that you consider irrelevant costs. A common fixed-cost fallacy is to let overhead or depreciation costs influence short-run decisions."],
+    ["Chapter 3 summary: what is the hidden-cost fallacy, and what is a common example?",
+      "The hidden-cost fallacy occurs when you ignore relevant costs. A common hidden-cost fallacy is to ignore the opportunity cost of capital when making investment or shutdown decisions."],
+    ["Chapter 3 summary: where should you begin when analyzing a decision?",
+      "If you begin by looking at the costs, you will always get confused; if you begin with the decision you are considering, you will never get confused."]
+  ];
+  want.forEach(([f, b], i) => {
+    const c = F.ALL.find(x => x.id === "froeb-ch03-ch3-summary-" + (i + 1));
+    assert.ok(c, "summary card " + (i + 1) + " missing");
+    assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch03");
+    assert.equal(c.f, f); assert.equal(c.b, b);
+    assert.ok(!/\(p\. \d+\)|\(page not given\)/.test(c.b), "summary card " + (i + 1) + " should carry no page reference");
+  });
+  assert.equal(F.ALL.filter(c => c.topic === "book:froeb-ch03").length, 32);   // 24 before, 8 added
 });
