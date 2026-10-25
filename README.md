@@ -131,6 +131,11 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.7 - Froeb Chapter 4
+BUS 5421 Froeb **Chapter 4, "Extent (How Much) Decisions"**: 31 cards (the Card 42 to Card 72 set), written in our own words from the chapter, with each answer ending in the section or page reference from the notes, e.g. "(Ch 4, sect 4.2, pp. 39-40)". No textbook text is quoted, so these carry a section reference rather than a page quote. Ids are `froeb-ch04-<slug>`.
+
+The chapter needs no wiring: `sectionList()` builds the Books and chapters list from `books-data.js`, so Chapter 4 arrives with its own section, its Right / Wrong / Restudy / Important counts and all four study buttons (Study all, Study missed, Study restudy, Study important), exactly like Chapters 1 to 3. Froeb is now Ch 1: 23, Ch 2: 25, Ch 3: 33, Ch 4: 31, Ch 6: 3, and the whole deck is 644 built-in cards.
+
 ## v5.9.6 - Mute means the microphone, so noise cannot stop a lesson
 Bill listens on his phone in noisy places and the lesson kept stopping. Three things were doing it, and all three were the microphone, not the audio:
 - **Mute meant the wrong thing.** The Mute pill called the tutor's own mute, which *stops the tutor talking* and leaves the microphone open to catch the unmute phrase. It also froze every on-screen button except Stop. The one thing it did not do was stop the app listening.

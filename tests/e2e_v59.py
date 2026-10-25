@@ -53,7 +53,7 @@ try:
             ["What is the one lesson of economics?",
              "The art of economics consists in looking not merely at the immediate but at the longer effects of any act or policy; it consists of tracing the consequences of that policy not merely for one group but for all groups."]]
     check("both new cards are word for word from the book", sorted(txt) == sorted(want), txt)
-    check("no Chapter 3 section was added for them", A.evaluate("()=>window.Flash.BOOKS.find(function(b){return b.id==='froeb'}).chapters.map(function(c){return c.n}).join(',')") == "1,2,3,6")
+    check("the Froeb chapters are the expected ones (no stray chapter was created)", A.evaluate("()=>window.Flash.BOOKS.find(function(b){return b.id==='froeb'}).chapters.map(function(c){return c.n}).join(',')") == "1,2,3,4,6")
 
     # ---- the Important star ----
     study(A, CH2)
