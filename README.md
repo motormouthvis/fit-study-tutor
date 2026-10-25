@@ -131,6 +131,11 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.5 - Froeb Chapter 3 problem 3-1: opportunity cost is profit given up
+One card in BUS 5421 Froeb **Chapter 3** (`froeb-ch03-opp-cost-profit-given-up`) for the free-Springsteen-ticket problem, where the easy wrong answer is $80, the price of the U2 ticket. The answer leads with "$20, not $80", shows $100 - $80 = $20, and quotes the book: "The opportunity cost of an alternative is what you give up to pursue it," and the cost of the alternative you choose is "the forgone opportunity to earn profit from the other." (p. 29). Chapter 3 goes from 32 cards to 33.
+
+The card is **not** pre-marked Important: that star is per-device study progress (`tutor.v1.fc`, key `imp`) rather than card data, and it syncs, so a built-in default would fight the user's own star. Tap **&#9734; Important** on the card once and it sticks on every synced device.
+
 ## v5.9.4 - every point of Froeb Chapter 3's Summary of Main Points
 Eight more cards in BUS 5421 Froeb **Chapter 3**, one per point of the chapter's "Summary of Main Points", with the book's sentences as the answers and no paraphrase. The page the summary sits on is not known, so these carry **no page reference**, unlike the rest of the chapter; the unit test that insists on a page ref knows about them. Ids are `froeb-ch03-ch3-summary-1` to `-8`. Chapter 3 goes from 24 cards to 32 and nothing existing was changed.
 
