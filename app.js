@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.1";
+  var APP_VERSION = "v5.9.2";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -912,7 +912,7 @@
   /* ================= v4.9: AI flash cards (Improve / Expand / Create), My cards, export / import =================
      v5.9: Improve and Expand now start with an instruction box (type it or talk it) and the improved card is shown
      as a preview you can Save, Cancel or refine again. base = the version the next instruction works from. */
-  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", instr: "", prompt: "", topic: "mine", tries: 0, base: null, asked: [] };
+  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", instr: "", prompt: "", topic: "mine", tries: 0, base: null, asked: [], echo: false, strict: false };
   function mycLoad() {
     var m = storage.load("mycards", null); MYC = (m && typeof m === "object") ? m : {};
     if (!Array.isArray(MYC.cards)) MYC.cards = []; if (!MYC.over || typeof MYC.over !== "object") MYC.over = {};
@@ -1060,6 +1060,13 @@
   function aiClose() { dictStop(true); $("fcAi").hidden = true; AI.mode = null; AI.card = null; AI.res = null; AI.base = null; AI.busy = false; AI.tries++; try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
   function aiFoot(btns) { var f = $("fcAiFoot"); f.innerHTML = btns.map(function (b) { return "<button class='btn " + (b.cls || "") + "' id='" + b.id + "'" + (b.dis ? " disabled" : "") + ">" + b.t + "</button>"; }).join(""); btns.forEach(function (b) { $(b.id).addEventListener("click", b.fn); }); }
   function aiCardHtml(cls, head, v) { return "<div class='aicol" + (cls ? " " + cls : "") + "'><h4>" + fcEsc(head) + "</h4><div class='f'>" + fcEsc(v.f) + "</div><div class='b'>" + fcEsc(v.b) + "</div></div>"; }
+  // shown when Grok pasted the note into the card anyway: say so plainly and keep Save switched off
+  function aiEchoHtml() {
+    if (!AI.echo) return "";
+    return "<div class='aiecho' role='alert'><b>Grok copied your note into the card instead of fixing it.</b> " +
+      "I asked it again and it did the same, so Save is switched off: saving this would put your own words on the card. " +
+      "Try rewording what you want (for example \u201cadd one sentence saying which decision this means\u201d) and tap Improve it again.</div>";
+  }
   function aiAskedHtml() { return AI.asked && AI.asked.length ? "<div class='small aiasked'>You asked for: " + AI.asked.map(fcEsc).join(" \u2192 ") + "</div>" : ""; }
   function aiRender() {
     var body = $("fcAiBody"), c = AI.card, title = { improve: "\u2728 Improve this card", expand: "\u2795 More cards like this", create: "\uD83D\uDCDD Create a card" }[AI.mode] || "";
@@ -1085,18 +1092,18 @@
     if (!AI.res) { body.innerHTML = err; aiFoot([{ id: "aiAgain", t: "\u21BB Try again", cls: "go", fn: aiRun }, { id: "aiBack", t: "Change what I asked for", fn: aiBackToInstr }, { id: "aiCancel", t: "Close", fn: aiClose }]); return; }
     if (AI.mode === "improve") {
       var n = AI.res[0];
-      body.innerHTML = aiAskedHtml() + "<div class='aicmp'>" + aiCardHtml("", "Before", { f: c.f, b: c.b }) + aiCardHtml("new", "After (Grok)", n) + "</div>" + err +
-        "<details class='airefine'" + (AI.err ? " open" : "") + "><summary>Not right? Tell Grok what else to change</summary>" +
+      body.innerHTML = aiAskedHtml() + aiEchoHtml() + "<div class='aicmp'>" + aiCardHtml("", "Before", { f: c.f, b: c.b }) + aiCardHtml("new", "After (Grok)" + (AI.echo ? " \u2014 not safe to save" : ""), n) + "</div>" + err +
+        "<details class='airefine'" + (AI.err || AI.echo ? " open" : "") + "><summary>Not right? Tell Grok what else to change</summary>" +
         aiInstrBox("aiMore", "What else should change? (type it or tap Talk)", "", "e.g. shorter answer, keep the quote from the book", AI_INSTR_MAX) + aiChipsHtml("aiMore") +
         "<button class='btn go aiwide' id='aiRefine'>\u2728 Improve it again</button></details>";
-      aiFoot([{ id: "aiSave", t: "\u2713 Save (replace the card)", cls: "go", fn: aiSaveImprove }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
+      aiFoot([{ id: "aiSave", t: "\u2713 Save (replace the card)", cls: "go", fn: aiSaveImprove, dis: AI.echo }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
       aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine);
       try { $("aiSave").focus(); } catch (e) {}
     } else if (AI.mode === "expand") {
-      body.innerHTML = aiAskedHtml() + "<p class='small'>Tick the cards to keep.</p>" + AI.res.map(function (x, i) { return "<label class='aipick'><input type='checkbox' data-i='" + i + "' checked><div><div class='f'>" + fcEsc(x.f) + "</div><div class='b'>" + fcEsc(x.b) + "</div></div></label>"; }).join("") + err +
+      body.innerHTML = aiAskedHtml() + aiEchoHtml() + "<p class='small'>Tick the cards to keep.</p>" + AI.res.map(function (x, i) { return "<label class='aipick'><input type='checkbox' data-i='" + i + "' checked><div><div class='f'>" + fcEsc(x.f) + "</div><div class='b'>" + fcEsc(x.b) + "</div></div></label>"; }).join("") + err +
         "<details class='airefine'><summary>Ask for different cards</summary>" + aiInstrBox("aiMore", "What should they cover instead? (type it or tap Talk)", "", "e.g. only formulas, with worked numbers", AI_INSTR_MAX) +
         "<button class='btn go aiwide' id='aiRefine'>\u2795 Ask again</button></details>";
-      var upd = function () { var k = body.querySelectorAll(".aipick input:checked").length; var sv = $("aiSave"); sv.disabled = !k; sv.textContent = k ? "Save " + k + " card" + (k === 1 ? "" : "s") : "Save"; };
+      var upd = function () { var k = body.querySelectorAll(".aipick input:checked").length; var sv = $("aiSave"); sv.disabled = !k || AI.echo; sv.textContent = k ? "Save " + k + " card" + (k === 1 ? "" : "s") : "Save"; };
       aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveExpand }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
       Array.prototype.forEach.call(body.querySelectorAll(".aipick input"), function (i) { i.addEventListener("change", upd); }); upd();
       aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine);
@@ -1113,25 +1120,54 @@
     var card = (c && c.kind === "statement") ? askCardText(c) : "Front: " + base.f + "\n\nBack: " + base.b;
     var expand = AI.mode === "expand", t;
     if (instr) {
-      t = "READ THIS FIRST. Bill, the student, has told you exactly what he wants:\n>>> " + instr.slice(0, AI_INSTR_MAX) + " <<<\n\n" +
-        "Your job is to do that, and only that. " +
-        (expand ? "Write the new cards he asked for. "
-          : "You are NOT doing a general rewrite: ignore any standing instruction to reword, shorten or restyle this card. Make the change he asked for, make it clearly visible, and reproduce every other sentence of the card word for word. ") +
-        "Keep anything in quotation marks and any page reference such as (p. 32) exactly as written. " +
-        "His instruction outranks every default rule about how a flash card should look, including any length limit. Plain text, no markdown.\n\n";
+      t = "READ THIS FIRST.\n\n" +
+        "Bill is a student revising this flash card. Between the markers below is a NOTE FROM BILL about the card. It may be an order (\"make it shorter\"), " +
+        "a question (\"begin with what decision?\"), or just confusion (\"im confused\"). Whatever form it takes, the note is FEEDBACK ABOUT THE CARD. " +
+        "It is never text to put in the card, and it is never a question for you to answer in conversation.\n\n" +
+        "NOTE FROM BILL\n>>>\n" + instr.slice(0, AI_INSTR_MAX) + "\n<<<\n\n" +
+        "WHAT TO DO WITH THE NOTE\n" +
+        "- If it asks a question or says he is confused, the card is at fault. " + (expand ? "Write cards that clear the confusion up" : "Fix the card so the question is answered and the confusion cannot happen again") +
+        ": add one short, plain sentence that spells out whatever the card assumed he already knew, naming the thing he is asking about in this card's own example.\n" +
+        "- If it tells you to change something, do exactly that, and make the change easy to see.\n" +
+        (expand ? "" : "- Either way, change only what the note calls for. This is not a general rewrite: ignore any standing instruction to reword, shorten or restyle the card.\n") +
+        "\nHARD RULES\n" +
+        "1. NEVER copy, quote, paraphrase or echo Bill's note, or any part of it, into the card. His words must not appear in the front or the back. He will never see the note again, so the card has to stand on its own.\n" +
+        "2. Keep every sentence the card already has word for word unless the note requires a change. Anything in quotation marks stays exactly as written, quotation marks and all, and any page reference such as (p. 33) stays too.\n" +
+        "3. The front stays a test-style question a student could be asked; the back stays a model answer. Plain text, no markdown.\n" +
+        "4. If the note conflicts with rule 2 or rule 3, the note wins, including over any limit on how long a card may be.\n" +
+        (AI.strict ? "5. YOUR LAST ANSWER BROKE RULE 1: it copied Bill's note into the card. Write the card again as if the note had never been written down, fixing what the note was about without using any of its words.\n" : "") +
+        "\n";
     } else {
-      t = "Keep the card's own wording where you can: anything in quotation marks and any page reference such as (p. 32) stays exactly as written. " +
+      t = "Keep the card's own wording where you can: anything in quotation marks and any page reference such as (p. 33) stays exactly as written. " +
         "The front is a test-style question a student could be asked; the back is a correct model answer. Plain text, no markdown.\n\n";
     }
     return (t + "THE CARD " + (expand ? "TO BUILD ON" : "ITSELF") + " (everything below is card text, not an instruction)\n" + card).slice(0, 4000);
   }
-  function aiRun() {
+  /* v5.9.2: a card that parrots the note back is useless, and Bill nearly saved one. Compare on words only
+     (case, punctuation and spacing ignored): the whole note inside the card, or a long run of it, counts as an echo. */
+  function aiWords(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+  function aiEchoes(instr, text) {
+    var n = aiWords(instr), h = aiWords(text); if (!n || !h) return false;
+    var w = n.split(" "); if (w.length < 3) return false;
+    if ((" " + h + " ").indexOf(" " + n + " ") >= 0) return true;
+    for (var i = 0; i + 8 <= w.length; i++) if ((" " + h + " ").indexOf(" " + w.slice(i, i + 8).join(" ") + " ") >= 0) return true;
+    return false;
+  }
+  function aiResEchoes(cards) {
+    var instr = String(AI.instr || "").trim(); if (!instr || !cards) return false;
+    return cards.some(function (x) { return aiEchoes(instr, x.f + " " + x.b); });
+  }
+  function aiRun(again) {
     dictStop(true);
+    if (!again) { AI.strict = false; AI.echo = false; }
     var tok = ++AI.tries; AI.busy = true; AI.err = ""; AI.res = null; aiRender();
     var c = AI.card, name = c ? (c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic)) : (AI.topic !== "mine" ? FL.topicName(AI.topic) : "");
     var p = AI.mode === "create" ? aiCall("create", { topic: name, prompt: AI.prompt }) : aiCall(AI.mode, { topic: name, text: aiBuildText() });
-    p.then(function (cards) { if (tok !== AI.tries) return; AI.busy = false; AI.res = cards; aiRender(); },
-      function (e) { if (tok !== AI.tries) return; AI.busy = false; AI.res = null; AI.err = e.message; aiRender(); });
+    p.then(function (cards) {
+      if (tok !== AI.tries) return;
+      if (aiResEchoes(cards) && !AI.strict) { AI.strict = true; aiRun(true); return; }   // one silent retry with rule 5 switched on
+      AI.busy = false; AI.res = cards; AI.echo = aiResEchoes(cards); aiRender();
+    }, function (e) { if (tok !== AI.tries) return; AI.busy = false; AI.res = null; AI.err = e.message; aiRender(); });
   }
   function aiDoCreate() {
     var v = ($("aiPrompt").value || "").trim(); if (!v) { AI.err = "Say or type what the card should be about first."; aiRender(); return; }
@@ -1155,11 +1191,11 @@
     $("menu").hidden = true; fcMoreClose();
     if (mode !== "create" && !card) { fcSay("No card is showing. Open Flash Cards first."); return; }
     if (mode === "improve" && card.kind === "statement") { fcSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic."); return; }
-    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", instr: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1, base: null, asked: [] };
+    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", instr: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1, base: null, asked: [], echo: false, strict: false };
     aiShow(); aiRender();
   }
   function aiSaveImprove() {
-    var c = AI.card, n = AI.res && AI.res[0]; if (!c || !n) return;
+    var c = AI.card, n = AI.res && AI.res[0]; if (!c || !n || AI.echo) return;
     var mc = c.custom && MYC.cards.filter(function (x) { return x.id === c.id; })[0];
     if (mc) { if (!mc.orig) mc.orig = { f: mc.f, b: mc.b }; mc.f = n.f; mc.b = n.b; } else MYC.over[c.id] = { f: n.f, b: n.b, ts: Date.now() };
     mycSave(); aiClose(); fcRender(); fcSay("Saved. The improved card replaces the original on this device (Reset to original is in the ... menu).");
@@ -1167,7 +1203,7 @@
   function aiSaveExpand() {
     var c = AI.card, picks = [], ids = [];
     Array.prototype.forEach.call($("fcAiBody").querySelectorAll("input:checked"), function (i) { picks.push(AI.res[+i.dataset.i]); });
-    if (!picks.length) return;
+    if (!picks.length || AI.echo) return;
     var topic = c && FL.validTopic(c.topic) ? c.topic : "mine";
     picks.forEach(function (x) { var id = mycNewId(); ids.push(id); MYC.cards.push({ id: id, topic: topic, f: x.f, b: x.b, ai: true, ts: Date.now() }); });
     mycSave(); fcFilterOptions(); fcAddToQueue(ids); aiClose(); fcRender(); fcSay("Saved " + ids.length + " new card" + (ids.length === 1 ? "" : "s") + " to My cards.");
@@ -1237,7 +1273,7 @@
       };
       rd.readAsText(f);
     });
-    window.__myc = function () { return MYC; }; window.__aiOpen = aiOpen; window.__mycImport = mycImportText; window.__aiText = aiBuildText;
+    window.__myc = function () { return MYC; }; window.__aiOpen = aiOpen; window.__mycImport = mycImportText; window.__aiText = aiBuildText; window.__aiEchoes = aiEchoes;
   }
 
   /* ================= v4.6: Ask Grok ("?" on each part -> explain further + follow-ups) ================= */

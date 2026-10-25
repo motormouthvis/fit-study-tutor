@@ -111,9 +111,13 @@ try:
     # v5.9.1: the instruction must lead the request, before any card text, and must countermand the proxy's
     # standing "rewrite this card" order. In v5.9 it sat after the card, inside the block the proxy calls "the card".
     check("the instruction comes first, before the card", sent.startswith("READ THIS FIRST") and sent.index("keep the textbook words") < sent.index(base[0]), sent[:120])
-    check("the instruction is marked as outranking the default card rules", "outranks every default rule" in sent and "NOT doing a general rewrite" in sent, sent[:400])
+    check("the instruction is marked as outranking the default card rules", "the note wins, including over any limit" in sent and "not a general rewrite" in sent, sent[:400])
     check("the card is labelled as card text, not as an instruction", "THE CARD ITSELF (everything below is card text, not an instruction)" in sent)
-    check("page references and quotes are protected", "Keep anything in quotation marks and any page reference" in sent)
+    check("page references and quotes are protected", "quotation marks and all" in sent and "(p. 33)" in sent)
+    # v5.9.2: a note that is a question or a complaint is still feedback, and must never land in the card
+    check("the note is framed as feedback, never as card text", "NOTE FROM BILL" in sent and "never text to put in the card" in sent)
+    check("copying the note into the card is forbidden", "NEVER copy, quote, paraphrase or echo Bill's note" in sent)
+    check("a confused note means fix the card", "the card is at fault" in sent and "spells out whatever the card assumed he already knew" in sent)
     check("Before and After are both shown", "Improved front?" in A.inner_text("#fcAiBody") and base[0][:30] in A.inner_text("#fcAiBody"))
     check("Save and Cancel are offered", A.is_visible("#aiSave") and A.is_visible("#aiDiscard"))
     A.screenshot(path=os.path.join(ROOT, "tests", "shot-v59-improve-preview.png"))
@@ -131,6 +135,30 @@ try:
     check("the back is replaced too", "Second pass back." in A.inner_text("#fcBack"), A.inner_text("#fcBack"))
     A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmReset"); A.wait_for_timeout(250)
     check("Reset to original still brings the real card back", base[0] in front(A), front(A))
+
+    # ---- v5.9.2: Grok parroting the note back is caught, retried once, then Save is blocked ----
+    NOTE = "begin with what decision? im confused"
+    A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmImprove"); A.wait_for_timeout(250)
+    card_now = A.evaluate("()=>{var c=window.Flash.ALL.filter(function(x){return x.id===window.__fc.queue[0]})[0]; return [c.f,c.b]}")
+    check("the echo check spots the note inside a card", A.evaluate("(n)=>window.__aiEchoes(n, 'begin with what decision?  im confused ' + 'the rest of the answer')", NOTE) is True)
+    check("the echo check does not fire on an ordinary improvement", A.evaluate("(n)=>window.__aiEchoes(n, 'Start with the decision: keep or drop the product.')", NOTE) is False)
+    check("a one-word note is never treated as an echo", A.evaluate("()=>window.__aiEchoes('shorter', 'Make the answer shorter to read.')") is False)
+    n0 = len(asked)
+    reply = {"cards": [{"front": card_now[0], "back": NOTE + "\n\n" + card_now[1]}]}   # Grok parrots the note, as it did for Bill
+    A.fill("#aiInstr", NOTE); A.click("#aiGo"); A.wait_for_timeout(900)
+    check("a parroted answer is retried once, automatically", len(asked) - n0 == 2, len(asked) - n0)
+    check("the retry tells Grok it broke the rule", "YOUR LAST ANSWER BROKE RULE 1" in asked[-1]["partText"] and "YOUR LAST ANSWER" not in asked[-2]["partText"])
+    check("the warning is shown when it parrots twice", A.is_visible(".aiecho") and "copied your note into the card" in A.inner_text(".aiecho"))
+    check("Save is blocked", A.is_disabled("#aiSave"))
+    before_over = A.evaluate("()=>Object.keys(window.__myc().over).length")
+    A.evaluate("()=>document.getElementById('aiSave').click()"); A.wait_for_timeout(200)
+    check("even a forced click cannot save a parroted card", A.evaluate("()=>Object.keys(window.__myc().over).length") == before_over)
+    A.screenshot(path=os.path.join(ROOT, "tests", "shot-v592-echo-blocked.png"))
+    reply = {"cards": [{"front": card_now[0], "back": "Start with the decision: keep the product or drop it. " + card_now[1]}]}
+    A.click("#aiAgain"); A.wait_for_timeout(600)
+    check("a clean answer clears the warning and re-enables Save", A.query_selector(".aiecho") is None and not A.is_disabled("#aiSave"))
+    A.click("#aiDiscard"); A.wait_for_timeout(200)
+    reply = {"cards": [{"front": "Improved front?", "back": "Improved back."}]}
 
     # ---- the same box on Expand and Create ----
     A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmExpand"); A.wait_for_timeout(250)

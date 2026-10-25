@@ -51,7 +51,8 @@ export const SYSTEM_JSON = "You write flash cards for Bill, an MBA beginner (BUS
   "front = a test-style question or a term, short enough to read at a glance (under 280 characters). back = the model answer in plain English, as short as it can be and still be complete (under 800 characters), " +
   "standard textbook definitions and formulas; if numbers are involved show the arithmetic briefly. " +
   "Keep any wording the user gives inside quotation marks, and any page reference such as (p. 17), exactly as written unless the user asks for a change. " +
-  "When the user's message carries an instruction of his own, that instruction outranks every rule in this message, including the length limits, and you must do what it says rather than a general rewrite. " +
+  "When the user's message carries a note of his own, that note outranks every rule in this message, including the length limits, and you must do what it says rather than a general rewrite. " +
+  "A note that asks a question or says the user is confused means the card is at fault: fix the card so the question is answered. Never copy the user's note into a card. " +
   "Plain text only. Never invent facts: if you are unsure, keep the card general. " +
   "If the request is not about business, accounting, economics, finance or study skills, reply {\"cards\":[]}.";
 function cardText(t) { return String(t).replace(/\s+/g, " ").trim(); }
@@ -71,9 +72,10 @@ export function buildJsonMessages(body) {
     // partText (that is the only field older deployments forward); prompt is honoured too when it is used.
     user = (prompt.trim() ? "BILL'S INSTRUCTION, which outranks everything else in this message: " + cardText(prompt) + "\n" : "") +
       (kind === "improve"
-        ? "TASK: IMPROVE this flash card. If the block below opens with an instruction from Bill, do what it says and only what it says: do not reword, shorten or restyle the rest of the card, and reproduce its other sentences word for word. Otherwise make it a question Bill could be asked on a test with a short correct answer, keeping the same scope and meaning, and fix any mistakes. Return exactly 1 card."
-        : "TASK: EXPAND this flash card. Write 3 to 5 NEW related flash cards that deepen understanding (related terms, formulas, a worked example, a common mistake). Do not repeat the given card. If the block below opens with an instruction from Bill, follow it.") +
-      "\nAn instruction from Bill beats every rule about how a flash card should look, including any length limit." +
+        ? "TASK: IMPROVE this flash card. If the block below opens with a note from Bill, do what it says and only what it says: do not reword, shorten or restyle the rest of the card, and reproduce its other sentences word for word. Otherwise make it a question Bill could be asked on a test with a short correct answer, keeping the same scope and meaning, and fix any mistakes. Return exactly 1 card."
+        : "TASK: EXPAND this flash card. Write 3 to 5 NEW related flash cards that deepen understanding (related terms, formulas, a worked example, a common mistake). Do not repeat the given card. If the block below opens with a note from Bill, follow it.") +
+      "\nA note from Bill may be an order, a question, or just \"I'm confused\". In every case it is feedback about the card, never text to copy into the card: never put his words in a card, and when he is confused, fix whatever the card assumed he already knew." +
+      "\nA note from Bill beats every rule about how a flash card should look, including any length limit." +
       "\nTopic: " + (title || "MBA flash card") + "\n\nThe card, with Bill's instruction first if he gave one:\n\"\"\"\n" + part + "\n\"\"\"";
   }
   return { kind, spec, messages: [{ role: "system", content: SYSTEM_JSON }, { role: "user", content: user }] };
