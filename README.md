@@ -131,6 +131,20 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.1 - Grok actually does what you asked
+Bill asked Grok to "name the opportunity cost explicitly and keep the book's wording" on a Froeb Ch 3 card. Grok named the opportunity cost but rewrote the book's sentence, i.e. it did half the job and then did its usual rewrite.
+
+What was wrong (measured against the live proxy, not guessed):
+- v5.9 put the instruction **after** the card inside `partText`, and the deployed Worker wraps that whole field as `The card: """ ... """`. So the instruction arrived dressed as card text. In one test the model copied words out of the instruction into the answer, which is exactly that mistake.
+- The deployed Worker's own task line says "Rewrite it to be clearer and more accurate", and its system prompt fixes the shape of a card ("a short question or term", "under 500 characters"). Nothing told the model that Bill's instruction beats those defaults, so a standing order to reword silently won over "keep the book's wording".
+- The instruction box also capped at 300 characters, so a long instruction was cut off without saying so.
+
+The fix (client side, so it works with the Worker that is already deployed): the instruction now goes **first**, before any card text, as the point of the request; it says plainly that this is not a general rewrite, that every other sentence must be reproduced word for word, and that the instruction outranks any default rule about how a card should look, including length. The card follows, labelled as card text rather than an instruction. The box now holds 600 characters.
+
+Measured on Bill's card with his instruction, calling the live proxy: v5.9 kept the book's sentence 0 times out of 2; v5.9.1 kept it 2 times out of 2, and named the opportunity cost both times.
+
+`worker/src/index.js` carries the same precedence for whenever it is next deployed (`cd worker && npx wrangler deploy`, needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`). **A redeploy is not required** - the fix was verified against the Worker running today.
+
 ## v5.9 - Important cards, and telling Grok what to improve
 - **Important star.** Every flash card has a **&#9734; Important** button next to **&#9734; Restudy** (keyboard: `I`). Tap or click it to mark the card; tap again to unmark. Important is Bill's own star: a miss never sets it (a miss still sets Restudy and sends the card to the end of the session, as before).
 - **Study important.** Each section on the Flash Cards list now shows an **Important** count and a fourth button, **Study important**. The "All cards" section gives the same button across every section at once. The finished-session screen offers "Important only" too, and "Important only" is in the which-cards dropdown.

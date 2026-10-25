@@ -51,7 +51,7 @@ export const SYSTEM_JSON = "You write flash cards for Bill, an MBA beginner (BUS
   "front = a test-style question or a term, short enough to read at a glance (under 280 characters). back = the model answer in plain English, as short as it can be and still be complete (under 800 characters), " +
   "standard textbook definitions and formulas; if numbers are involved show the arithmetic briefly. " +
   "Keep any wording the user gives inside quotation marks, and any page reference such as (p. 17), exactly as written unless the user asks for a change. " +
-  "If the user's message contains a line starting with \"WHAT BILL ASKED FOR\", follow that instruction above every other style rule. " +
+  "When the user's message carries an instruction of his own, that instruction outranks every rule in this message, including the length limits, and you must do what it says rather than a general rewrite. " +
   "Plain text only. Never invent facts: if you are unsure, keep the card general. " +
   "If the request is not about business, accounting, economics, finance or study skills, reply {\"cards\":[]}.";
 function cardText(t) { return String(t).replace(/\s+/g, " ").trim(); }
@@ -67,12 +67,14 @@ export function buildJsonMessages(body) {
   } else {
     if (!part.trim()) return { error: "missing_part" };
     if (part.length > LIMITS.partChars) return { error: "part_too_long" };
-    user = (kind === "improve"
-      ? "TASK: IMPROVE this flash card. Keep the same scope and meaning, fix any mistakes, and make it a question Bill could be asked on a test with a short correct answer. Return exactly 1 card."
-      : "TASK: EXPAND this flash card. Write 3 to 5 NEW related flash cards that deepen understanding (related terms, formulas, a worked example, a common mistake). Do not repeat the given card.") +
-      "\nThe block below holds the card and may also hold a line starting with \"WHAT BILL ASKED FOR\": that is Bill's own instruction and it comes first." +
-      (prompt.trim() ? "\nWhat Bill asked for: " + cardText(prompt) : "") +
-      "\nTopic: " + (title || "MBA flash card") + "\n\nThe card:\n\"\"\"\n" + part + "\n\"\"\"";
+    // v5.9.1: Bill's own instruction comes first and outranks the task line. The app sends it at the top of
+    // partText (that is the only field older deployments forward); prompt is honoured too when it is used.
+    user = (prompt.trim() ? "BILL'S INSTRUCTION, which outranks everything else in this message: " + cardText(prompt) + "\n" : "") +
+      (kind === "improve"
+        ? "TASK: IMPROVE this flash card. If the block below opens with an instruction from Bill, do what it says and only what it says: do not reword, shorten or restyle the rest of the card, and reproduce its other sentences word for word. Otherwise make it a question Bill could be asked on a test with a short correct answer, keeping the same scope and meaning, and fix any mistakes. Return exactly 1 card."
+        : "TASK: EXPAND this flash card. Write 3 to 5 NEW related flash cards that deepen understanding (related terms, formulas, a worked example, a common mistake). Do not repeat the given card. If the block below opens with an instruction from Bill, follow it.") +
+      "\nAn instruction from Bill beats every rule about how a flash card should look, including any length limit." +
+      "\nTopic: " + (title || "MBA flash card") + "\n\nThe card, with Bill's instruction first if he gave one:\n\"\"\"\n" + part + "\n\"\"\"";
   }
   return { kind, spec, messages: [{ role: "system", content: SYSTEM_JSON }, { role: "user", content: user }] };
 }
