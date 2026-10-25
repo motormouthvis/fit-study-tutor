@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 71 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 75 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,14 +229,14 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-3 and 6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 71); assert.equal(F.BK.length, 221);
+  assert.equal(FR.length, 75); assert.equal(F.BK.length, 225);
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
     "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades"];
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-36]-[a-z0-9-]+$/.test(c.id) && (VERBATIM.includes(c.id) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 20, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 24, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -330,4 +330,26 @@ test("v5.9: old saved progress still works and Important rides along with the ex
   F.setImportant(st, "balance-1", true); st.cards["balance-1"].u = 2000;
   const merged = SMx.merge({ cards: { "balance-1": { seen: 2, got: 1, miss: 1, u: 1000 } } }, { cards: st.cards });
   assert.equal(merged.cards["balance-1"].imp, true);                                     // newest write wins, Important included
+});
+
+test("v5.9.3: Froeb Ch 3 cost cards are word for word from the textbook, and nothing existing was touched", () => {
+  const want = {
+    "froeb-ch03-explicit-costs-what-the-book-calls-them": ["Explicit costs: what are they, and what does Froeb call them?",
+      "The book does not use the term \"explicit costs\" by itself; it calls them accounting costs: costs paid to suppliers for product ingredients, general operating expenses (such as salaries to factory managers and marketing expenses), depreciation expenses related to investments in buildings and equipment, and interest payments on borrowed funds. \"These types of expenses are the accounting costs of the business.\" (p. 28)"],
+    "froeb-ch03-what-are-implicit-costs": ["What are implicit costs?",
+      "\"Economists, however, are interested in all the relevant costs of decisions, including the implicit costs that do not show up in the accounting statements.\" Example: the income statement \"reflects no charge for equity even though this is an important consideration for investment decisions.\" (p. 28)"],
+    "froeb-ch03-what-are-the-relevant-costs-and-benefits-of-a-decision": ["What are the relevant costs and benefits of a decision?",
+      "\"Consider all costs and benefits that vary with the consequence of a decision (If you miss some, that is the hidden-cost fallacy.)\" and \"But consider only costs and benefits that vary with the consequence of the decision. (If you take account of irrelevant costs or benefits, that is the sunk- or fixed-cost fallacy.)\" \"These are the relevant costs and benefit of a decision.\" (p. 30)"],
+    "froeb-ch03-explicit-vs-implicit-costs-accounting-profit-economic-loss": ["Explicit vs implicit costs: why can a firm show an accounting profit but an economic loss?",
+      "\"In practical terms, a firm may show an accounting profit while experiencing an economic loss. The two amounts are not the same because economic profit recognizes both explicit and implicit costs of capital.\" (p. 29)"]
+  };
+  for (const id of Object.keys(want)) {
+    const c = F.ALL.find(x => x.id === id);
+    assert.ok(c, id + " missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch03");
+    assert.equal(c.f, want[id][0]); assert.equal(c.b, want[id][1]);
+  }
+  const ch3 = F.ALL.filter(c => c.topic === "book:froeb-ch03");
+  assert.equal(ch3.length, 24);                                                   // 20 before, 4 added
+  for (const old of ["opportunity-cost", "implicit-costs", "accounting-costs", "economic-profit", "key-maxim-of-chapter-3"])
+    assert.ok(ch3.some(c => c.id === "froeb-ch03-" + old), "existing card lost: " + old);
 });

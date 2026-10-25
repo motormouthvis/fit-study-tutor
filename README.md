@@ -131,6 +131,9 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.3 - Froeb Chapter 3 cost cards
+Four cards added to BUS 5421 Froeb **Chapter 3** (Benefits, Costs, and Decisions), question and answer word for word from the textbook with the page numbers as given: explicit costs (what the book calls accounting costs, p. 28), implicit costs (p. 28), the relevant costs and benefits of a decision (p. 30), and accounting profit versus economic loss (p. 29). Chapter 3 goes from 20 cards to 24; nothing existing was changed or removed, and the new ids sit alongside the older `implicit-costs`, `accounting-costs` and `relevant-costs-and-benefits-the-general-rule` cards rather than replacing them.
+
 ## v5.9.2 - a question in the Improve box is feedback, not words to paste on the card
 Bill typed "begin with what decision? im confused" on the Froeb Ch 3 "begin with the decision" card. Grok did not explain anything: it pasted his words on top of the old answer.
 
