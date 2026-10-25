@@ -131,6 +131,16 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.6 - Mute means the microphone, so noise cannot stop a lesson
+Bill listens on his phone in noisy places and the lesson kept stopping. Three things were doing it, and all three were the microphone, not the audio:
+- **Mute meant the wrong thing.** The Mute pill called the tutor's own mute, which *stops the tutor talking* and leaves the microphone open to catch the unmute phrase. It also froze every on-screen button except Stop. The one thing it did not do was stop the app listening.
+- **Half-heard noise could stop the lesson.** `heard()` checked for a mute command *before* it checked whether the phrase was finished, so an interim transcript of background noise - "mood", "paws", "moot" - cancelled the audio. Other noise parsed as a command (next, repeat, stop) does the same.
+- **On some Android phones opening the microphone pauses the audio**, which the app then has to detect and work around.
+
+Now: **&#127908; Mute the mic** switches the microphone off. The recognizer session is closed and nothing restarts it, nothing heard can reach the tutor (the engine refuses too), the lesson plays straight through with no listening gaps, and every on-screen button still works by tap. The button turns red and reads **&#128263; Mic off &ndash; tap to listen**, the status line says "Microphone off, so noise cannot stop the lesson", and the setting is saved: it survives topic changes, starting a new session and a reload. Voice cannot undo it, by design, so the way back is the button.
+Separately, a mute spoken by voice now needs a finished phrase rather than an interim guess, so half-heard noise no longer stops a lesson even with the microphone on. Recognizer errors (no-speech, audio-capture, network, aborted) never touched playback and there is now a test that says so.
+Tests: `tests/engine.test.js` (mic off ignores everything, buttons and auto-advance keep working, the setting is remembered, no interim mute, no listening gap) and `python3 tests/e2e_v596.py` (the real screen: tap, recognizer closed and never restarted, audio keeps playing, buttons, reload, tap back on).
+
 ## v5.9.5 - Froeb Chapter 3 problem 3-1: opportunity cost is profit given up
 One card in BUS 5421 Froeb **Chapter 3** (`froeb-ch03-opp-cost-profit-given-up`) for the free-Springsteen-ticket problem, where the easy wrong answer is $80, the price of the U2 ticket. The answer leads with "$20, not $80", shows $100 - $80 = $20, and quotes the book: "The opportunity cost of an alternative is what you give up to pursue it," and the cost of the alternative you choose is "the forgone opportunity to earn profit from the other." (p. 29). Chapter 3 goes from 32 cards to 33.
 

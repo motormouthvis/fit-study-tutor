@@ -1,6 +1,6 @@
 /* Offline cache. v2: app files are network-first (so updates arrive quickly); audio clips are cached on demand
    in a separate cache that survives version bumps. Bump VERSION whenever any app file changes. */
-var VERSION = "study-tutor-v5.9.5";
+var VERSION = "study-tutor-v5.9.6";
 var AUDIO_CACHE = "study-tutor-audio-v1";
 var FILES = ["./", "index.html", "style.css", "app.js", "engine.js", "questions.js", "lessons-data.js", "statements.js", "cards-v50.js", "books-data.js", "sync-merge.js", "flashcards.js", "practice-data.js", "practice.js", "ask-config.js", "audio-manifest.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 self.addEventListener("install", function (e) {

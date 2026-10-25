@@ -436,7 +436,7 @@
   }
 
   /* ---------------- the Tutor (session logic, no DOM) ---------------- */
-  var DEFAULTS = { unmuteKeyword: "resume tutor", rate: 1, voiceURI: "", bargeIn: true, alsoUnmute: true, autoAdvance: true, lessonAuto: true, soundOk: false, schema: 2, wakeLock: true, fontScale: 1, muteMode: "keyword", introCount: 0, explainNotes: 0, explainWaitMs: 3500, lessonGapMs: 600, listenGapMs: 3000, topicGapMs: 7000, deviceMode: "auto", learnView: "listen", splitPct: 50 };
+  var DEFAULTS = { unmuteKeyword: "resume tutor", rate: 1, voiceURI: "", bargeIn: true, alsoUnmute: true, micOff: false, autoAdvance: true, lessonAuto: true, soundOk: false, schema: 2, wakeLock: true, fontScale: 1, muteMode: "keyword", introCount: 0, explainNotes: 0, explainWaitMs: 3500, lessonGapMs: 600, listenGapMs: 3000, topicGapMs: 7000, deviceMode: "auto", learnView: "listen", splitPct: 50 };
   var PRAISE = ["Correct.", "That's right.", "Yes.", "Good.", "Right."];
   var sp = speakable;
   function lessonChunks(tp, simple) { return chunkText(simple ? tp.simple : tp.lesson, 260).map(sp); }
@@ -556,7 +556,10 @@
       return { action: "ignored-muted" };
     }
     if (!this.running) return { action: "ignored-idle" };
-    if (isMuteCommand(alts)) { this.mute(); return { action: "mute" }; }
+    // v5.9.6: the microphone is off, so nothing heard may touch the lesson. Belt and braces: the app also stops the recognizer.
+    if (this.settings.micOff) return { action: "ignored-mic-off" };
+    // Mute stops the audio, so it waits for a final result: interim transcripts of background noise used to trigger it.
+    if (isFinal && isMuteCommand(alts)) { this.mute(); return { action: "mute" }; }
     if (keywordMatch(alts, this.settings.unmuteKeyword) && kwTokens(alts[0]).length <= kwTokens(this.settings.unmuteKeyword).length + 1) return { action: "ignored-unmute-while-listening" };
     if (this.settings.alsoUnmute && hasUnmuteWord(alts)) return { action: "ignored-unmute-while-listening" };
     if (!isFinal) return { action: "interim" };
@@ -843,7 +846,8 @@
       } else self.lessonEnd();
     });
   };
-  P.lessonGap = function () { return (this.settings.bargeIn || this.voiceOff) ? this.settings.lessonGapMs : Math.max(this.settings.lessonGapMs, this.settings.listenGapMs); };
+  // v5.9.6: with the microphone switched off there is nobody to listen for, so no quiet gap to leave: the lesson runs on
+  P.lessonGap = function () { return (this.settings.bargeIn || this.voiceOff || this.settings.micOff) ? this.settings.lessonGapMs : Math.max(this.settings.lessonGapMs, this.settings.listenGapMs); };
   P.lessonEnd = function () {
     var self = this, tp = this.topics[this.lesson.ti], last = this.lesson.ti >= this.topics.length - 1;
     this.phase = "lessonEnd";

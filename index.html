@@ -62,7 +62,7 @@
       </div>
       <div class="ctlrow2">
         <button id="btnSpeed" class="pill" aria-label="Playback speed">1.0&times;</button>
-        <button class="pill micbtn" data-mic>&#127908; Mute</button>
+        <button class="pill micbtn" data-mic aria-pressed="false" title="Switch the microphone off so noise cannot interrupt the lesson">&#127908; Mute the mic</button>
         <button id="btnStmt" class="pill" hidden>&#128202; Statements</button>
       </div>
       <div id="lText" class="qtext lesson">Tap PLAY to start listening.</div>
@@ -133,7 +133,7 @@
     </div>
     <div id="quizBar" class="quizbar" hidden>
       <button class="pill" data-ui="repeat">&#128266; Repeat</button>
-      <button class="pill micbtn" data-mic>&#127908; Mute</button>
+      <button class="pill micbtn" data-mic aria-pressed="false" title="Switch the microphone off so noise cannot interrupt the lesson">&#127908; Mute the mic</button>
       <span class="small">Answered <span id="sessCount">0</span> &middot; right <span id="sessRight">0</span></span>
     </div>
     <div id="quizCard" class="card" hidden>
@@ -302,6 +302,7 @@
         <li><b>Listening needs internet.</b> Chrome sends your voice to Google to turn it into text. If you are offline, use the buttons. Questions and tapping still work offline.</li>
         <li><b>You may hear a small beep or tone</b> each time the microphone restarts. That is Chrome, not this app.</li>
         <li><b>Free-form answers are graded by keywords.</b> I look for the key ideas in what you said. It is approximate. Tap "I was right" or "I was wrong" (or say it) to overrule me.</li>
+        <li><b>Noisy places.</b> Tap <b>&#127908; Mute the mic</b> on the Learn screen and the microphone is switched off: nothing you or anyone near you says can stop, pause or skip the lesson, and the audio keeps playing straight through with no quiet gaps. The button then reads <b>&#128263; Mic off &ndash; tap to listen</b>, and it stays off through topic changes and after a reload until you tap it again. Every on-screen button (PLAY / PAUSE, back and forward 10 s, speed, previous and next topic) still works by tap. Voice commands do nothing while the mic is off, including "unmute", so the way back is the button.</li>
         <li><b>Talking while I talk.</b> The big PLAY / PAUSE button always works instantly. Saying "mute" while I am playing audio works when "Listen while I talk" is on in Settings (the default). If your phone pauses the audio when the microphone opens, I turn it off automatically; then I leave a 3-second quiet gap after each lesson part so you can say back, repeat, next, or mute.</li>
         <li><b>No sound?</b> Open the menu and tap Test sound. Raise the media volume, turn off silent mode, check Bluetooth. I never skip ahead if the audio fails; I stop and show a red message.</li>
         <li><b>Number problems</b> use the phone's built-in voice, which some phones do not support. If it fails, read the question on screen.</li>
