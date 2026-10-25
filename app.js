@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.8.6";
+  var APP_VERSION = "v5.9";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -581,7 +581,7 @@
   }
   function fcFilterOptions() {
     var sel = $("fcFilter"), h = "<option value='all'>All cards</option><option value='course:acct'>BUS 5601 Accounting (all)</option><option value='course:econ'>BUS 5421 Economics (all)</option>" +
-      "<option value='sa'>Statement Analysis</option><option value='mine'>My cards (AI) (" + FL.filterCards("mine").length + ")</option><option value='restudy'>Restudy only</option><option value='unseen'>Unseen</option>";
+      "<option value='sa'>Statement Analysis</option><option value='mine'>My cards (AI) (" + FL.filterCards("mine").length + ")</option><option value='restudy'>Restudy only</option><option value='important'>Important only</option><option value='unseen'>Unseen</option>";
     ["acct", "econ"].forEach(function (co) {
       h += "<optgroup label='" + (co === "acct" ? "BUS 5601 topics" : "BUS 5421 topics") + "'>";
       FL.TOPICS.filter(function (t) { return t.course === co; }).forEach(function (t) { h += "<option value='topic:" + t.key + "'>" + fcEsc(t.name) + "</option>"; });
@@ -649,17 +649,20 @@
     }
     if (!c) {
       var none = !fc.sess.total;
-      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
-        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "");
+      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "important" ? ". No cards are marked Important yet. Tap \u2606 Important on a card to add one." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
+        : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "") + (st.important ? "<button class='bigbtn' id='fcImpOnly'>&#9733; Important only (" + st.important + ")</button>" : "");
       var b; if ((b = $("fcToSec"))) b.onclick = function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); };
       if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
       if ((b = $("fcAgain"))) b.onclick = function () { fcStart(); }; if ((b = $("fcRe"))) b.onclick = function () { fcSetFilter("restudy"); };
+      if ((b = $("fcImpOnly"))) b.onclick = function () { fcSetFilter("important"); };
       return;
     }
     var s = fc.st.cards[c.id] || {};
     var ttl = c.course === "sa" ? "Statement Analysis · " + c.health : c.custom ? (c.course === "acct" ? "BUS 5601 · " : c.course === "econ" ? "BUS 5421 · " : "") + FL.topicName(c.topic) + " · My card" : (c.course === "acct" ? "BUS 5601 · " : "BUS 5421 · ") + FL.topicName(c.topic);
     $("fcTopic").innerHTML = fcEsc(ttl + (s.seen ? "" : " · new")) + (c.custom ? "<span class='aibadge' title='Written with Grok'>AI</span>" : "") + (c.improved ? "<span class='aibadge imp' title='Improved with Grok on this device'>" + (c.custom ? "IMPROVED" : "AI IMPROVED") + "</span>" : "");
     $("fcStar").innerHTML = s.restudy ? "&#9733; Restudy" : "&#9734; Restudy"; $("fcStar").setAttribute("aria-pressed", s.restudy ? "true" : "false"); $("fcStar").classList.toggle("on", !!s.restudy);
+    $("fcImp").innerHTML = s.imp ? "&#9733; Important" : "&#9734; Important"; $("fcImp").setAttribute("aria-pressed", s.imp ? "true" : "false"); $("fcImp").classList.toggle("on", !!s.imp);
+    $("fcImp").title = s.imp ? "Important: tap to unmark (I)" : "Mark this card Important (I)";
     if (c.kind === "statement") {
       $("fcFront").innerHTML = "<div class='fcq'>" + fcEsc(c.company) + ": " + fcEsc(c.q) + "</div><div class='fctbls'>" + c.tables.map(fcTable).join("") + "</div>";
       $("fcBack").innerHTML = "<div class='fcans'>" + fcEsc(c.answer) + "</div><div class='fcwork'><b>Working:</b> " + fcEsc(c.work) + "</div><div class='fcint'><b>What it means:</b> " + fcEsc(c.interp) + "</div>";
@@ -684,12 +687,18 @@
   }
   function fcSkip() { if (fc.queue.length > 1) { fc.queue.push(fc.queue.shift()); fc.flipped = false; fcRender(); } }
   function fcStar() { var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}; FL.setRestudy(fc.st, id, !s.restudy); fcSave(); fcRender(); }
+  // v5.9: Bill's own Important star. Saved with the other card progress (so it syncs across his devices).
+  function fcImportant() {
+    var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}, on = !s.imp;
+    FL.setImportant(fc.st, id, on); fcSave(); fcRender();
+    fcSay(on ? "Marked Important. Study them with \u201cStudy important\u201d on the sections list." : "Important mark removed.");
+  }
   function fcSetFilter(v) { fc.filter = v; $("fcFilter").value = v; fcSave(); fcStart(); }
   function renderFlash() { if (fc.view === "study" && fc.queue) fcRender(); else { fc.view = "sections"; renderSections(); } }
   /* ---- v5.1: sections list (book chapters, topics, Statement Analysis, My cards) ---- */
   function fcSecLabel(filter) {
     var m = /^sec:/.test(filter) ? FL.parseSec(filter) : FL.filterSection(filter); if (!m) return "";
-    var sec = FL.sectionById(m.id); if (!sec) return ""; var mode = { all: "Study all", wrong: "Study missed", restudy: "Study restudy" }[m.mode];
+    var sec = FL.sectionById(m.id); if (!sec) return ""; var mode = { all: "Study all", wrong: "Study missed", restudy: "Study restudy", important: "Study important" }[m.mode];
     return sec.title + (mode ? " \u00B7 " + mode : "");
   }
   // keep a small log per section: one entry per study session (date, mode, cards studied, right, wrong)
@@ -706,12 +715,12 @@
       return "<button class='fcsbtn" + (extra || "") + "' data-sec='" + key + "' data-mode='" + mode + "'" + (count ? "" : " disabled") + "><b>" + label + "</b><span>" + count + (count === 1 ? " card" : " cards") + at + "</span></button>";
     }
     var h = "<div class='fcsec' data-secid='" + key + "'><div class='fcsectitle'>" + fcEsc(sec.title) + "</div>" +
-      "<div class='fcsecnums' aria-label='Counts'><span class='n right'><b>" + n.right + "</b> Right</span><span class='n wrong'><b>" + n.wrong + "</b> Wrong</span><span class='n restudy'><b>" + n.restudy + "</b> Restudy</span><span class='n unseen'><b>" + n.unseen + "</b> Unseen</span><span class='n total'><b>" + n.total + "</b> Total</span></div>" +
-      "<div class='fcsecbtns'>" + btn("all", "Study all", n.total, " go") + btn("wrong", "Study missed", n.wrong, " miss") + btn("restudy", "Study restudy", n.restudy, " rs") + "</div>";
+      "<div class='fcsecnums' aria-label='Counts'><span class='n right'><b>" + n.right + "</b> Right</span><span class='n wrong'><b>" + n.wrong + "</b> Wrong</span><span class='n restudy'><b>" + n.restudy + "</b> Restudy</span><span class='n important'><b>" + n.important + "</b> Important</span><span class='n unseen'><b>" + n.unseen + "</b> Unseen</span><span class='n total'><b>" + n.total + "</b> Total</span></div>" +
+      "<div class='fcsecbtns'>" + btn("all", "Study all", n.total, " go") + btn("wrong", "Study missed", n.wrong, " miss") + btn("restudy", "Study restudy", n.restudy, " rs") + btn("important", "Study important", n.important, " imp") + "</div>";
     h += "<details class='fchist'><summary>History (" + hist.length + (hist.length ? " session" + (hist.length === 1 ? "" : "s") : "") + ")</summary>";
     if (!hist.length) h += "<div class='small'>No sessions yet.</div>";
     else h += "<table class='fchtbl'><tr><th>When</th><th>Cards</th><th>Studied</th><th>Right</th><th>Wrong</th></tr>" + hist.slice(0, 10).map(function (e) {
-      return "<tr><td>" + fcDate(e.t) + "</td><td>" + ({ all: "All", wrong: "Missed", restudy: "Restudy" }[e.mode] || "All") + "</td><td>" + e.n + "</td><td class='r'>" + e.got + "</td><td class='w'>" + e.miss + "</td></tr>"; }).join("") + "</table>";
+      return "<tr><td>" + fcDate(e.t) + "</td><td>" + ({ all: "All", wrong: "Missed", restudy: "Restudy", important: "Important" }[e.mode] || "All") + "</td><td>" + e.n + "</td><td class='r'>" + e.got + "</td><td class='w'>" + e.miss + "</td></tr>"; }).join("") + "</table>";
     return h + "</details></div>";
   }
   // v5.3: the study screen fits the window: the card fills the space left above the grade buttons, and its text shrinks until it all fits (no page scrolling)
@@ -730,7 +739,7 @@
     $("fcStudy").hidden = true; box.hidden = false;
     var open = {}; Array.prototype.forEach.call(box.querySelectorAll("details[data-g]"), function (d) { open[d.dataset.g] = d.open; });
     var openHist = {}; Array.prototype.forEach.call(box.querySelectorAll(".fcsec"), function (d) { var x = d.querySelector(".fchist"); if (x && x.open) openHist[d.dataset.secid] = 1; });
-    var h = "<h2 class='fcsechead'>Flash Cards</h2><p class='small fcsecintro'>Pick a section. Right = your last answer was Got it. Wrong = your last answer was Missed. Restudy = starred cards (a miss stars a card for you).</p>";
+    var h = "<h2 class='fcsechead'>Flash Cards</h2><p class='small fcsecintro'>Pick a section. Right = your last answer was Got it. Wrong = your last answer was Missed. Restudy = starred cards (a miss stars a card for you). Important = cards you starred yourself with the \u2606 Important button on the card.</p>";
     var best = null; Object.keys(fc.st.pass || {}).forEach(function (k) { var inf = fcPassInfo(k), m = FL.parseSec(k); if (inf && inf.left > 0 && inf.done > 0 && FL.sectionById(m.id) && (!best || inf.u > best.inf.u)) best = { k: k, inf: inf, m: m }; });
     if (best) h += "<button class='bigbtn go fcresume' id='fcResume' data-sec='" + fcEsc(best.m.id) + "' data-mode='" + best.m.mode + "'>&#9654; Continue &middot; " + fcEsc(fcSecLabel(best.k)) + " &middot; " + best.inf.pos + " of " + best.inf.total + "</button>";
     FL.sectionList().forEach(function (g) {
@@ -750,7 +759,7 @@
   function renderFcStats() {
     var box = $("fcStats"); if (!box || !FL) return;
     var s = FL.stats(fc.st), h = "<div style='font-size:1.6rem;font-weight:900'>" + s.seen + " of " + s.total + " <span class='small'>cards seen</span></div>" +
-      "<div class='small'>Lifetime: " + s.got + " got it, " + s.miss + " missed" + (s.got + s.miss ? " (" + Math.round(s.acc * 100) + "%)" : "") + " &middot; " + s.mastered + " mastered &middot; " + s.restudy + " marked Restudy &middot; " + s.sessions + " sessions</div>";
+      "<div class='small'>Lifetime: " + s.got + " got it, " + s.miss + " missed" + (s.got + s.miss ? " (" + Math.round(s.acc * 100) + "%)" : "") + " &middot; " + s.mastered + " mastered &middot; " + s.restudy + " marked Restudy &middot; " + s.important + " marked Important &middot; " + s.sessions + " sessions</div>";
     Object.keys(FL.COURSES).forEach(function (k) { var b = s.byCourse[k]; if (!b) return; var n = b.got + b.miss;
       h += "<div class='small'>" + fcEsc(FL.COURSES[k]) + ": seen " + b.seen + "/" + b.total + (n ? ", " + Math.round(b.got / n * 100) + "% got" : "") + "</div>"; });
     if (s.byCourse.mine) { var bm = s.byCourse.mine, nm = bm.got + bm.miss; h += "<div class='small'>My cards (AI): " + bm.total + " saved, seen " + bm.seen + (nm ? ", " + Math.round(bm.got / nm * 100) + "% got" : "") + "</div>"; }
@@ -768,8 +777,9 @@
       b.dataset.sure = ""; b.classList.remove("sure"); b.querySelector(".fcrtxt").textContent = " Start over"; fcStartOver(); });
     $("fcBackSec").addEventListener("click", function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); });
     $("fcFilter").addEventListener("change", function () { fcSetFilter($("fcFilter").value); });
-    $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar")) return; fcFlip(); });
+    $("fcCard").addEventListener("click", function (e) { if (e.target.closest("#fcStar") || e.target.closest("#fcImp")) return; fcFlip(); });
     $("fcStar").addEventListener("click", function (e) { e.stopPropagation(); fcStar(); });
+    $("fcImp").addEventListener("click", function (e) { e.stopPropagation(); fcImportant(); });
     $("fcGot").addEventListener("click", function () { fcAnswer(true); });
     $("fcMissed").addEventListener("click", function () { fcAnswer(false); });
     document.addEventListener("keydown", function (e) {
@@ -783,6 +793,7 @@
       else if (k === "g" || k === "G" || k === "ArrowRight") { e.preventDefault(); fcAnswer(true); }
       else if (k === "m" || k === "M" || k === "ArrowLeft") { e.preventDefault(); fcAnswer(false); }
       else if (k === "r" || k === "R") { e.preventDefault(); fcStar(); }
+      else if (k === "i" || k === "I") { e.preventDefault(); fcImportant(); }
       else if (k === "n" || k === "N") { e.preventDefault(); fcSkip(); }
     });
     window.__fc = fc;
@@ -898,8 +909,10 @@
   }
 
 
-  /* ================= v4.9: AI flash cards (Improve / Expand / Create), My cards, export / import ================= */
-  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", prompt: "", topic: "mine", tries: 0 };
+  /* ================= v4.9: AI flash cards (Improve / Expand / Create), My cards, export / import =================
+     v5.9: Improve and Expand now start with an instruction box (type it or talk it) and the improved card is shown
+     as a preview you can Save, Cancel or refine again. base = the version the next instruction works from. */
+  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", instr: "", prompt: "", topic: "mine", tries: 0, base: null, asked: [] };
   function mycLoad() {
     var m = storage.load("mycards", null); MYC = (m && typeof m === "object") ? m : {};
     if (!Array.isArray(MYC.cards)) MYC.cards = []; if (!MYC.over || typeof MYC.over !== "object") MYC.over = {};
@@ -938,6 +951,7 @@
   function aiCall(kind, o) {
     if (!ASK.url) return Promise.reject(new Error("AI cards need Ask Grok, which is not switched on yet."));
     var body = { kind: kind, topic: String(o.topic || "").slice(0, 200), partText: String(o.text || "").slice(0, 4000), prompt: String(o.prompt || "").slice(0, 300) };
+    AI.lastSent = body;
     return fetch(ASK.url + "/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .catch(function () { throw new Error(navigator.onLine === false ? "No internet connection. AI cards need internet." : "Could not reach Grok. Check the connection and tap Try again."); })
       .then(function (r) {
@@ -978,55 +992,160 @@
     });
     return h;
   }
+  /* ---- v5.9: talk instead of type. Browser speech recognition writes a live transcript into a text box
+     so Bill can edit it before sending; if the browser has no speech recognition the box is typing-only. ---- */
+  var DICT = { rec: null, ta: null, btn: null, hint: null, base: "", said: "", on: false };
+  function dictAvailable() { return !!SR; }
+  function dictLabel() {
+    if (!DICT.btn) return;
+    DICT.btn.innerHTML = DICT.on ? "\u23F9 Stop" : "\uD83C\uDFA4 Talk";
+    DICT.btn.classList.toggle("on", DICT.on); DICT.btn.setAttribute("aria-pressed", DICT.on ? "true" : "false");
+  }
+  function dictSay(msg) { if (DICT.hint) { DICT.hint.textContent = msg || ""; DICT.hint.hidden = !msg; } }
+  function dictWrite(txt) { if (!DICT.ta) return; var max = +DICT.ta.getAttribute("maxlength") || 300; DICT.ta.value = txt.slice(0, max); }
+  function dictStop(quiet) {
+    var r = DICT.rec; DICT.rec = null; if (DICT.on) { DICT.on = false; dictLabel(); if (!quiet) dictSay("Stopped. Edit the words if you need to, then send."); }
+    if (r) { try { r.onend = null; r.onresult = null; r.onerror = null; r.stop(); } catch (e) { try { r.abort(); } catch (e2) {} } }
+    try { syncMic(); } catch (e) {}
+  }
+  function dictStart(ta, btn, hint) {
+    if (!SR || !ta) return;
+    if (DICT.on) { dictStop(); return; }
+    try { stopRec(); } catch (e) {}   // never run two recognizers at once
+    var r; try { r = new SR(); } catch (e) { DICT.hint = hint; dictSay("Voice typing would not start here. Type your instruction instead."); return; }
+    r.lang = "en-US"; r.continuous = true; r.interimResults = true;
+    DICT = { rec: r, ta: ta, btn: btn, hint: hint, base: ta.value ? ta.value.replace(/\s+$/, "") + " " : "", said: "", on: true };
+    dictLabel(); dictSay("Listening\u2026 say what you want changed, then tap Stop. The words appear in the box so you can fix them.");
+    r.onresult = function (ev) {
+      if (DICT.rec !== r) return;
+      var fin = "", mid = "";
+      for (var i = ev.resultIndex; i < ev.results.length; i++) { var t = ev.results[i][0].transcript; if (ev.results[i].isFinal) fin += t; else mid += t; }
+      if (fin.trim()) DICT.said += (DICT.said ? " " : "") + fin.trim();
+      dictWrite(DICT.base + DICT.said + (mid.trim() ? (DICT.said ? " " : "") + mid.trim() : ""));
+    };
+    r.onerror = function (ev) {
+      if (DICT.rec !== r) return; var e = ev && ev.error;
+      var msg = (e === "not-allowed" || e === "service-not-allowed") ? "Chrome blocked the microphone. Allow it from the icon in the address bar, or just type."
+        : e === "network" ? "Voice typing needs an internet connection. Type your instruction instead."
+        : e === "no-speech" ? "I did not hear anything. Tap Talk again, or type it." : "Voice typing stopped. You can type instead.";
+      dictStop(true); dictSay(msg);
+    };
+    r.onend = function () { if (DICT.rec === r) dictStop(); };
+    try { r.start(); } catch (e) { dictStop(true); dictSay("Voice typing would not start. Type your instruction instead."); }
+  }
+  // one instruction box: label, textarea, mic button, hint line (or a typing-only note when speech is unavailable)
+  function aiInstrBox(id, label, value, placeholder, maxlen) {
+    var mic = dictAvailable() ? "<button type='button' class='btn aimic' id='" + id + "Mic' aria-pressed='false' aria-label='Talk instead of typing'>\uD83C\uDFA4 Talk</button>" : "";
+    return "<label class='lbl' for='" + id + "'>" + fcEsc(label) + "</label>" +
+      "<div class='airow'><textarea id='" + id + "' rows='3' maxlength='" + (maxlen || 300) + "' placeholder='" + fcEsc(placeholder || "") + "'>" + fcEsc(value || "") + "</textarea>" + mic + "</div>" +
+      "<div class='small aimichint' id='" + id + "Hint'" + (dictAvailable() ? " hidden" : "") + ">" +
+      (dictAvailable() ? "" : "Voice typing is not available in this browser \u2014 type what you want instead.") + "</div>";
+  }
+  var AI_CHIPS = ["Make it shorter and clearer", "Explain it in simpler words", "Add a short worked example", "Turn it into an exam-style question", "Keep the textbook wording, fix the question"];
+  function aiChipsHtml(id) { return "<div class='aichips'>" + AI_CHIPS.map(function (t, i) { return "<button type='button' class='aichip' data-for='" + id + "' data-chip='" + i + "'>" + fcEsc(t) + "</button>"; }).join("") + "</div>"; }
+  function aiWireInstr(id, onSend, focus) {
+    var ta = $(id); if (!ta) return;
+    var mic = $(id + "Mic"), hint = $(id + "Hint");
+    if (mic) mic.addEventListener("click", function () { dictStart(ta, mic, hint); });
+    ta.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && onSend) { e.preventDefault(); onSend(); } });
+    Array.prototype.forEach.call($("fcAiBody").querySelectorAll(".aichip[data-for='" + id + "']"), function (ch) {
+      ch.addEventListener("click", function () { var t = AI_CHIPS[+ch.dataset.chip]; ta.value = ta.value.trim() ? ta.value.trim() + ". " + t : t; ta.focus(); });
+    });
+    if (focus !== false) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
+  }
   function aiShow() { $("fcAi").hidden = false; }
-  function aiClose() { $("fcAi").hidden = true; AI.mode = null; AI.card = null; AI.res = null; AI.busy = false; AI.tries++; try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
+  function aiClose() { dictStop(true); $("fcAi").hidden = true; AI.mode = null; AI.card = null; AI.res = null; AI.base = null; AI.busy = false; AI.tries++; try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
   function aiFoot(btns) { var f = $("fcAiFoot"); f.innerHTML = btns.map(function (b) { return "<button class='btn " + (b.cls || "") + "' id='" + b.id + "'" + (b.dis ? " disabled" : "") + ">" + b.t + "</button>"; }).join(""); btns.forEach(function (b) { $(b.id).addEventListener("click", b.fn); }); }
+  function aiCardHtml(cls, head, v) { return "<div class='aicol" + (cls ? " " + cls : "") + "'><h4>" + fcEsc(head) + "</h4><div class='f'>" + fcEsc(v.f) + "</div><div class='b'>" + fcEsc(v.b) + "</div></div>"; }
+  function aiAskedHtml() { return AI.asked && AI.asked.length ? "<div class='small aiasked'>You asked for: " + AI.asked.map(fcEsc).join(" \u2192 ") + "</div>" : ""; }
   function aiRender() {
     var body = $("fcAiBody"), c = AI.card, title = { improve: "\u2728 Improve this card", expand: "\u2795 More cards like this", create: "\uD83D\uDCDD Create a card" }[AI.mode] || "";
     $("fcAiTitle").textContent = title;
     var err = AI.err ? "<div class='aierr' role='alert'>" + fcEsc(AI.err) + "</div>" : "";
-    if (AI.busy) { body.innerHTML = "<div class='aibusy'>Grok is " + (AI.mode === "create" ? "writing your card" : AI.mode === "expand" ? "writing new cards" : "rewriting this card") + "\u2026</div>"; aiFoot([{ id: "aiCancel", t: "Cancel", fn: aiClose }]); return; }
+    var base = AI.base || (c ? { f: c.f, b: c.b } : { f: "", b: "" });
+    if (AI.busy) { dictStop(true); body.innerHTML = "<div class='aibusy'>Grok is " + (AI.mode === "create" ? "writing your card" : AI.mode === "expand" ? "writing new cards" : "rewriting this card") + "\u2026</div>"; aiFoot([{ id: "aiCancel", t: "Cancel", fn: aiClose }]); return; }
     if (AI.mode === "create" && !AI.res) {
-      body.innerHTML = "<label class='lbl' for='aiPrompt'>What should the card be about?</label><textarea id='aiPrompt' rows='3' maxlength='300' placeholder='Type a topic or a question, e.g. What is working capital?'>" + fcEsc(AI.prompt) + "</textarea>" +
+      body.innerHTML = aiInstrBox("aiPrompt", "What should the card be about? (type it or tap Talk)", AI.prompt, "e.g. a card on working capital with a small example", 300) +
         "<label class='lbl' for='aiTopic'>Course topic (optional)</label><select id='aiTopic'>" + aiTopicOptions(AI.topic) + "</select>" + err;
       aiFoot([{ id: "aiDraft", t: "Draft the card", cls: "go", fn: aiDoCreate }, { id: "aiCancel", t: "Cancel", fn: aiClose }]);
-      $("aiPrompt").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aiDoCreate(); } });
-      $("aiPrompt").focus(); return;
+      aiWireInstr("aiPrompt", aiDoCreate); return;
     }
-    if (!AI.res) { body.innerHTML = err; aiFoot([{ id: "aiAgain", t: "\u21BB Try again", cls: "go", fn: aiRun }, { id: "aiCancel", t: "Close", fn: aiClose }]); return; }
+    if ((AI.mode === "improve" || AI.mode === "expand") && !AI.res) {
+      var isImp = AI.mode === "improve";
+      body.innerHTML = aiCardHtml("now", isImp ? "The card now" : "The card you are expanding", base) +
+        aiInstrBox("aiInstr", isImp ? "What do you want changed? (type it or tap Talk)" : "What should the new cards cover? (optional \u2014 type it or tap Talk)", AI.instr,
+          isImp ? "e.g. make the question harder and keep the textbook wording in the answer" : "e.g. three cards on the formulas, with a worked example", 300) +
+        aiChipsHtml("aiInstr") + err;
+      aiFoot([{ id: "aiGo", t: isImp ? "Ask Grok to improve it" : "Ask Grok for more cards", cls: "go", fn: aiDoInstr }, { id: "aiCancel", t: "Cancel", fn: aiClose }]);
+      aiWireInstr("aiInstr", aiDoInstr); return;
+    }
+    if (!AI.res) { body.innerHTML = err; aiFoot([{ id: "aiAgain", t: "\u21BB Try again", cls: "go", fn: aiRun }, { id: "aiBack", t: "Change what I asked for", fn: aiBackToInstr }, { id: "aiCancel", t: "Close", fn: aiClose }]); return; }
     if (AI.mode === "improve") {
       var n = AI.res[0];
-      body.innerHTML = "<div class='aicmp'><div class='aicol'><h4>Before</h4><div class='f'>" + fcEsc(c.f) + "</div><div class='b'>" + fcEsc(c.b) + "</div></div><div class='aicol new'><h4>After (Grok)</h4><div class='f'>" + fcEsc(n.f) + "</div><div class='b'>" + fcEsc(n.b) + "</div></div></div>" + err;
-      aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveImprove }, { id: "aiDiscard", t: "Discard", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]); $("aiSave").focus();
+      body.innerHTML = aiAskedHtml() + "<div class='aicmp'>" + aiCardHtml("", "Before", { f: c.f, b: c.b }) + aiCardHtml("new", "After (Grok)", n) + "</div>" + err +
+        "<details class='airefine'" + (AI.err ? " open" : "") + "><summary>Not right? Tell Grok what else to change</summary>" +
+        aiInstrBox("aiMore", "What else should change? (type it or tap Talk)", "", "e.g. shorter answer, keep the quote from the book", 300) + aiChipsHtml("aiMore") +
+        "<button class='btn go aiwide' id='aiRefine'>\u2728 Improve it again</button></details>";
+      aiFoot([{ id: "aiSave", t: "\u2713 Save (replace the card)", cls: "go", fn: aiSaveImprove }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
+      aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine);
+      try { $("aiSave").focus(); } catch (e) {}
     } else if (AI.mode === "expand") {
-      body.innerHTML = "<p class='small'>Tick the cards to keep.</p>" + AI.res.map(function (x, i) { return "<label class='aipick'><input type='checkbox' data-i='" + i + "' checked><div><div class='f'>" + fcEsc(x.f) + "</div><div class='b'>" + fcEsc(x.b) + "</div></div></label>"; }).join("") + err;
-      var upd = function () { var k = body.querySelectorAll("input:checked").length; var sv = $("aiSave"); sv.disabled = !k; sv.textContent = k ? "Save " + k + " card" + (k === 1 ? "" : "s") : "Save"; };
-      aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveExpand }, { id: "aiDiscard", t: "Discard", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
-      Array.prototype.forEach.call(body.querySelectorAll("input"), function (i) { i.addEventListener("change", upd); }); upd();
+      body.innerHTML = aiAskedHtml() + "<p class='small'>Tick the cards to keep.</p>" + AI.res.map(function (x, i) { return "<label class='aipick'><input type='checkbox' data-i='" + i + "' checked><div><div class='f'>" + fcEsc(x.f) + "</div><div class='b'>" + fcEsc(x.b) + "</div></div></label>"; }).join("") + err +
+        "<details class='airefine'><summary>Ask for different cards</summary>" + aiInstrBox("aiMore", "What should they cover instead? (type it or tap Talk)", "", "e.g. only formulas, with worked numbers", 300) +
+        "<button class='btn go aiwide' id='aiRefine'>\u2795 Ask again</button></details>";
+      var upd = function () { var k = body.querySelectorAll(".aipick input:checked").length; var sv = $("aiSave"); sv.disabled = !k; sv.textContent = k ? "Save " + k + " card" + (k === 1 ? "" : "s") : "Save"; };
+      aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveExpand }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
+      Array.prototype.forEach.call(body.querySelectorAll(".aipick input"), function (i) { i.addEventListener("change", upd); }); upd();
+      aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine);
     } else {
       var d = AI.res[0];
       body.innerHTML = "<p class='small'>Draft from Grok. You can edit it before saving.</p><label class='lbl' for='aiF'>Front (question or term)</label><textarea id='aiF' rows='2' maxlength='600'>" + fcEsc(d.f) + "</textarea><label class='lbl' for='aiB'>Back (answer)</label><textarea id='aiB' rows='5' maxlength='1500'>" + fcEsc(d.b) + "</textarea>" + err;
-      aiFoot([{ id: "aiSave", t: "Save card", cls: "go", fn: aiSaveCreate }, { id: "aiDiscard", t: "Discard", fn: aiClose }, { id: "aiAgain", t: "\u21BB Redraft", fn: aiRun }]);
+      aiFoot([{ id: "aiSave", t: "Save card", cls: "go", fn: aiSaveCreate }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Redraft", fn: aiBackToInstr }]);
     }
   }
+  /* What Grok is sent for Improve / Expand: the card as it stands, Bill's own instruction, and the house style.
+     It all goes in partText because the Worker's improve/expand modes only forward that field. */
+  function aiBuildText() {
+    var c = AI.card, base = AI.base || (c ? { f: c.f, b: c.b } : { f: "", b: "" }), instr = String(AI.instr || "").trim();
+    var t = c && c.kind === "statement" ? askCardText(c) : "Front: " + base.f + "\n\nBack: " + base.b;
+    t = "THE CARD\n" + t;
+    if (instr) t += "\n\nWHAT BILL ASKED FOR (follow this instruction above anything else):\n" + instr.slice(0, 300);
+    t += "\n\nHOUSE STYLE: the front is a test-style question a student could be asked; the back is a short, correct model answer. " +
+      "Keep any wording in quotation marks and any page reference such as (p. 17) exactly as they are, unless Bill asked for them to change. Plain text, no markdown.";
+    return t.slice(0, 4000);
+  }
   function aiRun() {
-    var tok = ++AI.tries; AI.busy = true; AI.err = ""; AI.res = (AI.mode === "create") ? null : null; aiRender();
+    dictStop(true);
+    var tok = ++AI.tries; AI.busy = true; AI.err = ""; AI.res = null; aiRender();
     var c = AI.card, name = c ? (c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic)) : (AI.topic !== "mine" ? FL.topicName(AI.topic) : "");
-    var p = AI.mode === "create" ? aiCall("create", { topic: name, prompt: AI.prompt }) : aiCall(AI.mode, { topic: name, text: askCardText(c) });
+    var p = AI.mode === "create" ? aiCall("create", { topic: name, prompt: AI.prompt }) : aiCall(AI.mode, { topic: name, text: aiBuildText() });
     p.then(function (cards) { if (tok !== AI.tries) return; AI.busy = false; AI.res = cards; aiRender(); },
       function (e) { if (tok !== AI.tries) return; AI.busy = false; AI.res = null; AI.err = e.message; aiRender(); });
   }
   function aiDoCreate() {
-    var v = ($("aiPrompt").value || "").trim(); if (!v) { AI.err = "Type a topic or a question first."; aiRender(); return; }
-    AI.prompt = v.slice(0, 300); AI.topic = $("aiTopic").value; aiRun();
+    var v = ($("aiPrompt").value || "").trim(); if (!v) { AI.err = "Say or type what the card should be about first."; aiRender(); return; }
+    dictStop(true); AI.prompt = v.slice(0, 300); AI.topic = $("aiTopic").value; AI.asked = [AI.prompt]; aiRun();
   }
+  function aiDoInstr() {
+    var v = ($("aiInstr").value || "").trim();
+    if (AI.mode === "improve" && !v) { AI.err = "Say or type what you want changed (or tap one of the suggestions)."; aiRender(); return; }
+    dictStop(true); AI.instr = v.slice(0, 300); AI.asked = v ? [AI.instr] : []; aiRun();
+  }
+  // refine: the next instruction works from the card Grok just produced, so changes build up
+  function aiRefine() {
+    var ta = $("aiMore"), v = ta ? (ta.value || "").trim() : "";
+    if (!v) { if (ta) { ta.focus(); } return; }
+    dictStop(true);
+    if (AI.res && AI.res[0] && AI.mode === "improve") AI.base = { f: AI.res[0].f, b: AI.res[0].b };
+    AI.instr = v.slice(0, 300); AI.asked = (AI.asked || []).concat([AI.instr]).slice(-4); aiRun();
+  }
+  function aiBackToInstr() { dictStop(true); AI.res = null; AI.err = ""; aiRender(); }
   function aiOpen(mode, card) {
     $("menu").hidden = true; fcMoreClose();
     if (mode !== "create" && !card) { fcSay("No card is showing. Open Flash Cards first."); return; }
     if (mode === "improve" && card.kind === "statement") { fcSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic."); return; }
-    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1 };
-    aiShow();
-    if (mode === "create") aiRender(); else aiRun();
+    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", instr: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1, base: null, asked: [] };
+    aiShow(); aiRender();
   }
   function aiSaveImprove() {
     var c = AI.card, n = AI.res && AI.res[0]; if (!c || !n) return;

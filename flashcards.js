@@ -521,20 +521,21 @@
     return groups;
   }
   function sectionById(id) { var gs = sectionList(); for (var i = 0; i < gs.length; i++) for (var j = 0; j < gs[i].sections.length; j++) if (gs[i].sections[j].id === id) return gs[i].sections[j]; return null; }
-  // "sec:<section id>" or "sec:<section id>:all|wrong|restudy"
+  // "sec:<section id>" or "sec:<section id>:all|wrong|restudy|important"
   function parseSec(filter) {
     var t = String(filter).slice(4), i = t.lastIndexOf(":"), mode = "all";
-    if (i >= 0 && /^(all|wrong|restudy)$/.test(t.slice(i + 1))) { mode = t.slice(i + 1); t = t.slice(0, i); }
+    if (i >= 0 && /^(all|wrong|restudy|important)$/.test(t.slice(i + 1))) { mode = t.slice(i + 1); t = t.slice(0, i); }
     return { id: t, mode: mode };
   }
   function secMatch(filter, c, s) {
     var p = parseSec(filter), sec = sectionById(p.id); if (!sec || !sec.test(c)) return false;
-    if (p.mode === "wrong") return cardStatus(s) === "wrong"; if (p.mode === "restudy") return !!(s && s.restudy); return true;
+    if (p.mode === "wrong") return cardStatus(s) === "wrong"; if (p.mode === "restudy") return !!(s && s.restudy);
+    if (p.mode === "important") return !!(s && s.imp); return true;
   }
-  // counts for one section: total, right, wrong, unseen (right + wrong + unseen = total), restudy (starred; can overlap)
+  // counts for one section: total, right, wrong, unseen (right + wrong + unseen = total), restudy and important (starred; both can overlap)
   function sectionStats(sec, st) {
-    st = st || { cards: {} }; var r = { total: 0, right: 0, wrong: 0, unseen: 0, restudy: 0 };
-    ALL.forEach(function (c) { if (!sec.test(c)) return; var s = st.cards[c.id]; r.total++; r[cardStatus(s)]++; if (s && s.restudy) r.restudy++; });
+    st = st || { cards: {} }; var r = { total: 0, right: 0, wrong: 0, unseen: 0, restudy: 0, important: 0 };
+    ALL.forEach(function (c) { if (!sec.test(c)) return; var s = st.cards[c.id]; r.total++; r[cardStatus(s)]++; if (s && s.restudy) r.restudy++; if (s && s.imp) r.important++; });
     return r;
   }
   // which section a filter value belongs to (for session history); null when it does not map to one
@@ -549,7 +550,7 @@
     st.hist = st.hist || {}; var a = st.hist[secId] = st.hist[secId] || []; entry.mode = mode; a.unshift(entry); if (a.length > 20) a.length = 20; return entry;
   }
 
-  // filter: "all" | "sec:<id>[:wrong|restudy]" | "course:acct" | "course:econ" | "topic:<key>" | "sa" | "restudy" | "unseen"
+  // filter: "all" | "sec:<id>[:wrong|restudy|important]" | "course:acct" | "course:econ" | "topic:<key>" | "sa" | "restudy" | "important" | "unseen"
   function filterCards(filter, st) {
     st = st || { cards: {} };
     return ALL.filter(function (c) {
@@ -557,6 +558,7 @@
       if (!filter || filter === "all") return true;
       if (filter === "sa") return c.course === "sa";
       if (filter === "mine") return !!c.custom;
+      if (filter === "important") return !!s.imp;
       if (filter === "restudy") return !!s.restudy;
       if (filter === "unseen") return !s.seen;
       if (filter.indexOf("sec:") === 0) return secMatch(filter, c, s);
@@ -588,18 +590,22 @@
     return q;
   }
   function setRestudy(st, id, on) { var s = st.cards[id] || (st.cards[id] = { seen: 0, got: 0, miss: 0 }); s.restudy = !!on; }
+  // v5.9: Important is Bill's own star (imp). It is never set automatically; a miss only sets Restudy.
+  function setImportant(st, id, on) { var s = st.cards[id] || (st.cards[id] = { seen: 0, got: 0, miss: 0 }); if (on) s.imp = true; else delete s.imp; }
+  function isImportant(st, id) { var s = st && st.cards && st.cards[id]; return !!(s && s.imp); }
   function stats(st) {
     st = st || newState();
-    var seen = 0, mastered = 0, restudy = 0, byCourse = {};
+    var seen = 0, mastered = 0, restudy = 0, important = 0, byCourse = {};
     ALL.forEach(function (c) {
       var s = st.cards[c.id], b = byCourse[c.course] || (byCourse[c.course] = { total: 0, seen: 0, got: 0, miss: 0 }); b.total++;
       if (s && s.seen) { seen++; b.seen++; b.got += s.got; b.miss += s.miss; if (s.got > s.miss && !s.restudy) mastered++; }
       if (s && s.restudy) restudy++;
+      if (s && s.imp) important++;
     });
     var n = st.life.got + st.life.miss;
-    return { total: ALL.length, seen: seen, unseen: ALL.length - seen, mastered: mastered, restudy: restudy, got: st.life.got, miss: st.life.miss, acc: n ? st.life.got / n : 0, byCourse: byCourse, sessions: st.sessions || 0 };
+    return { total: ALL.length, seen: seen, unseen: ALL.length - seen, mastered: mastered, restudy: restudy, important: important, got: st.life.got, miss: st.life.miss, acc: n ? st.life.got / n : 0, byCourse: byCourse, sessions: st.sessions || 0 };
   }
   return { MINE: MINE, MINE_NAME: MINE_NAME, setUser: setUser, baseCard: baseCard, validTopic: validTopic, BASE: BASE, COURSES: COURSES, TOPICS: TOPICS, CARDS: CARDS, SA: SA, ALL: ALL, COMPANIES: COMPANIES, SAQ: SAQ, topicName: topicName, filterCards: filterCards,
     BOOKS: BOOKS, BK: BK, sectionList: sectionList, sectionById: sectionById, sectionStats: sectionStats, cardStatus: cardStatus, filterSection: filterSection, addHistory: addHistory, parseSec: parseSec,
-    buildQueue: buildQueue, answer: answer, setRestudy: setRestudy, stats: stats, newState: newState, REQUEUE_GAP: REQUEUE_GAP, shuffle: shuffle, rng: rng };
+    buildQueue: buildQueue, answer: answer, setRestudy: setRestudy, setImportant: setImportant, isImportant: isImportant, stats: stats, newState: newState, REQUEUE_GAP: REQUEUE_GAP, shuffle: shuffle, rng: rng };
 });
