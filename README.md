@@ -131,6 +131,9 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.8 - one more Froeb Chapter 4 card
+`froeb-ch04-ac-rising-mc-above`, last in Chapter 4: average cost rising means marginal cost is **above** average cost, which is not the same as marginal cost rising. Chapter 4 becomes 32 cards, Froeb 116, the deck 645 built-in cards.
+
 ## v5.9.7 - Froeb Chapter 4
 BUS 5421 Froeb **Chapter 4, "Extent (How Much) Decisions"**: 31 cards (the Card 42 to Card 72 set), written in our own words from the chapter, with each answer ending in the section or page reference from the notes, e.g. "(Ch 4, sect 4.2, pp. 39-40)". No textbook text is quoted, so these carry a section reference rather than a page quote. Ids are `froeb-ch04-<slug>`.
 
