@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 115 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 116 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-4 and 6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 115); assert.equal(F.BK.length, 265);
+  assert.equal(FR.length, 116); assert.equal(F.BK.length, 266);
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
@@ -240,7 +240,7 @@ test("v5.7: Froeb Chapters 1-4 and 6 cards: course 5421, page refs, long section
   const ch4ref = c => /^froeb-ch04-/.test(c.id) && / \(Ch 4, [^)]+\)$/.test(c.b);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-46]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 31, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 32, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -399,24 +399,24 @@ test("v5.9.5: the problem 3-1 card teaches profit given up, not the price of the
   assert.match(c.b, / \(p\. 29\)$/);
 });
 
-test("v5.9.7: Froeb Chapter 4 is a chapter like the others: 31 cards, stable ids, in every chapter filter", () => {
+test("v5.9.7: Froeb Chapter 4 is a chapter like the others: 32 cards, stable ids, in every chapter filter", () => {
   const b = F.BOOKS.find(x => x.id === "froeb"), ch = b.chapters.find(c => c.n === 4);
   assert.ok(ch, "no chapter 4"); assert.equal(ch.title, "Extent (How Much) Decisions");
   assert.equal(ch.key, "book:froeb-ch04");
   assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 4: Extent (How Much) Decisions");
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04");
-  assert.equal(cards.length, 31);
+  assert.equal(cards.length, 32);
   assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 4 && /^froeb-ch04-[a-z0-9-]+$/.test(c.id)));
   // the sections list builds the chapter pickers, so Chapter 4 gets Study all / missed / restudy / important for free
   const sec = F.sectionById("book:froeb-ch04");
   assert.ok(sec, "chapter 4 has no section"); assert.equal(sec.title, ch.title_full);
   const books = F.sectionList().find(g => g.id === "books");
   assert.ok(books.sections.some(s => s.id === "book:froeb-ch04"), "chapter 4 missing from Books and chapters");
-  assert.equal(F.sectionStats(sec, F.newState()).total, 31);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 32);
   const st = F.newState(); F.setImportant(st, cards[0].id, true);
   assert.deepEqual(F.filterCards("sec:book:froeb-ch04:important", st).map(c => c.id), [cards[0].id]);
   assert.equal(F.sectionStats(sec, st).important, 1);
-  assert.equal(F.filterCards("sec:book:froeb-ch04:all", st).length, 31);
+  assert.equal(F.filterCards("sec:book:froeb-ch04:all", st).length, 32);
 });
 test("v5.9.7: every Chapter 4 card matches the written wording, front and back, in order", () => {
   const want = [
@@ -454,10 +454,21 @@ test("v5.9.7: every Chapter 4 card matches the written wording, front and back, 
   ];
   assert.equal(want.length, 31);
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04");
+  assert.ok(cards.length >= want.length, "chapter 4 lost cards");   // later cards are checked by their own tests
   want.forEach(([slug, f, b], i) => {
     const c = cards[i];
     assert.equal(c.id, "froeb-ch04-" + slug);
     assert.equal(c.f, f, "front " + slug); assert.equal(c.b, b, "back " + slug);
     assert.ok(!/[*\\]/.test(c.f + c.b), "markdown left in " + slug);
   });
+});
+
+test("v5.9.8: the AC-rising card is the last Chapter 4 card and says MC need not be rising", () => {
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04"), c = cards[cards.length - 1];
+  assert.equal(c.id, "froeb-ch04-ac-rising-mc-above", "it should be the last card in the chapter");
+  assert.equal(c.course, "econ"); assert.equal(c.book, "froeb"); assert.equal(c.chapter, 4);
+  assert.equal(c.f, "Average cost is going up as output rises. What does that tell you about marginal cost, and does MC itself have to be rising?");
+  assert.equal(c.b, "MC is above AC. Average cost only rises when the next unit costs more than the current average (like a grade average rising only if the new score beats it). MC does NOT have to be rising: it can even be falling a little and still sit above AC. Mix-up trap: 'AC rising' means 'MC above AC', not 'MC rising'. (Ch 4, sect 4.2 and summary)");
+  assert.match(c.b, / \(Ch 4, [^)]+\)$/);
+  assert.equal(cards.filter(x => x.id === c.id).length, 1, "no duplicate id");
 });
