@@ -131,6 +131,11 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.10 - Froeb Chapter 5
+BUS 5421 Froeb **Chapter 5, "Investment Decisions: Look Ahead and Reason Back"**: 41 cards in our own words, each answer ending in the section and page reference from the notes, e.g. "(Ch 5, sect 5.2, p. 51)". The chapter opening (apartment WACC example) cites "(Ch 5, overview)" because no page is known. Ids are `froeb-ch05-<slug>`. By section: overview 3, 5.1 5, 5.2 6, 5.3 6, 5.4 6, 5.5 3, 5.6 12. Eight cards are tagged "; summary" and together cover all seven "Summary of Main Points".
+Concepts the deck already had were not repeated (NPV and IRR definitions, future and present value, rule of 72, WACC definition, payback, contribution margin, break-even quantity formula, break-even price, avoidable cost, shutdown rule and its derivation, sunk cost, fixed vs sunk, accounting vs economic profit, generic hold-up). Chapter 5 adds the angles those cards do not have: the apartment, pension, A vs B, IRR, Nissan, Deere and printer numbers, and the chapter's traps.
+No wiring is needed: the chapter list is built from `books-data.js`, and Chapter 5 sorts between Chapters 4 and 6. Froeb is now Ch 1: 23, Ch 2: 25, Ch 3: 33, Ch 4: 40, Ch 5: 41, Ch 6: 3 = 165 cards, and the deck is 694 built-in cards.
+
 ## v5.9.9 - five Froeb Chapter 4 vocab cards
 After `froeb-ch04-ac-rising-mc-above`: `avoidable-cost`, `average-variable-cost`, `break-even-price`, `short-run-vs-long-run-avoidable`, `shutdown-rule-short-vs-long-run` (from the Entry and Shutdown Decisions lecture). Other vocab terms already had cards, so none were duplicated. Chapter 4 becomes 37 cards, Froeb 121, the deck 650 built-in cards.
 Then three more lecture cards at the end: `break-even-quantity-formula`, `shutdown-rule-derivation`, `average-avoidable-cost`. Chapter 4 becomes 40 cards, Froeb 124, the deck 653 built-in cards. The key-price table was already covered by `break-even-price`, `average-variable-cost` and `shutdown-rule-short-vs-long-run`.

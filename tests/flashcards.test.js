@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 124 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 165 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -227,9 +227,9 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
     for (const [slug, f, bk] of ch.cards) { assert.match(slug, /^[a-z0-9-]+$/); const k = b.id + ch.n + slug; assert.ok(!seen.has(k), "dup " + k); seen.add(k); assert.ok(f.length > 5 && bk.length > 5, slug); } } }
 });
 
-test("v5.7: Froeb Chapters 1-4 and 6 cards: course 5421, page refs, long section titles", () => {
+test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 124); assert.equal(F.BK.length, 274);
+  assert.equal(FR.length, 165); assert.equal(F.BK.length, 315);
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
@@ -238,9 +238,11 @@ test("v5.7: Froeb Chapters 1-4 and 6 cards: course 5421, page refs, long section
   const noPage = c => VERBATIM.includes(c.id) || /^froeb-ch03-ch3-summary-\d+$/.test(c.id);
   // Chapter 4 is written in our own words from the chapter, so its answers end with a section reference instead of a page
   const ch4ref = c => /^froeb-ch04-/.test(c.id) && / \(Ch 4, [^)]+\)$/.test(c.b);
-  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-46]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
+  // Chapter 5 is also in our own words; each answer ends with a section and page reference, or the overview
+  const ch5ref = c => /^froeb-ch05-/.test(c.id) && / \(Ch 5, (overview|sect 5\.[1-6], p\. \d+)(; summary)?\)$/.test(c.b);
+  assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-6]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || ch5ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 40, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 40, 41, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -487,4 +489,36 @@ test("v5.9.9: three lecture cards (break-even quantity, shutdown derivation, ave
     ["break-even-quantity-formula", "shutdown-rule-derivation", "average-avoidable-cost"]);
   for (const c of cards.slice(37)) { assert.match(c.b, / \(Ch 4, lecture: Entry and Shutdown Decisions\)$/); assert.equal(F.ALL.filter(x => x.id === c.id).length, 1); }
   assert.match(cards[37].b, /Q = F \/ \(P - MC\)/); assert.match(cards[39].b, /average total cost \(ATC\)/);
+});
+
+test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 41 cards, between Chapters 4 and 6, in every chapter filter", () => {
+  const b = F.BOOKS.find(x => x.id === "froeb"), ch = b.chapters.find(c => c.n === 5);
+  assert.ok(ch, "no chapter 5"); assert.equal(ch.title, "Investment Decisions: Look Ahead and Reason Back");
+  assert.equal(ch.key, "book:froeb-ch05");
+  assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 5: Investment Decisions: Look Ahead and Reason Back");
+  assert.deepEqual(b.chapters.map(c => c.n), [1, 2, 3, 4, 5, 6]);
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05");
+  assert.equal(cards.length, 41);
+  assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 5 && /^froeb-ch05-[a-z0-9-]+$/.test(c.id)));
+  assert.equal(new Set(cards.map(c => c.id)).size, 41, "duplicate ids");
+  // page references come from the section pages in the notes
+  const pages = { "5.1": 49, "5.2": 51, "5.3": 53, "5.4": 55, "5.5": 56, "5.6": 56 };
+  for (const c of cards) { const m = c.b.match(/\(Ch 5, sect (5\.\d), p\. (\d+)/); if (m) assert.equal(+m[2], pages[m[1]], c.id); else assert.match(c.b, /\(Ch 5, overview\)$/, c.id); }
+  const sec = F.sectionById("book:froeb-ch05");
+  assert.ok(sec, "chapter 5 has no section"); assert.equal(sec.title, ch.title_full);
+  const books = F.sectionList().find(g => g.id === "books").sections.map(s => s.id);
+  assert.ok(books.indexOf("book:froeb-ch04") < books.indexOf("book:froeb-ch05") && books.indexOf("book:froeb-ch05") < books.indexOf("book:froeb-ch06"), "chapter order");
+  assert.equal(F.sectionStats(sec, F.newState()).total, 41);
+  const st = F.newState(); F.setImportant(st, cards[0].id, true);
+  assert.deepEqual(F.filterCards("sec:book:froeb-ch05:important", st).map(c => c.id), [cards[0].id]);
+  assert.equal(F.filterCards("sec:book:froeb-ch05:all", st).length, 41);
+});
+test("v5.9.10: Chapter 5 covers the seven summary points and the key worked numbers", () => {
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05"), txt = cards.map(c => c.b).join("\n");
+  assert.equal(cards.filter(c => /; summary\)$/.test(c.b)).length, 8);
+  for (const re of [/7\.4%/, /10\.125%/, /\$20,485/, /\+\$0\.88/, /-\$1\.20/, /7\.93%/, /40,000 trucks/, /9,600 trucks/, /Q = 5/, /\$6\./, /\$6 \+ \$2 = \$8/, /look ahead and reason back/])
+    assert.match(txt, re, String(re));
+  // no duplicates of Ch 4 concepts: none of these Ch 5 slugs repeats a Ch 4 slug
+  const ch4 = new Set(F.ALL.filter(c => c.topic === "book:froeb-ch04").map(c => c.id.replace("froeb-ch04-", "")));
+  for (const c of cards) assert.ok(!ch4.has(c.id.replace("froeb-ch05-", "")), c.id);
 });
