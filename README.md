@@ -133,6 +133,7 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 
 ## v5.9.9 - five Froeb Chapter 4 vocab cards
 After `froeb-ch04-ac-rising-mc-above`: `avoidable-cost`, `average-variable-cost`, `break-even-price`, `short-run-vs-long-run-avoidable`, `shutdown-rule-short-vs-long-run` (from the Entry and Shutdown Decisions lecture). Other vocab terms already had cards, so none were duplicated. Chapter 4 becomes 37 cards, Froeb 121, the deck 650 built-in cards.
+Then three more lecture cards at the end: `break-even-quantity-formula`, `shutdown-rule-derivation`, `average-avoidable-cost`. Chapter 4 becomes 40 cards, Froeb 124, the deck 653 built-in cards. The key-price table was already covered by `break-even-price`, `average-variable-cost` and `shutdown-rule-short-vs-long-run`.
 
 ## v5.9.8 - one more Froeb Chapter 4 card
 `froeb-ch04-ac-rising-mc-above`, last in Chapter 4: average cost rising means marginal cost is **above** average cost, which is not the same as marginal cost rising. Chapter 4 becomes 32 cards, Froeb 116, the deck 645 built-in cards.

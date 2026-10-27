@@ -50,7 +50,7 @@ with sync_playwright() as p:
         check(tag + ": improved card override still applies", pg.evaluate("Flash.ALL.find(c=>c.id==='balance-4').f") == "MY OWN FRONT")
         sa = nums(pg, "sa"); check(tag + ": Statement Analysis section has 48 cards", sa["total"] == 48, sa)
         check(tag + ": My cards (AI) section counts the saved card", nums(pg, "mine")["total"] == 1)
-        total_all = nums(pg, "all")["total"]; check(tag + ": All cards = every built-in card + 1 my card", total_all == 651, total_all)
+        total_all = nums(pg, "all")["total"]; check(tag + ": All cards = every built-in card + 1 my card", total_all == 654, total_all)
         pg.screenshot(path=os.path.join(ROOT, "tests", "shot-v51-%s-sections.png" % tag))
         # topic groups
         check(tag + ": topic groups exist for both courses", pg.locator("details.fcgroup[data-g=t5601]").count() == 1 and pg.locator("details.fcgroup[data-g=t5421]").count() == 1)
