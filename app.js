@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.10";
+  var APP_VERSION = "v5.9.11";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -620,7 +620,7 @@
   }
   function fcStart(fresh) {
     var cards = FL.filterCards(fc.filter, fc.st), key = fcPassKey();
-    fc.flipped = false; fc.histRef = null;
+    fc.flipped = false; fc.histRef = null; fc.off = 0;
     if (key) {
       fc.st.pass = fc.st.pass || {}; var p = fc.st.pass[key], inF = {}, mode = FL.parseSec(fc.filter).mode;
       cards.forEach(function (c) { inF[c.id] = 1; });
@@ -649,7 +649,7 @@
     $("fcSecName").textContent = fcSecLabel(fc.filter); $("fcSecName").title = fcSecLabel(fc.filter); document.body.classList.add("fcstudy");
     var st = FL.stats(fc.st), id = fc.queue[0], c = id && fcCard(id);
     var pinf = fcPassKey() && fcPassInfo(fcPassKey());
-    $("fcScore").innerHTML = (pinf && pinf.left ? "<b>Card " + pinf.pos + " of " + pinf.total + "</b> &middot; " : "") + "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
+    $("fcScore").innerHTML =  (pinf && pinf.left ? "<b>Card " + (pinf.pos + ((fc.off || 0) % Math.max(1, fc.queue.length))) + " of " + pinf.total + "</b> &middot; " : "") + "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
       " &middot; <b>Lifetime:</b> " + (st.got + st.miss ? Math.round(st.acc * 100) + "%" : "new") + " &middot; " + st.restudy + " Restudy";
     $("fcScore").title = "Lifetime: " + st.got + " got, " + st.miss + " missed";
     $("fcStage").hidden = !c; $("fcEmpty").hidden = !!c;
@@ -691,6 +691,7 @@
     $("fcBack").hidden = !fc.flipped; $("fcCard").classList.toggle("flipped", fc.flipped);
     $("fcHint").textContent = fc.flipped ? (device === "desktop" ? "Did you get it? G or → got it, M or ← missed" : "Did you get it?") : (device === "desktop" ? "Click the card or press Space to flip" : "Tap the card to flip");
     $("fcGot").disabled = $("fcMissed").disabled = !fc.flipped;
+    $("fcPrev").hidden = $("fcNext").hidden = fc.flipped; $("fcBtns").classList.toggle("nav", !fc.flipped); $("fcPrev").disabled = $("fcNext").disabled = fc.queue.length < 2;
     fcFit();
   }
   function fcFlip() { if (!fc.queue.length) return; fc.flipped = !fc.flipped; fcRender(); if (fc.flipped && device !== "desktop") { var b = $("fcBack"); b.scrollIntoView && b.scrollIntoView({ block: "nearest" }); } }
@@ -698,10 +699,11 @@
     if (!fc.queue.length || !fc.flipped) return;
     var aid = fc.queue[0], pk = fcPassKey(), pp = pk && fc.st.pass && fc.st.pass[pk];
     if (pp && got) { if (!pp.done) pp.done = {}; pp.done[aid] = 1; pp.u = Date.now(); }
-    fc.queue = FL.answer(fc.st, fc.queue, fc.queue[0], got); fc.sess[got ? "got" : "miss"]++; fcHist(got); fc.flipped = false; fcSave(); fcRender();
+    fc.queue = FL.answer(fc.st, fc.queue, fc.queue[0], got); fc.sess[got ? "got" : "miss"]++; fcHist(got); fc.flipped = false; fc.off = 0; fcSave(); fcRender();
     if (device !== "desktop") window.scrollTo(0, 0);
   }
-  function fcSkip() { if (fc.queue.length > 1) { fc.queue.push(fc.queue.shift()); fc.flipped = false; fcRender(); } }
+  // v5.9.11: skip arrows. Move to the next / previous card with no grade; the deck loops (last -> first, first -> last). fc.off tracks the shown position.
+  function fcSkip(dir) { dir = dir < 0 ? -1 : 1; if (fc.queue.length > 1) { fc.queue = FL.skip(fc.queue, dir); fc.off = ((fc.off || 0) + dir + fc.queue.length) % fc.queue.length; fc.flipped = false; fcRender(); } }
   function fcStar() { var id = fc.queue[0]; if (!id) return; var s = fc.st.cards[id] || {}; FL.setRestudy(fc.st, id, !s.restudy); fcSave(); fcRender(); }
   // v5.9: Bill's own Important star. Saved with the other card progress (so it syncs across his devices).
   function fcImportant() {
@@ -798,6 +800,8 @@
     $("fcImp").addEventListener("click", function (e) { e.stopPropagation(); fcImportant(); });
     $("fcGot").addEventListener("click", function () { fcAnswer(true); });
     $("fcMissed").addEventListener("click", function () { fcAnswer(false); });
+    $("fcPrev").addEventListener("click", function () { fcSkip(-1); });
+    $("fcNext").addEventListener("click", function () { fcSkip(1); });
     document.addEventListener("keydown", function (e) {
       if (!$("tab-cards").classList.contains("active") || fc.view !== "study" || e.ctrlKey || e.metaKey || e.altKey) return;
       var tg = e.target, tag = tg && tg.tagName; if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
@@ -806,11 +810,12 @@
       if (tg && tg.classList && (tg.classList.contains("askq") || tg.classList.contains("fcmorebtn")) && (k === " " || k === "Enter")) return;
       if (k === " ") { e.preventDefault(); fcFlip(); }
       else if (k === "Enter" && tg === $("fcCard")) { e.preventDefault(); fcFlip(); }
+      else if (!fc.flipped && (k === "ArrowRight" || k === "ArrowLeft")) { e.preventDefault(); fcSkip(k === "ArrowLeft" ? -1 : 1); }   // v5.9.11: question side only; the answer side keeps got / missed
       else if (k === "g" || k === "G" || k === "ArrowRight") { e.preventDefault(); fcAnswer(true); }
       else if (k === "m" || k === "M" || k === "ArrowLeft") { e.preventDefault(); fcAnswer(false); }
       else if (k === "r" || k === "R") { e.preventDefault(); fcStar(); }
       else if (k === "i" || k === "I") { e.preventDefault(); fcImportant(); }
-      else if (k === "n" || k === "N") { e.preventDefault(); fcSkip(); }
+      else if (k === "n" || k === "N") { e.preventDefault(); fcSkip(1); }
     });
     window.__fc = fc;
   }

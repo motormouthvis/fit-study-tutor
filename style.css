@@ -238,6 +238,11 @@ body.immersive .article { max-height:calc(100vh - 220px); }
 .fcans { font-size:2rem; font-weight:900; color:var(--green); }
 .fcwork, .fcint { margin-top:8px; font-size:1.05rem; }
 .fchint { margin-top:auto; padding-top:12px; color:var(--mut); font-size:.9rem; text-align:center; }
+.fcbtns.nav { grid-template-columns:76px 1fr 1fr 76px; gap:8px; }
+.fcbtns.nav .bigbtn { width:100%; }
+.fcbtns .fcnavbtn { width:100%; font-size:1.8rem; padding:4px; background:#1a3f8f; border-color:#9bc2ff; }
+@media (max-width:600px) { .fcbtns.nav { grid-template-columns:64px 1fr 1fr 64px; gap:6px; } .fcbtns.nav .bigbtn:not(.fcnavbtn) { font-size:1.2rem; } }
+.fcnavbtn[hidden] { display:none; }
 .fcbtns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .fcbtns .bigbtn { margin:0; }
 .fcbtns .bigbtn:disabled { opacity:.35; }
