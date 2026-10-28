@@ -196,11 +196,13 @@
         <div id="fcBack" class="fcface fcback" hidden></div>
         <div id="fcHint" class="fchint">Tap the card or press Space to flip</div>
       </div>
-      <div class="fcbtns">
+      <div class="fcbtns" id="fcBtns">
+        <button id="fcPrev" class="bigbtn fcnavbtn" aria-label="Previous card (no grade)" title="Previous card, no grade (&larr;)">&#9664;</button>
         <button id="fcMissed" class="bigbtn fcmiss" disabled>&#10007; Missed <span class="kbd">M / &larr;</span></button>
         <button id="fcGot" class="bigbtn go" disabled>&#10003; Got it <span class="kbd">G / &rarr;</span></button>
+        <button id="fcNext" class="bigbtn fcnavbtn" aria-label="Next card (no grade)" title="Next card, no grade (&rarr;)">&#9654;</button>
       </div>
-      <p class="small fckeys">Keys: Space flip &middot; G or &rarr; got it &middot; M or &larr; missed &middot; R restudy star &middot; I important star &middot; N skip. Missed cards go to the end of the session and are marked Restudy.</p>
+      <p class="small fckeys">Keys: Space flip &middot; G or &rarr; got it &middot; M or &larr; missed &middot; R restudy star &middot; I important star &middot; N skip &middot; before flipping, &larr; / &rarr; skip to the previous / next card (no grade). Missed cards go to the end of the session and are marked Restudy.</p>
     </div>
     </div>
   </section>

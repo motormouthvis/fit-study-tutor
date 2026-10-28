@@ -522,3 +522,14 @@ test("v5.9.10: Chapter 5 covers the seven summary points and the key worked numb
   const ch4 = new Set(F.ALL.filter(c => c.topic === "book:froeb-ch04").map(c => c.id.replace("froeb-ch04-", "")));
   for (const c of cards) assert.ok(!ch4.has(c.id.replace("froeb-ch05-", "")), c.id);
 });
+
+test("v5.9.11: skip moves next / previous, wraps at the ends, and never changes card state", () => {
+  const st = F.newState(), before = JSON.stringify(st), q = ["a", "b", "c", "d"];
+  assert.deepEqual(F.skip(q, 1), ["b", "c", "d", "a"]);
+  assert.deepEqual(F.skip(q, -1), ["d", "a", "b", "c"], "previous from the first card wraps to the last");
+  assert.deepEqual(F.skip(F.skip(q, 1), -1), q, "next then previous returns to the same card");
+  let r = q; for (let i = 0; i < 4; i++) r = F.skip(r, 1); assert.deepEqual(r, q, "next from the last card wraps to the first");
+  assert.deepEqual(q, ["a", "b", "c", "d"], "input queue is not mutated");
+  assert.deepEqual(F.skip(["a"], 1), ["a"]); assert.deepEqual(F.skip([], -1), []);
+  assert.equal(JSON.stringify(st), before, "no stats recorded");
+});

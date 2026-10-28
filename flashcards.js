@@ -581,6 +581,13 @@
   var REQUEUE_GAP = 3;
   function newState() { return { cards: {}, life: { got: 0, miss: 0 }, sessions: 0, hist: {} }; }
   // record an answer; returns the new queue. A missed card goes to the END of the session queue (v5.7.2).
+  // v5.9.11: skip to the next (dir 1) or previous (dir -1) card without grading it. The queue is a loop, so it wraps at the ends.
+  // Returns a new queue; card state and stats are never touched.
+  function skip(queue, dir) {
+    var q = (queue || []).slice(); if (q.length < 2) return q;
+    if (dir < 0) q.unshift(q.pop()); else q.push(q.shift());
+    return q;
+  }
   function answer(st, queue, id, got, now) {
     var s = st.cards[id] || (st.cards[id] = { seen: 0, got: 0, miss: 0 });
     s.seen++; s.last = now || Date.now(); s.lastOk = !!got;
@@ -607,5 +614,5 @@
   }
   return { MINE: MINE, MINE_NAME: MINE_NAME, setUser: setUser, baseCard: baseCard, validTopic: validTopic, BASE: BASE, COURSES: COURSES, TOPICS: TOPICS, CARDS: CARDS, SA: SA, ALL: ALL, COMPANIES: COMPANIES, SAQ: SAQ, topicName: topicName, filterCards: filterCards,
     BOOKS: BOOKS, BK: BK, sectionList: sectionList, sectionById: sectionById, sectionStats: sectionStats, cardStatus: cardStatus, filterSection: filterSection, addHistory: addHistory, parseSec: parseSec,
-    buildQueue: buildQueue, answer: answer, setRestudy: setRestudy, setImportant: setImportant, isImportant: isImportant, stats: stats, newState: newState, REQUEUE_GAP: REQUEUE_GAP, shuffle: shuffle, rng: rng };
+    buildQueue: buildQueue, answer: answer, skip: skip, setRestudy: setRestudy, setImportant: setImportant, isImportant: isImportant, stats: stats, newState: newState, REQUEUE_GAP: REQUEUE_GAP, shuffle: shuffle, rng: rng };
 });
