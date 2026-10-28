@@ -50,7 +50,7 @@ with sync_playwright() as p:
         check(tag + ": improved card override still applies", pg.evaluate("Flash.ALL.find(c=>c.id==='balance-4').f") == "MY OWN FRONT")
         sa = nums(pg, "sa"); check(tag + ": Statement Analysis section has 48 cards", sa["total"] == 48, sa)
         check(tag + ": My cards (AI) section counts the saved card", nums(pg, "mine")["total"] == 1)
-        total_all = nums(pg, "all")["total"]; check(tag + ": All cards = every built-in card + 1 my card", total_all == 695, total_all)
+        total_all = nums(pg, "all")["total"]; check(tag + ": All cards = every built-in card + 1 my card", total_all == 696, total_all)
         pg.screenshot(path=os.path.join(ROOT, "tests", "shot-v51-%s-sections.png" % tag))
         # topic groups
         check(tag + ": topic groups exist for both courses", pg.locator("details.fcgroup[data-g=t5601]").count() == 1 and pg.locator("details.fcgroup[data-g=t5421]").count() == 1)
@@ -83,7 +83,7 @@ with sync_playwright() as p:
         btn(pg, CH, "restudy").click(); pg.wait_for_timeout(250)
         check(tag + ": Study restudy shows the starred card", pg.evaluate("window.__fc.queue.length") == 1 and "Study restudy" in pg.inner_text("#fcSecName"))
         # keys and ? and menu AI items still work in the study view
-        check(tag + ": ? button and card ... menu present", pg.locator("#fcFront .askq").count() >= 1 and pg.locator("#fcFront .fcmorebtn").count() == 1)
+        check(tag + ": single ? card helper button present", pg.locator("#fcFront .fcinfo").count() == 1 and pg.locator("#fcFront .askq, #fcFront .fcmorebtn").count() == 0)
         pg.click("#btnMenu"); pg.wait_for_selector("#menu:not([hidden])"); pg.click("#mImprove"); pg.wait_for_timeout(400)
         check(tag + ": menu Improve keeps the open study view and opens the AI sheet", pg.is_visible("#fcAi") and pg.is_visible("#fcCard"))
         pg.keyboard.press("Escape"); pg.wait_for_timeout(200)

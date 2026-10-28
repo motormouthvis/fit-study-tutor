@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 165 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 68 + 48);
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 165); assert.equal(F.BK.length, 315);
+  assert.equal(FR.length, 166); assert.equal(F.BK.length, 316);
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
@@ -242,7 +242,7 @@ test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section title
   const ch5ref = c => /^froeb-ch05-/.test(c.id) && / \(Ch 5, (overview|sect 5\.[1-6], p\. \d+)(; summary)?\)$/.test(c.b);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-6]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || ch5ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 40, 41, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 40, 42, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -491,16 +491,16 @@ test("v5.9.9: three lecture cards (break-even quantity, shutdown derivation, ave
   assert.match(cards[37].b, /Q = F \/ \(P - MC\)/); assert.match(cards[39].b, /average total cost \(ATC\)/);
 });
 
-test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 41 cards, between Chapters 4 and 6, in every chapter filter", () => {
+test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 42 cards, between Chapters 4 and 6, in every chapter filter", () => {
   const b = F.BOOKS.find(x => x.id === "froeb"), ch = b.chapters.find(c => c.n === 5);
   assert.ok(ch, "no chapter 5"); assert.equal(ch.title, "Investment Decisions: Look Ahead and Reason Back");
   assert.equal(ch.key, "book:froeb-ch05");
   assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 5: Investment Decisions: Look Ahead and Reason Back");
   assert.deepEqual(b.chapters.map(c => c.n), [1, 2, 3, 4, 5, 6]);
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05");
-  assert.equal(cards.length, 41);
+  assert.equal(cards.length, 42);
   assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 5 && /^froeb-ch05-[a-z0-9-]+$/.test(c.id)));
-  assert.equal(new Set(cards.map(c => c.id)).size, 41, "duplicate ids");
+  assert.equal(new Set(cards.map(c => c.id)).size, 42, "duplicate ids");
   // page references come from the section pages in the notes
   const pages = { "5.1": 49, "5.2": 51, "5.3": 53, "5.4": 55, "5.5": 56, "5.6": 56 };
   for (const c of cards) { const m = c.b.match(/\(Ch 5, sect (5\.\d), p\. (\d+)/); if (m) assert.equal(+m[2], pages[m[1]], c.id); else assert.match(c.b, /\(Ch 5, overview\)$/, c.id); }
@@ -508,10 +508,10 @@ test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 41 cards, between C
   assert.ok(sec, "chapter 5 has no section"); assert.equal(sec.title, ch.title_full);
   const books = F.sectionList().find(g => g.id === "books").sections.map(s => s.id);
   assert.ok(books.indexOf("book:froeb-ch04") < books.indexOf("book:froeb-ch05") && books.indexOf("book:froeb-ch05") < books.indexOf("book:froeb-ch06"), "chapter order");
-  assert.equal(F.sectionStats(sec, F.newState()).total, 41);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 42);
   const st = F.newState(); F.setImportant(st, cards[0].id, true);
   assert.deepEqual(F.filterCards("sec:book:froeb-ch05:important", st).map(c => c.id), [cards[0].id]);
-  assert.equal(F.filterCards("sec:book:froeb-ch05:all", st).length, 41);
+  assert.equal(F.filterCards("sec:book:froeb-ch05:all", st).length, 42);
 });
 test("v5.9.10: Chapter 5 covers the seven summary points and the key worked numbers", () => {
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05"), txt = cards.map(c => c.b).join("\n");
@@ -532,4 +532,18 @@ test("v5.9.11: skip moves next / previous, wraps at the ends, and never changes 
   assert.deepEqual(q, ["a", "b", "c", "d"], "input queue is not mutated");
   assert.deepEqual(F.skip(["a"], 1), ["a"]); assert.deepEqual(F.skip([], -1), []);
   assert.equal(JSON.stringify(st), before, "no stats recorded");
+});
+
+test("v5.9.13: the IRR-by-trial-and-error card sits right after the IRR worked example in Chapter 5, as a normal card", () => {
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05"), i = cards.findIndex(c => c.id === "froeb-ch05-irr-by-trial-and-error");
+  assert.ok(i > 0 && cards[i - 1].id === "froeb-ch05-irr-worked-example", "placed after the IRR worked example");
+  const c = cards[i]; assert.equal(c.course, "econ"); assert.equal(c.book, "froeb"); assert.equal(c.chapter, 5);
+  assert.match(c.f, /How do you find the IRR by trial and error/); assert.match(c.f, /\$100/); assert.match(c.f, /\$50 a year for 5 years/);
+  for (const re of [/50 \/ \(1 \+ r\)\^n/, /too low/, /too high/, /189\.54/, /149\.53/, /101\.76/, /just above 40%/, /\(Ch 5, sect 5\.2, p\. 51\)$/]) assert.match(c.b, re, String(re));
+  // the numbers are right: the sum of discounted payments at each guessed rate, and the IRR is a little above 40%
+  const pv = r => [1, 2, 3, 4, 5].reduce((s, n) => s + 50 / Math.pow(1 + r, n), 0);
+  assert.equal(pv(0.1).toFixed(2), "189.54"); assert.equal(pv(0.2).toFixed(2), "149.53"); assert.equal(pv(0.4).toFixed(2), "101.76");
+  assert.ok(pv(0.4) > 100 && pv(0.42) < 100);
+  assert.ok(!F.newState().cards[c.id], "not marked important or restudy by default");
+  assert.deepEqual(F.filterCards("sec:book:froeb-ch05:important", F.newState()).map(x => x.id), []);
 });
