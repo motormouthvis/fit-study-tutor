@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.13";
+  var APP_VERSION = "v5.9.14";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -1382,18 +1382,21 @@
   }
   function cpPendingStart(mode) {
     CP.pending = mode; $("cpType").value = ""; cpSay(CP_PENDING[mode][0] + ": " + CP_PENDING[mode][1], "ask"); $("cpHeard").textContent = ""; cpRefresh();
-    try { $("cpType").focus({ preventScroll: true }); } catch (e) {}
+    // v5.9.14: on a phone that can listen, do NOT pop the soft keyboard: it covers the panel, resizes the page and competes with the microphone. Typing is one tap on the box.
+    var caps = MicSupport.capabilities(window, navigator), touch = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    if (!(caps.sr && caps.secure && touch)) { try { $("cpType").focus({ preventScroll: true }); } catch (e) {} }
   }
   // The words he says or types are FEEDBACK about the card, sent to Grok as a note; the Improve / Create code checks the result and blocks Save if his words came back in the card.
   function cpLaunch(mode, note) {
-    var c = fcCurrent(); note = String(note || "").trim(); if (!c && mode !== "create") return;
-    cpHide(); cpFitSoon(); aiOpen(mode, c);
+    var c = fcCurrent(); note = String(note || "").trim();
+    if (!c && mode !== "create") { ev("card helper: no card for " + mode); cpSay("That card is no longer showing, so I could not " + (mode === "improve" ? "improve" : "make another from") + " it. Close this, open a card, and try again.", "err"); return; }
+    ev("card helper: " + mode + (note ? " with a note" : "")); cpHide(); cpFitSoon(); aiOpen(mode, c);
     if (mode === "create") { AI.prompt = note.slice(0, 300); AI.asked = [AI.prompt]; }
     else { AI.instr = note.slice(0, AI_INSTR_MAX); AI.asked = note ? [AI.instr] : []; }
     aiRun();
   }
   function cpDo(action, note) {
-    var c = fcCurrent(); if (!c) { cpClose(); return; } var said = "", cls = "ok";
+    var c = fcCurrent(); if (!c && action === "close") { cpClose(); return; } if (!c) { ev("card helper: no card for " + action); cpSay("No card is showing, so \u201C" + action + "\u201D did nothing. Open a card in Flash Cards first.", "err"); return; } var said = "", cls = "ok";
     if (action !== "delete") CP.delAt = 0;
     switch (action) {
       case "explain": cpClose(); openAskCard(c); return;
@@ -1439,7 +1442,7 @@
       prime: !!prime || CP.needPrime,
       onStatus: function (m) { cpSay(m, "ask"); },
       onInterim: function (t) { $("cpHeard").textContent = "Hearing: \u201C" + t + "\u201D"; },
-      onFinal: function (t) { cpEndListen(); CP.needPrime = false; cpSay("", ""); cpHandle(t); },
+      onFinal: function (t) { cpEndListen(); CP.needPrime = false; cpSay("", ""); ev("card helper heard: " + String(t).slice(0, 40)); cpHandle(t); },
       onError: function (info) {
         cpEndListen(); CP.needPrime = info.kind === "blocked" || info.kind === "no-start";   // the next Try again asks for the mic itself, from that tap
         cpSay(info.message, "err"); $("cpRetry").hidden = !info.retry; if (!info.retry || info.fatal) { try { $("cpType").focus({ preventScroll: true }); } catch (e) {} }
