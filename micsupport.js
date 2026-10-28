@@ -29,7 +29,7 @@
       case "service-not-allowed": return { kind: "service-off", fatal: true, retry: true, message: "This browser has speech-to-text switched off, even if the microphone itself works. Use the buttons or the type box." };
       case "no-speech": return { kind: "no-speech", fatal: false, retry: true, message: "I did not hear anything. Tap Try again and start talking right after it says Listening." };
       case "audio-capture": return { kind: "no-mic", fatal: false, retry: true, message: "No microphone was found, or another app is using it. Check the microphone, then tap Try again, or use the buttons or the type box." };
-      case "network": return { kind: "network", fatal: false, retry: true, message: "Turning speech into text needs the internet, and I cannot reach it right now. Check the connection and tap Try again, or use the type box." };
+      case "network": return { kind: "network", fatal: false, retry: true, message: "This browser's speech-to-text service did not answer. Your internet is probably fine: some car and in-app browsers cannot reach the speech service even when the connection works. Tap Try again once, or use the buttons or the type box." };
       case "aborted": return { kind: "stopped", fatal: false, retry: true, message: "Listening was stopped. Tap Try again when you are ready." };
       case "language-not-supported": return { kind: "language", fatal: true, retry: false, message: "This browser cannot recognise English speech. Use the buttons or the type box." };
       case "no-api": return { kind: "no-api", fatal: true, retry: false, message: "This browser can't listen. Use the buttons or the type box." + (caps.gum ? " (The microphone looks available, but there is no speech-to-text here.)" : "") };
