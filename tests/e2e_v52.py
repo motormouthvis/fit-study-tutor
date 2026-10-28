@@ -81,7 +81,7 @@ try:
     fcz.value.set_files(myfile); A.wait_for_timeout(300); settle(A); os.remove(myfile)
     pull(B); check("My card and improved card made on A appear on B", B.evaluate("!!Flash.ALL.find(c=>c.id==='my-sync-test') && Flash.ALL.find(c=>c.id==='balance-4').f==='SYNCED FRONT'"))
     B.evaluate("""()=>{var m=JSON.parse(localStorage.getItem('tutor.v1.mycards'));}""")
-    study(B, "mine", "all"); B.click("#fcFront .fcmorebtn"); B.wait_for_timeout(100); B.click("#fcmDelete"); B.click("#fcmDelete"); B.wait_for_timeout(200); settle(B)
+    study(B, "mine", "all"); B.click("#fcFront .fcinfo"); B.wait_for_timeout(100); B.click("#fcmDelete"); B.click("#fcmDelete"); B.wait_for_timeout(200); settle(B)
     pull(A); check("a My card deleted on B is deleted on A", A.evaluate("!Flash.ALL.find(c=>c.id==='my-sync-test')"))
     # reload keeps the code and the synced results
     A.reload(); A.wait_for_timeout(800); settle(A); cards(A); check("A: after reload, code kept and counts the same", nums(A) == nums(B) and A.evaluate("JSON.parse(localStorage.getItem('tutor.v1.sync')).code") == code)

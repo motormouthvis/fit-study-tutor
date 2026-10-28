@@ -297,17 +297,8 @@ body.dev-desktop.asking main { margin-right:min(460px, 38vw); }
 @media (max-width:480px) { .askpanel .askbox { height:86vh; max-height:86vh; } }
 
 /* v4.8: Ask Grok on flash cards */
-.fcface > .askq.fcask { float: right; margin: 0 0 6px 10px; position: relative; z-index: 2; }
 
 /* v4.9: AI flash cards */
-.fcface > .fcmorebtn { float:right; margin:0 0 6px 8px; position:relative; z-index:2; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; border:2px solid var(--mut); background:transparent; color:var(--mut); font-weight:900; font-size:1.1rem; line-height:1; padding:0 0 4px; cursor:pointer; }
-.fcface > .fcmorebtn:hover, .fcface > .fcmorebtn:focus-visible { background:var(--mut); color:#000; }
-@media (pointer:coarse) { .fcface > .fcmorebtn, .fcface > .askq.fcask { width:40px; height:40px; } }
-.fcmore { position:fixed; z-index:46; background:#14161a; border:3px solid #fff; border-radius:14px; padding:6px; min-width:230px; max-width:calc(100vw - 16px); box-shadow:0 8px 28px rgba(0,0,0,.7); }
-.fcmore[hidden] { display:none; }
-.fcmore button { display:block; width:100%; text-align:left; background:none; border:0; color:#fff; font-size:1.05rem; padding:12px 14px; min-height:48px; border-radius:10px; cursor:pointer; font-family:inherit; }
-.fcmore button:hover, .fcmore button:focus-visible { background:#2a2f38; outline:2px solid var(--accent); }
-.fcmore button[hidden] { display:none; }
 .aibadge { display:inline-block; font-size:.72rem; font-weight:900; letter-spacing:.04em; background:var(--accent); color:#000; border-radius:6px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
 .aibadge.imp { background:var(--amber); }
 .aibox { max-height:90vh; }
@@ -435,3 +426,40 @@ body.fcstudy #fcEmpty { margin:0; }
 .pqscore { font-size:1.2rem; margin:8px 0; }
 
 #soundCard .grid2 .bigbtn { width:100%; margin:8px 0; }
+
+
+/* v5.9.13: ONE "?" button per card side, and the card helper panel it opens */
+.fcface > .fcinfo { float:right; margin:0 0 6px 10px; position:relative; z-index:2; display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:3px solid var(--accent); background:transparent; color:var(--accent); font-weight:900; font-size:1.1rem; line-height:1; cursor:pointer; padding:0; }
+.fcface > .fcinfo:hover, .fcface > .fcinfo:focus-visible { background:var(--accent); color:#000; }
+@media (pointer:coarse) { .fcface > .fcinfo { width:46px; height:46px; font-size:1.3rem; } }
+.cardpanel { background:transparent; pointer-events:none; }
+.cardpanel .sheetbox { pointer-events:auto; max-height:70vh; box-shadow:0 -6px 28px rgba(0,0,0,.7); }
+.cpcardline { margin:0 0 8px; color:var(--mut); }
+.cptalk { width:100%; margin:4px 0 6px; min-height:64px; font-size:1.2rem; }
+.cptalk.on { background:var(--red); border-color:var(--red); color:#fff; }
+.cptalk:disabled { opacity:.6; }
+.cpstatus { min-height:1.4em; margin:2px 0 6px; font-size:1.05rem; }
+.cpstatus.err { color:var(--amber); font-weight:700; }
+.cpstatus.ok { color:var(--green); font-weight:700; }
+.cpstatus.ask { color:var(--accent); font-weight:700; }
+.cpheard { color:var(--mut); min-height:1.2em; margin:0 0 6px; font-size:.95rem; }
+.cpretry { width:100%; margin:0 0 8px; min-height:52px; background:var(--amber); color:#000; border-color:var(--amber); font-weight:800; }
+.cptype { align-items:center; margin:6px 0 4px; }
+.cptype input { flex:1 1 auto; min-width:0; background:#0e1013; color:#fff; border:2px solid var(--line); border-radius:10px; padding:12px; font-size:1.05rem; font-family:inherit; }
+.cptype .btn { flex:none; min-height:48px; }
+.cpgrp { margin:10px 0 4px; font-weight:800; color:var(--mut); font-size:.9rem; text-transform:uppercase; letter-spacing:.04em; }
+.cpgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cpgrid .btn { min-height:52px; margin:0; text-align:center; }
+.cpgrid .btn[hidden] { display:none; }
+.cpgrid .btn.on { background:var(--amber); color:#000; border-color:var(--amber); font-weight:800; }
+.cpgrid3 { grid-template-columns:1fr 1fr 1fr; }
+.cpgrid .btn:disabled { opacity:.45; }
+.cptips { margin:10px 0 0; }
+.mtmeter { height:14px; border:2px solid var(--line); border-radius:8px; margin:10px 0; overflow:hidden; background:#0e1013; }
+#mtBar { height:100%; width:0; background:var(--green); transition:width .08s linear; }
+.mtreport { background:#0e1013; border:2px solid var(--line); border-radius:10px; padding:10px; font-size:.85rem; white-space:pre-wrap; word-break:break-word; margin:6px 0; max-height:34vh; overflow:auto; user-select:text; }
+.mtverdict { font-weight:800; margin:6px 0 10px; color:var(--accent); }
+@media (max-width:420px) { .cpgrid3 { grid-template-columns:1fr 1fr; } }
+body.dev-desktop .cardpanel { inset:0 0 0 auto; width:min(420px, 36vw); justify-content:flex-end; align-items:stretch; }
+body.dev-desktop .cardpanel .sheetbox { height:100vh; max-height:100vh; border-radius:0; border-width:0 0 0 3px; max-width:none; }
+body.dev-desktop.cpopen main { margin-right:min(420px, 36vw); }

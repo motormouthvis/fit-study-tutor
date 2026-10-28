@@ -87,7 +87,7 @@ try:
     # ---- Improve with Grok: say what you want, preview, save, refine ----
     study(A, CH2)
     base = A.evaluate("()=>{var c=window.Flash.ALL.filter(function(x){return x.id===window.__fc.queue[0]})[0]; return [c.f,c.b]}")
-    A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmImprove"); A.wait_for_timeout(250)
+    A.click("#fcFront .fcinfo"); A.wait_for_timeout(150); A.click("#fcmImprove"); A.wait_for_timeout(250)
     check("Improve opens an instruction box, it does not call Grok yet", A.is_visible("#aiInstr") and not asked)
     check("the card as it stands is shown", base[0][:30] in A.inner_text("#fcAiBody"))
     check("there is a Talk button and no typing-only note", A.is_visible("#aiInstrMic") and A.is_hidden("#aiInstrHint"))
@@ -133,12 +133,12 @@ try:
     check("Save replaces the card on the device", front(A).endswith("Second pass front?"), front(A))
     A.click("#fcCard"); A.wait_for_timeout(120)
     check("the back is replaced too", "Second pass back." in A.inner_text("#fcBack"), A.inner_text("#fcBack"))
-    A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmReset"); A.wait_for_timeout(250)
+    A.click("#fcFront .fcinfo"); A.wait_for_timeout(150); A.click("#fcmReset"); A.wait_for_timeout(250)
     check("Reset to original still brings the real card back", base[0] in front(A), front(A))
 
     # ---- v5.9.2: Grok parroting the note back is caught, retried once, then Save is blocked ----
     NOTE = "begin with what decision? im confused"
-    A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmImprove"); A.wait_for_timeout(250)
+    A.click("#fcFront .fcinfo"); A.wait_for_timeout(150); A.click("#fcmImprove"); A.wait_for_timeout(250)
     card_now = A.evaluate("()=>{var c=window.Flash.ALL.filter(function(x){return x.id===window.__fc.queue[0]})[0]; return [c.f,c.b]}")
     check("the echo check spots the note inside a card", A.evaluate("(n)=>window.__aiEchoes(n, 'begin with what decision?  im confused ' + 'the rest of the answer')", NOTE) is True)
     check("the echo check does not fire on an ordinary improvement", A.evaluate("(n)=>window.__aiEchoes(n, 'Start with the decision: keep or drop the product.')", NOTE) is False)
@@ -161,12 +161,12 @@ try:
     reply = {"cards": [{"front": "Improved front?", "back": "Improved back."}]}
 
     # ---- the same box on Expand and Create ----
-    A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmExpand"); A.wait_for_timeout(250)
+    A.click("#fcFront .fcinfo"); A.wait_for_timeout(150); A.click("#fcmExpand"); A.wait_for_timeout(250)
     check("Expand asks what the new cards should cover", A.is_visible("#aiInstr") and A.is_visible("#aiInstrMic"))
     A.click("#aiGo"); A.wait_for_timeout(400)
     check("Expand sends with no instruction (it is optional)", asked[-1]["kind"] == "expand" and "WHAT BILL ASKED FOR" not in asked[-1]["partText"])
     A.click("#fcAiClose"); A.wait_for_timeout(150)
-    A.click("#fcFront .fcmorebtn"); A.wait_for_timeout(150); A.click("#fcmCreate"); A.wait_for_timeout(250)
+    A.click("#fcFront .fcinfo"); A.wait_for_timeout(150); A.click("#fcmCreate"); A.wait_for_timeout(250)
     check("Create has the Talk button too", A.is_visible("#aiPromptMic"))
     A.click("#aiPromptMic"); A.wait_for_timeout(150); A.evaluate("()=>window.__hear(['a card about working capital'])"); A.wait_for_timeout(200)
     check("talking fills the Create box", A.input_value("#aiPrompt") == "a card about working capital", A.input_value("#aiPrompt"))
@@ -182,7 +182,7 @@ try:
     study(B, CH2)
     box = B.evaluate("()=>{var r=document.getElementById('fcImp').getBoundingClientRect(); return [Math.round(r.width),Math.round(r.height)]}")
     check("phone: the Important button is a big tap target", box[1] >= 44, box)
-    B.click("#fcFront .fcmorebtn"); B.wait_for_timeout(150); B.click("#fcmImprove"); B.wait_for_timeout(250)
+    B.click("#fcFront .fcinfo"); B.wait_for_timeout(150); B.click("#fcmImprove"); B.wait_for_timeout(250)
     check("no speech recognition: no mic button, and it says to type", B.query_selector("#aiInstrMic") is None and "not available" in B.inner_text("#aiInstrHint"))
     B.fill("#aiInstr", "shorter please"); B.click("#aiGo"); B.wait_for_timeout(400)
     check("typing still works as the fallback", "Second pass front?" in B.inner_text("#fcAiBody") or "Improved front?" in B.inner_text("#fcAiBody"))

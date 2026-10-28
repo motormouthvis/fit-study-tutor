@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.11";
+  var APP_VERSION = "v5.9.13";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -199,8 +199,7 @@
       rec.onresult = onResult;
       rec.onerror = function (ev2) {
         var e = ev2 && ev2.error; recStats.errors++; recStats.lastErr = e || "?";
-        if (e === "not-allowed" || e === "service-not-allowed") { micError = "fatal"; showAlert("The microphone is blocked. Tap the lock icon in Chrome's address bar, allow Microphone for this site, then reload. You can still use the buttons."); }
-        else if (e === "audio-capture") { micError = "fatal"; showAlert("No microphone found. You can still use the buttons."); }
+        if (e === "not-allowed" || e === "service-not-allowed" || e === "audio-capture") { micError = "fatal"; showAlert(MicSupport.classifyError(e, MicSupport.capabilities(window, navigator)).message + " (Menu \u203A Test microphone shows what this browser allows.)"); }
         else if (e === "network") {
           // calm handling: retry quietly a couple of times, then give up until the user asks again or the connection returns
           netFails++; micError = netFails >= 3 ? "voice-off" : "network";
@@ -665,7 +664,7 @@
     }
     if (!c) {
       var none = !fc.sess.total;
-      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Use the ... menu on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "important" ? ". No cards are marked Important yet. Tap \u2606 Important on a card to add one." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
+      $("fcEmpty").innerHTML = none ? "<p>No cards match this filter" + (fc.filter === "mine" ? ". You have no saved cards yet. Tap the ? on a card to create one." : fc.filter === "restudy" ? ". Nothing is marked Restudy yet." : fc.filter === "important" ? ". No cards are marked Important yet. Tap \u2606 Important on a card to add one." : fc.filter === "unseen" ? ". You have seen every card." : ".") + "</p><button class='bigbtn' id='fcAll'>Show all cards</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>"
         : "<h2>Session done</h2><p style='font-size:1.3rem'>" + fc.sess.got + " got it, " + fc.sess.miss + " missed.</p><button class='bigbtn go' id='fcAgain'>Go again</button><button class='bigbtn' id='fcToSec'>&#8249; Back to all sections</button>" + (st.restudy ? "<button class='bigbtn' id='fcRe'>Restudy only (" + st.restudy + ")</button>" : "") + (st.important ? "<button class='bigbtn' id='fcImpOnly'>&#9733; Important only (" + st.important + ")</button>" : "");
       var b; if ((b = $("fcToSec"))) b.onclick = function () { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); };
       if ((b = $("fcAll"))) b.onclick = function () { fcSetFilter("all"); };
@@ -686,7 +685,8 @@
       $("fcFront").innerHTML = "<div class='fcq big" + (c.f.length > 170 ? " sm" : c.f.length > 90 ? " mid" : "") + "'>" + fcFrontHtml(c.f) + "</div>";
       $("fcBack").innerHTML = "<div class='fcbacktxt'>" + fcBackHtml(c.b) + "</div>";
     }
-    ["fcFront", "fcBack"].forEach(function (fid) { var mb = document.createElement("button"); mb.type = "button"; mb.className = "fcmorebtn"; mb.textContent = "\u22EF"; mb.setAttribute("aria-label", "Card actions: improve, expand, create"); mb.setAttribute("aria-haspopup", "menu"); mb.title = "More: improve, expand, create"; mb.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); if (!$("fcMore").hidden) fcMoreClose(); else fcMoreOpen(mb); }); var qb = askButton(function () { openAskCard(c); }, "Ask Grok to explain this card in more depth"); qb.classList.add("fcask"); qb.title = "Ask Grok to explain this card"; $(fid).insertBefore(qb, $(fid).firstChild); $(fid).insertBefore(mb, $(fid).firstChild); });
+    // v5.9.13: ONE button per card side (was a ? and a ... menu). It opens the card helper: explain / improve / make another / create, plus every other card action, by voice or buttons.
+    ["fcFront", "fcBack"].forEach(function (fid) { var ib = document.createElement("button"); ib.type = "button"; ib.className = "fcinfo"; ib.textContent = "?"; ib.setAttribute("aria-label", "Card helper: explain, improve, make another card, create a card. Use your voice or the buttons."); ib.setAttribute("aria-haspopup", "dialog"); ib.title = "Card helper (voice or buttons)"; ib.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); cpOpen(); }); $(fid).insertBefore(ib, $(fid).firstChild); });
     $("fcCard").classList.toggle("statement", c.kind === "statement");
     $("fcBack").hidden = !fc.flipped; $("fcCard").classList.toggle("flipped", fc.flipped);
     $("fcHint").textContent = fc.flipped ? (device === "desktop" ? "Did you get it? G or → got it, M or ← missed" : "Did you get it?") : (device === "desktop" ? "Click the card or press Space to flip" : "Tap the card to flip");
@@ -805,9 +805,9 @@
     document.addEventListener("keydown", function (e) {
       if (!$("tab-cards").classList.contains("active") || fc.view !== "study" || e.ctrlKey || e.metaKey || e.altKey) return;
       var tg = e.target, tag = tg && tg.tagName; if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
-      if (!$("menu").hidden || !$("fcMore").hidden || (document.querySelector(".sheet:not([hidden])"))) return;
+      if (!$("menu").hidden || (document.querySelector(".sheet:not([hidden])"))) return;
       var k = e.key;
-      if (tg && tg.classList && (tg.classList.contains("askq") || tg.classList.contains("fcmorebtn")) && (k === " " || k === "Enter")) return;
+      if (tg && tg.classList && (tg.classList.contains("askq") || tg.classList.contains("fcinfo")) && (k === " " || k === "Enter")) return;
       if (k === " ") { e.preventDefault(); fcFlip(); }
       else if (k === "Enter" && tg === $("fcCard")) { e.preventDefault(); fcFlip(); }
       else if (!fc.flipped && (k === "ArrowRight" || k === "ArrowLeft")) { e.preventDefault(); fcSkip(k === "ArrowLeft" ? -1 : 1); }   // v5.9.11: question side only; the answer side keeps got / missed
@@ -816,6 +816,7 @@
       else if (k === "r" || k === "R") { e.preventDefault(); fcStar(); }
       else if (k === "i" || k === "I") { e.preventDefault(); fcImportant(); }
       else if (k === "n" || k === "N") { e.preventDefault(); fcSkip(1); }
+      else if (k === "?") { e.preventDefault(); cpOpen(); }
     });
     window.__fc = fc;
   }
@@ -993,18 +994,6 @@
     var ok = FL.filterCards(fc.filter, fc.st).map(function (c) { return c.id; });
     ids.slice().reverse().forEach(function (id) { if (ok.indexOf(id) >= 0 && fc.queue.indexOf(id) < 0) { fc.queue.splice(1, 0, id); fc.sess.total++; } });
   }
-  /* ---- the small card menu ---- */
-  function fcMoreClose() { $("fcMore").hidden = true; }
-  function fcMoreOpen(btn) {
-    var c = fcCurrent(); if (!c) return; var m = $("fcMore");
-    var isSt = c.kind === "statement";
-    $("fcmImprove").hidden = isSt; $("fcmReset").hidden = !(c.improved); $("fcmDelete").hidden = !c.custom;
-    $("fcmDelete").textContent = "\uD83D\uDDD1 Delete this card"; $("fcmDelete").dataset.sure = "";
-    m.hidden = false; var r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
-    var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)), top = r.bottom + 6; if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
-    m.style.left = left + "px"; m.style.top = top + "px";
-    var first = m.querySelector("button:not([hidden])"); if (first) first.focus();
-  }
   /* ---- the Improve / Expand / Create sheet ---- */
   function aiTopicOptions(sel) {
     var h = "<option value='mine'>Any topic (goes in My cards)</option>";
@@ -1033,7 +1022,7 @@
     if (!SR || !ta) return;
     if (DICT.on) { dictStop(); return; }
     try { stopRec(); } catch (e) {}   // never run two recognizers at once
-    var r; try { r = new SR(); } catch (e) { DICT.hint = hint; dictSay("Voice typing would not start here. Type your instruction instead."); return; }
+    var r; try { r = new SR(); } catch (e) { DICT.hint = hint; dictSay(MicSupport.classifyError("start-threw").message.replace(/tap Try again/g, "tap Talk again")); return; }
     r.lang = "en-US"; r.continuous = true; r.interimResults = true;
     DICT = { rec: r, ta: ta, btn: btn, hint: hint, base: ta.value ? ta.value.replace(/\s+$/, "") + " " : "", said: "", on: true };
     dictLabel(); dictSay("Listening\u2026 say what you want changed, then tap Stop. The words appear in the box so you can fix them.");
@@ -1046,13 +1035,13 @@
     };
     r.onerror = function (ev) {
       if (DICT.rec !== r) return; var e = ev && ev.error;
-      var msg = (e === "not-allowed" || e === "service-not-allowed") ? "Chrome blocked the microphone. Allow it from the icon in the address bar, or just type."
-        : e === "network" ? "Voice typing needs an internet connection. Type your instruction instead."
-        : e === "no-speech" ? "I did not hear anything. Tap Talk again, or type it." : "Voice typing stopped. You can type instead.";
+      var msg = MicSupport.classifyError(e, MicSupport.capabilities(window, navigator)).message.replace(/tap Try again/g, "tap Talk again");
       dictStop(true); dictSay(msg);
     };
-    r.onend = function () { if (DICT.rec === r) dictStop(); };
-    try { r.start(); } catch (e) { dictStop(true); dictSay("Voice typing would not start. Type your instruction instead."); }
+    r.onend = function () { if (DICT.rec === r) { var heard = !!(DICT.said || (DICT.ta && DICT.ta.value.trim() && DICT.ta.value.trim() !== DICT.base.trim())); dictStop(); if (!heard) dictSay(MicSupport.classifyError("nothing-heard").message.replace(/tap Try again/g, "tap Talk again")); } };
+    var startTimer = setTimeout(function () { if (DICT.rec === r && !DICT.opened) { dictStop(true); dictSay(MicSupport.classifyError("no-start", MicSupport.capabilities(window, navigator)).message.replace(/tap Try again/g, "tap Talk again")); } }, 8000);
+    r.onstart = function () { DICT.opened = true; clearTimeout(startTimer); };
+    try { r.start(); } catch (e) { clearTimeout(startTimer); dictStop(true); dictSay(MicSupport.classifyError("start-threw").message.replace(/tap Try again/g, "tap Talk again")); }
   }
   // one instruction box: label, textarea, mic button, hint line (or a typing-only note when speech is unavailable)
   function aiInstrBox(id, label, value, placeholder, maxlen) {
@@ -1060,7 +1049,7 @@
     return "<label class='lbl' for='" + id + "'>" + fcEsc(label) + "</label>" +
       "<div class='airow'><textarea id='" + id + "' rows='3' maxlength='" + (maxlen || 300) + "' placeholder='" + fcEsc(placeholder || "") + "'>" + fcEsc(value || "") + "</textarea>" + mic + "</div>" +
       "<div class='small aimichint' id='" + id + "Hint'" + (dictAvailable() ? " hidden" : "") + ">" +
-      (dictAvailable() ? "" : "Voice typing is not available in this browser \u2014 type what you want instead.") + "</div>";
+      (dictAvailable() ? "" : "Voice typing is not available in this browser \u2014 type what you want instead. (Menu \u203A Test microphone shows what it supports.)") + "</div>";
   }
   // v5.9.1: a longer instruction than v5.9's 300 characters, so a full sentence or two is never cut off
   // mid-word. Only the Create box stays at 300, which is what the proxy accepts in its prompt field.
@@ -1078,7 +1067,7 @@
     if (focus !== false) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
   }
   function aiShow() { $("fcAi").hidden = false; }
-  function aiClose() { dictStop(true); $("fcAi").hidden = true; AI.mode = null; AI.card = null; AI.res = null; AI.base = null; AI.busy = false; AI.tries++; try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
+  function aiClose() { dictStop(true); if (AI.listen) { AI.listen = null; listenStop(); } $("fcAi").hidden = true; AI.mode = null; AI.card = null; AI.res = null; AI.base = null; AI.busy = false; AI.tries++; try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {} }
   function aiFoot(btns) { var f = $("fcAiFoot"); f.innerHTML = btns.map(function (b) { return "<button class='btn " + (b.cls || "") + "' id='" + b.id + "'" + (b.dis ? " disabled" : "") + ">" + b.t + "</button>"; }).join(""); btns.forEach(function (b) { $(b.id).addEventListener("click", b.fn); }); }
   function aiCardHtml(cls, head, v) { return "<div class='aicol" + (cls ? " " + cls : "") + "'><h4>" + fcEsc(head) + "</h4><div class='f'>" + fcEsc(v.f) + "</div><div class='b'>" + fcEsc(v.b) + "</div></div>"; }
   // shown when Grok pasted the note into the card anyway: say so plainly and keep Save switched off
@@ -1090,6 +1079,7 @@
   }
   function aiAskedHtml() { return AI.asked && AI.asked.length ? "<div class='small aiasked'>You asked for: " + AI.asked.map(fcEsc).join(" \u2192 ") + "</div>" : ""; }
   function aiRender() {
+    if (AI.listen) { AI.listen = null; listenStop(); }
     var body = $("fcAiBody"), c = AI.card, title = { improve: "\u2728 Improve this card", expand: "\u2795 More cards like this", create: "\uD83D\uDCDD Create a card" }[AI.mode] || "";
     $("fcAiTitle").textContent = title;
     var err = AI.err ? "<div class='aierr' role='alert'>" + fcEsc(AI.err) + "</div>" : "";
@@ -1118,7 +1108,7 @@
         aiInstrBox("aiMore", "What else should change? (type it or tap Talk)", "", "e.g. shorter answer, keep the quote from the book", AI_INSTR_MAX) + aiChipsHtml("aiMore") +
         "<button class='btn go aiwide' id='aiRefine'>\u2728 Improve it again</button></details>";
       aiFoot([{ id: "aiSave", t: "\u2713 Save (replace the card)", cls: "go", fn: aiSaveImprove, dis: AI.echo }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
-      aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine);
+      aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine); aiFootVoice();
       try { $("aiSave").focus(); } catch (e) {}
     } else if (AI.mode === "expand") {
       body.innerHTML = aiAskedHtml() + aiEchoHtml() + "<p class='small'>Tick the cards to keep.</p>" + AI.res.map(function (x, i) { return "<label class='aipick'><input type='checkbox' data-i='" + i + "' checked><div><div class='f'>" + fcEsc(x.f) + "</div><div class='b'>" + fcEsc(x.b) + "</div></div></label>"; }).join("") + err +
@@ -1127,11 +1117,14 @@
       var upd = function () { var k = body.querySelectorAll(".aipick input:checked").length; var sv = $("aiSave"); sv.disabled = !k || AI.echo; sv.textContent = k ? "Save " + k + " card" + (k === 1 ? "" : "s") : "Save"; };
       aiFoot([{ id: "aiSave", t: "Save", cls: "go", fn: aiSaveExpand }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Try again", fn: aiRun }]);
       Array.prototype.forEach.call(body.querySelectorAll(".aipick input"), function (i) { i.addEventListener("change", upd); }); upd();
-      aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine);
+      aiWireInstr("aiMore", aiRefine, false); $("aiRefine").addEventListener("click", aiRefine); aiFootVoice();
     } else {
       var d = AI.res[0];
-      body.innerHTML = "<p class='small'>Draft from Grok. You can edit it before saving.</p><label class='lbl' for='aiF'>Front (question or term)</label><textarea id='aiF' rows='2' maxlength='600'>" + fcEsc(d.f) + "</textarea><label class='lbl' for='aiB'>Back (answer)</label><textarea id='aiB' rows='5' maxlength='1500'>" + fcEsc(d.b) + "</textarea>" + err;
-      aiFoot([{ id: "aiSave", t: "Save card", cls: "go", fn: aiSaveCreate }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Redraft", fn: aiBackToInstr }]);
+      body.innerHTML = aiAskedHtml() + (AI.echo ? "<div class='aiecho' role='alert'><b>Grok copied your request into the card.</b> Save is switched off: saving it would put your own words on the card. Tap Redraft and word the topic differently (for example just the topic, such as \u201Cworking capital\u201D).</div>" : "") + "<p class='small'>Draft from Grok. You can edit it before saving.</p><label class='lbl' for='aiF'>Front (question or term)</label><textarea id='aiF' rows='2' maxlength='600'>" + fcEsc(d.f) + "</textarea><label class='lbl' for='aiB'>Back (answer)</label><textarea id='aiB' rows='5' maxlength='1500'>" + fcEsc(d.b) + "</textarea>" + err;
+      aiFoot([{ id: "aiSave", t: "Save card", cls: "go", fn: aiSaveCreate, dis: AI.echo }, { id: "aiDiscard", t: "Cancel", fn: aiClose }, { id: "aiAgain", t: "\u21BB Redraft", fn: aiBackToInstr }]); aiFootVoice();
+      // editing the draft so his words are gone switches Save back on (and typing them in switches it off again)
+      var recheck = function () { var on = aiEchoes(AI.prompt, ($("aiF").value || "") + " " + ($("aiB").value || ""), 6); $("aiSave").disabled = on; };
+      $("aiF").addEventListener("input", recheck); $("aiB").addEventListener("input", recheck);
     }
   }
   /* What Grok is sent for Improve / Expand: the card as it stands, Bill's own instruction, and the house style.
@@ -1167,23 +1160,26 @@
   /* v5.9.2: a card that parrots the note back is useless, and Bill nearly saved one. Compare on words only
      (case, punctuation and spacing ignored): the whole note inside the card, or a long run of it, counts as an echo. */
   function aiWords(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
-  function aiEchoes(instr, text) {
+  // minWords: notes shorter than this are exempt. Improve / Expand notes are feedback ("make it shorter"), 3 words.
+  // For a brand-new card the note IS the topic ("what is working capital"), which can fairly appear in the question, so only
+  // a whole sentence of 6+ words copied across (or any 8-word run) counts as pasting his words in.
+  function aiEchoes(instr, text, minWords) {
     var n = aiWords(instr), h = aiWords(text); if (!n || !h) return false;
-    var w = n.split(" "); if (w.length < 3) return false;
+    var w = n.split(" "); if (w.length < (minWords || 3)) return false;
     if ((" " + h + " ").indexOf(" " + n + " ") >= 0) return true;
     for (var i = 0; i + 8 <= w.length; i++) if ((" " + h + " ").indexOf(" " + w.slice(i, i + 8).join(" ") + " ") >= 0) return true;
     return false;
   }
   function aiResEchoes(cards) {
-    var instr = String(AI.instr || "").trim(); if (!instr || !cards) return false;
-    return cards.some(function (x) { return aiEchoes(instr, x.f + " " + x.b); });
+    var instr = String(AI.mode === "create" ? AI.prompt : AI.instr || "").trim(); if (!instr || !cards) return false;
+    return cards.some(function (x) { return aiEchoes(instr, x.f + " " + x.b, AI.mode === "create" ? 6 : 3); });
   }
   function aiRun(again) {
     dictStop(true);
     if (!again) { AI.strict = false; AI.echo = false; }
     var tok = ++AI.tries; AI.busy = true; AI.err = ""; AI.res = null; aiRender();
     var c = AI.card, name = c ? (c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic)) : (AI.topic !== "mine" ? FL.topicName(AI.topic) : "");
-    var p = AI.mode === "create" ? aiCall("create", { topic: name, prompt: AI.prompt }) : aiCall(AI.mode, { topic: name, text: aiBuildText() });
+    var p = AI.mode === "create" ? aiCall("create", { topic: name, prompt: AI.strict ? (AI.prompt.slice(0, 190) + " (Write the card in your own words. Do not repeat my words in the card.)") : AI.prompt }) : aiCall(AI.mode, { topic: name, text: aiBuildText() });
     p.then(function (cards) {
       if (tok !== AI.tries) return;
       if (aiResEchoes(cards) && !AI.strict) { AI.strict = true; aiRun(true); return; }   // one silent retry with rule 5 switched on
@@ -1209,7 +1205,7 @@
   }
   function aiBackToInstr() { dictStop(true); AI.res = null; AI.err = ""; aiRender(); }
   function aiOpen(mode, card) {
-    $("menu").hidden = true; fcMoreClose();
+    $("menu").hidden = true; cpHide();
     if (mode !== "create" && !card) { fcSay("No card is showing. Open Flash Cards first."); return; }
     if (mode === "improve" && card.kind === "statement") { fcSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic."); return; }
     AI = { mode: mode, card: card || null, busy: false, res: null, err: "", instr: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1, base: null, asked: [], echo: false, strict: false };
@@ -1231,11 +1227,12 @@
   }
   function aiSaveCreate() {
     var f = ($("aiF").value || "").trim(), b = ($("aiB").value || "").trim(); if (!f || !b) { AI.err = "Both the front and the back need some text."; var e = $("fcAiBody").querySelector(".aierr"); if (!e) { e = document.createElement("div"); e.className = "aierr"; $("fcAiBody").appendChild(e); } e.textContent = AI.err; return; }
+    if (aiEchoes(AI.prompt, f + " " + b, 6)) { AI.echo = true; AI.err = "Your own words are in the card, so I did not save it. Tap Redraft and word the topic differently."; var e2 = $("fcAiBody").querySelector(".aierr"); if (!e2) { e2 = document.createElement("div"); e2.className = "aierr"; e2.setAttribute("role", "alert"); $("fcAiBody").appendChild(e2); } e2.textContent = AI.err; var sv = $("aiSave"); if (sv) sv.disabled = true; return; }
     var id = mycNewId(); MYC.cards.push({ id: id, topic: FL.validTopic(AI.topic) ? AI.topic : "mine", f: f.slice(0, 600), b: b.slice(0, 1500), ai: true, ts: Date.now() });
     mycSave(); fcFilterOptions(); fcAddToQueue([id]); aiClose(); fcRender(); fcSay("Saved to My cards.");
   }
   function fcResetCard() {
-    var c = fcCurrent(); if (!c) return; fcMoreClose();
+    var c = fcCurrent(); if (!c) return;
     var mc = c.custom && MYC.cards.filter(function (x) { return x.id === c.id; })[0];
     if (mc && mc.orig) { mc.f = mc.orig.f; mc.b = mc.orig.b; delete mc.orig; } else delete MYC.over[c.id];
     mycSave(); fcRender(); fcSay("Back to the original card.");
@@ -1243,7 +1240,7 @@
   function fcDeleteCard() {
     var c = fcCurrent(); if (!c || !c.custom) return; var b = $("fcmDelete");
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Tap again to delete"; setTimeout(function () { b.dataset.sure = ""; b.textContent = "\uD83D\uDDD1 Delete this card"; }, 4000); return; }
-    fcMoreClose(); MYC.cards = MYC.cards.filter(function (x) { return x.id !== c.id; }); delete fc.st.cards[c.id]; mycSave();
+    MYC.cards = MYC.cards.filter(function (x) { return x.id !== c.id; }); delete fc.st.cards[c.id]; mycSave();
     fc.queue = fc.queue.filter(function (id) { return id !== c.id; }); fc.flipped = false; fcSave(); fcFilterOptions(); fcRender(); fcSay("Card deleted.");
   }
   function mycExport() {
@@ -1274,12 +1271,8 @@
     mycLoad();
     $("fcAiClose").addEventListener("click", aiClose);
     $("fcAi").addEventListener("click", function (e) { if (e.target === $("fcAi")) aiClose(); });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if (!$("fcAi").hidden) aiClose(); else if (!$("fcMore").hidden) { fcMoreClose(); try { $("fcCard").focus({ preventScroll: true }); } catch (x) {} } } });
-    document.addEventListener("click", function (e) { if (!$("fcMore").hidden && !e.target.closest("#fcMore") && !e.target.closest(".fcmorebtn")) fcMoreClose(); });
-    $("fcmImprove").addEventListener("click", function () { aiOpen("improve", fcCurrent()); });
-    $("fcmExpand").addEventListener("click", function () { aiOpen("expand", fcCurrent()); });
-    $("fcmCreate").addEventListener("click", function () { aiOpen("create", fcCurrent()); });
-    $("fcmReset").addEventListener("click", fcResetCard); $("fcmDelete").addEventListener("click", fcDeleteCard);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if (!$("micTest").hidden) mtClose(); else if (!$("fcAi").hidden) aiClose(); else if (!$("cardPanel").hidden) cpClose(); } });
+    initCardPanel();
     function viaCards(fn) { return function () { $("menu").hidden = true; switchTab("cards", true); fn(); }; }
     $("mCreate").addEventListener("click", viaCards(function () { aiOpen("create", fcCurrent()); }));
     $("mImprove").addEventListener("click", viaCards(function () { aiOpen("improve", fcCurrent()); }));
@@ -1295,6 +1288,270 @@
       rd.readAsText(f);
     });
     window.__myc = function () { return MYC; }; window.__aiOpen = aiOpen; window.__mycImport = mycImportText; window.__aiText = aiBuildText; window.__aiEchoes = aiEchoes;
+  }
+
+  /* ================= v5.9.13: listen once (shared by the card helper, the preview screens and the mic test) =================
+     Rules for this to work in odd browsers such as the Cybertruck's: the speech API and the raw microphone are detected
+     separately; listening only ever starts from a tap; one tap = one short listen (never an automatic restart loop);
+     every way it can fail turns into one plain sentence plus a Try again button. */
+  var LISTEN = null;
+  function listenStop() { var h = LISTEN; LISTEN = null; if (h) { h.done = true; h.timers.forEach(clearTimeout); try { h.rec && (h.rec.onend = h.rec.onresult = h.rec.onerror = h.rec.onstart = null); h.rec && h.rec.abort(); } catch (e) {} } }
+  function stopStream(st) { try { st && st.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} }
+  // o = { prime, onStatus(msg), onInterim(text), onFinal(text), onError(info) }  ->  handle { stop() } or null when it could not even start
+  function listenOnce(o) {
+    var caps = MicSupport.capabilities(window, navigator), Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    function bad(code, name) { var i = name ? MicSupport.classifyMediaError(name, caps) : MicSupport.classifyError(code, caps); i.code = name || code; try { ev("listen failed: " + i.code); } catch (e) {} if (o.onError) o.onError(i); return null; }
+    if (!caps.secure) return bad("insecure");
+    if (!Ctor) return bad("no-api");
+    listenStop(); try { stopRec(); } catch (e) {} try { dictStop(true); } catch (e) {}   // never two recognizers at once
+    var h = { rec: null, done: false, started: false, mid: "", stopping: false, timers: [] }; LISTEN = h;
+    function clr() { h.timers.forEach(clearTimeout); h.timers = []; }
+    function later(fn, ms) { h.timers.push(setTimeout(fn, ms)); }
+    function fin(text) { if (h.done) return; h.done = true; clr(); var r = h.rec; try { r && (r.onend = r.onerror = r.onresult = null); r && r.stop(); } catch (e) {} if (LISTEN === h) LISTEN = null; if (o.onFinal) o.onFinal(text); }
+    function err(code, name) { if (h.done) return; h.done = true; clr(); var r = h.rec; try { r && (r.onend = r.onerror = r.onresult = null); r && r.abort(); } catch (e) {} if (LISTEN === h) LISTEN = null; bad(code, name); }
+    h.stop = function () { if (h.done) return; h.stopping = true; if (h.rec && h.started) { try { h.rec.stop(); } catch (e) { err("aborted"); } } else err("aborted"); };
+    function begin() {
+      if (h.done) return;
+      var r; try { r = new Ctor(); } catch (e) { return err("start-threw"); }
+      h.rec = r; r.lang = "en-US"; r.continuous = false; r.interimResults = true; r.maxAlternatives = 1;
+      function opened() { if (h.started) return; h.started = true; clr(); if (o.onStatus) o.onStatus("Listening\u2026 go ahead and speak."); later(function () { try { r.stop(); } catch (e) {} }, 12000); }
+      r.onstart = opened; r.onaudiostart = opened;
+      r.onresult = function (e2) {
+        opened(); var f = "", m = "";
+        for (var i = e2.resultIndex || 0; i < e2.results.length; i++) { var t = e2.results[i][0] && e2.results[i][0].transcript || ""; if (e2.results[i].isFinal) f += t; else m += t; }
+        if (f.trim()) return fin(f.trim());
+        if (m.trim()) { h.mid = m.trim(); if (o.onInterim) o.onInterim(h.mid); }
+      };
+      r.onerror = function (e2) { var c = e2 && e2.error || "error"; if (c === "aborted" && h.stopping) return; err(c); };
+      r.onend = function () { if (h.done) return; if (h.mid) return fin(h.mid); err(h.stopping ? "aborted" : "nothing-heard"); };
+      if (o.onStatus) o.onStatus("Opening the microphone\u2026");
+      later(function () { if (!h.started) err("no-start"); }, 8000);   // the car / browser never opened it: say so instead of waiting forever
+      try { r.start(); } catch (e) { err("start-threw"); }
+    }
+    if (o.prime && caps.gumModern) {
+      // a retry after a block: ask for the microphone itself, from this tap, so the browser (or the car's screen) shows its permission prompt
+      if (o.onStatus) o.onStatus("Asking for the microphone\u2026 if the screen asks, tap Allow.");
+      later(function () { err("no-start"); }, 20000);
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (st) { stopStream(st); if (!h.done) { clr(); begin(); } }, function (e2) { err("", e2 && e2.name || "NotAllowedError"); });
+    } else begin();
+    return h;
+  }
+
+  /* ================= v5.9.13: the single "?" card button: the card helper ================= */
+  var CP = { pending: null, listening: null, delAt: 0, needPrime: false };
+  var CP_PENDING = { improve: ["Improve this card", "What should change on this card? Say it or type it, for example \u201Cmake the question harder\u201D.", "Improve it"], create: ["Create a brand new card", "What should the new card cover? Say it or type it, for example \u201Cworking capital\u201D.", "Draft the card"] };
+  function cpOpen() {
+    var c = fcCurrent(); if (!c) return;
+    try { stopRec(); } catch (e) {} try { dictStop(true); } catch (e) {} $("menu").hidden = true;
+    CP.pending = null; cpRefresh(); cpSay(cpIdleMsg(), ""); $("cpHeard").textContent = ""; $("cpRetry").hidden = true;
+    $("cardPanel").hidden = false; document.body.classList.add("cpopen"); cpFitSoon();
+    try { $("cpTalk").focus({ preventScroll: true }); } catch (e) {}
+    ev("card helper opened");
+  }
+  function cpFitSoon() { setTimeout(function () { try { fcFit(); } catch (e) {} }, 60); }
+  function cpHide() { var p = $("cardPanel"); if (!p) return; if (CP.listening) { CP.listening = null; listenStop(); } CP.pending = null; p.hidden = true; document.body.classList.remove("cpopen"); }
+  function cpClose() {
+    cpHide(); cpFitSoon(); try { syncMic(); } catch (e) {}
+    try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {}
+  }
+  function cpIdleMsg() {
+    var caps = MicSupport.capabilities(window, navigator);
+    if (!caps.secure) return "Voice needs a secure (https) page. Use the buttons or the type box.";
+    if (!caps.sr) return "This browser can't listen. Use the buttons or the type box.";
+    return "Tap the big button and say what you want, or use the buttons or the type box.";
+  }
+  function cpSay(msg, cls) { var e = $("cpStatus"); e.textContent = msg || ""; e.className = "cpstatus" + (cls ? " " + cls : ""); }
+  function cpTalkLabel() {
+    var b = $("cpTalk"), caps = MicSupport.capabilities(window, navigator), on = !!CP.listening;
+    b.textContent = on ? "\u23F9 Listening\u2026 tap to stop" : !caps.sr || !caps.secure ? "\uD83C\uDFA4 Voice not available here" : CP.pending ? "\uD83C\uDFA4 Say it now" : "\uD83C\uDFA4 Tap, then say what you want";
+    b.setAttribute("aria-pressed", on ? "true" : "false"); b.classList.toggle("on", on); b.disabled = !on && (!caps.sr || !caps.secure);
+  }
+  function cpRefresh() {
+    var c = fcCurrent(); if (!c) { cpClose(); return; } var s = fc.st.cards[c.id] || {}, isSt = c.kind === "statement", p = CP.pending;
+    $("cpCardLine").textContent = "Card: " + String(isSt ? c.q : c.f).replace(/\s+/g, " ").slice(0, 90) + (fc.flipped ? "  (answer side showing)" : "  (question side showing)");
+    $("cpImp").innerHTML = s.imp ? "&#9733; Important" : "&#9734; Important"; $("cpImp").setAttribute("aria-pressed", s.imp ? "true" : "false"); $("cpImp").classList.toggle("on", !!s.imp);
+    $("cpStar").innerHTML = s.restudy ? "&#9733; Restudy" : "&#9734; Restudy"; $("cpStar").setAttribute("aria-pressed", s.restudy ? "true" : "false"); $("cpStar").classList.toggle("on", !!s.restudy);
+    $("cpFlip").innerHTML = fc.flipped ? "&#8644; Show question" : "&#8644; Show answer";
+    $("cpGot").disabled = $("cpMissed").disabled = !fc.flipped; $("cpPrev").disabled = $("cpNext").disabled = fc.queue.length < 2;
+    $("fcmImprove").hidden = isSt; $("fcmReset").hidden = !c.improved; $("fcmDelete").hidden = !c.custom;
+    if (!CP.delAt) { $("fcmDelete").textContent = "\uD83D\uDDD1 Delete this card"; }
+    $("cpGo").textContent = p ? CP_PENDING[p][2] : "Go";
+    $("cpType").placeholder = p ? (p === "create" ? "e.g. working capital, with a small example" : "e.g. make the question harder") : "Or type it, e.g. explain this card";
+    $("cpCancel").hidden = !p; cpTalkLabel();
+    var ph = CardVoice.PHRASES; $("cpTips").innerHTML = "You can say: " + ["explain", "improve", "similar", "create", "important", "restudy", "flip", "got", "missed", "next", "prev", "close"].filter(function (k) { return !(isSt && k === "improve"); }).map(function (k) { return ph[k]; }).join(" &middot; ") + (c.improved ? " &middot; " + ph.reset : "") + (c.custom ? " &middot; " + ph["delete"] : "") + ".";
+  }
+  function cpPendingStart(mode) {
+    CP.pending = mode; $("cpType").value = ""; cpSay(CP_PENDING[mode][0] + ": " + CP_PENDING[mode][1], "ask"); $("cpHeard").textContent = ""; cpRefresh();
+    try { $("cpType").focus({ preventScroll: true }); } catch (e) {}
+  }
+  // The words he says or types are FEEDBACK about the card, sent to Grok as a note; the Improve / Create code checks the result and blocks Save if his words came back in the card.
+  function cpLaunch(mode, note) {
+    var c = fcCurrent(); note = String(note || "").trim(); if (!c && mode !== "create") return;
+    cpHide(); cpFitSoon(); aiOpen(mode, c);
+    if (mode === "create") { AI.prompt = note.slice(0, 300); AI.asked = [AI.prompt]; }
+    else { AI.instr = note.slice(0, AI_INSTR_MAX); AI.asked = note ? [AI.instr] : []; }
+    aiRun();
+  }
+  function cpDo(action, note) {
+    var c = fcCurrent(); if (!c) { cpClose(); return; } var said = "", cls = "ok";
+    if (action !== "delete") CP.delAt = 0;
+    switch (action) {
+      case "explain": cpClose(); openAskCard(c); return;
+      case "improve":
+        if (c.kind === "statement") { cpSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic. You can still explain it or make another.", "err"); return; }
+        if (note) return cpLaunch("improve", note); return cpPendingStart("improve");
+      case "similar": return cpLaunch("expand", note);
+      case "create": if (note) return cpLaunch("create", note); return cpPendingStart("create");
+      case "important": fcImportant(); said = (fc.st.cards[c.id] || {}).imp ? "Marked Important." : "Important mark removed."; break;
+      case "restudy": fcStar(); said = (fc.st.cards[c.id] || {}).restudy ? "Marked Restudy." : "Restudy mark removed."; break;
+      case "flip": fcFlip(); said = fc.flipped ? "Showing the answer." : "Showing the question."; break;
+      case "got": case "missed":
+        if (!fc.flipped) { cpSay("Flip the card first (say \u201Cflip\u201D), then say " + (action === "got" ? "\u201Cgot it\u201D" : "\u201Cmissed it\u201D") + ".", "err"); return; }
+        fcAnswer(action === "got"); said = (action === "got" ? "Got it." : "Missed it.") + " Next card."; break;
+      case "next": if (fc.queue.length < 2) { cpSay("There is only one card left.", "err"); return; } fcSkip(1); said = "Next card (no grade)."; break;
+      case "prev": if (fc.queue.length < 2) { cpSay("There is only one card left.", "err"); return; } fcSkip(-1); said = "Previous card (no grade)."; break;
+      case "reset": if (!c.improved) { cpSay("This card has not been improved, so there is nothing to reset.", "err"); return; } fcResetCard(); said = "Back to the original card."; break;
+      case "delete":
+        if (!c.custom) { cpSay("Only cards you created can be deleted.", "err"); return; }
+        if (CP.delAt && Date.now() - CP.delAt < 6000) { CP.delAt = 0; fcDeleteCard(); fcDeleteCard(); cpClose(); try { fcSay("Card deleted."); } catch (e) {} return; }
+        CP.delAt = Date.now(); $("fcmDelete").textContent = "Tap again to delete"; cpSay("Delete this card? Say \u201Cdelete\u201D again, or tap Delete again, within a few seconds.", "ask"); setTimeout(function () { if (Date.now() - CP.delAt >= 5900) { CP.delAt = 0; try { cpRefresh(); } catch (e) {} } }, 6100); return;
+      case "close": cpClose(); return;
+      case "help": cpSay("Say or type one of these. " + $("cpTips").textContent.replace(/^You can say: /, ""), ""); return;
+    }
+    if (!fcCurrent()) { cpClose(); return; }
+    cpRefresh(); cpSay(said, cls);
+  }
+  function cpHandle(text) {
+    text = String(text || "").trim(); if (!text) return; $("cpHeard").textContent = "Heard: \u201C" + text + "\u201D";
+    if (CP.pending) {
+      if (/^(cancel|never ?mind|stop|close|go back)$/i.test(CardVoice.norm(text))) { CP.pending = null; cpRefresh(); cpSay("Okay, cancelled.", ""); return; }
+      var mode = CP.pending; CP.pending = null; return cpLaunch(mode, text);
+    }
+    var r = CardVoice.parse(text);
+    if (r.action === "none") { cpSay("I did not understand \u201C" + text + "\u201D. Say something like \u201Cexplain this card\u201D, \u201Cimprove this card\u201D, \u201Cmake another card like it\u201D or \u201Ccreate a new card\u201D, or tap a button.", "err"); return; }
+    cpDo(r.action, r.note);
+  }
+  function cpEndListen() { CP.listening = null; cpTalkLabel(); }
+  function cpStartListen(prime) {
+    $("cpRetry").hidden = true; $("cpHeard").textContent = "";
+    if (CP.listening) { var h = CP.listening; h.stop(); return; }
+    var handle = listenOnce({
+      prime: !!prime || CP.needPrime,
+      onStatus: function (m) { cpSay(m, "ask"); },
+      onInterim: function (t) { $("cpHeard").textContent = "Hearing: \u201C" + t + "\u201D"; },
+      onFinal: function (t) { cpEndListen(); CP.needPrime = false; cpSay("", ""); cpHandle(t); },
+      onError: function (info) {
+        cpEndListen(); CP.needPrime = info.kind === "blocked" || info.kind === "no-start";   // the next Try again asks for the mic itself, from that tap
+        cpSay(info.message, "err"); $("cpRetry").hidden = !info.retry; if (!info.retry || info.fatal) { try { $("cpType").focus({ preventScroll: true }); } catch (e) {} }
+      }
+    });
+    CP.listening = handle && !handle.done ? handle : null; cpTalkLabel();
+  }
+  function initCardPanel() {
+    $("cpClose").addEventListener("click", cpClose);
+    $("cpTalk").addEventListener("click", function () { cpStartListen(false); });
+    $("cpRetry").addEventListener("click", function () { cpStartListen(true); });
+    $("cpCancel").addEventListener("click", function () { CP.pending = null; cpRefresh(); cpSay("Okay, cancelled.", ""); });
+    function go() { var v = $("cpType").value.trim(); if (!v) return; $("cpType").value = ""; cpHandle(v); }
+    $("cpGo").addEventListener("click", go);
+    $("cpType").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    function typed() { var v = $("cpType").value.trim(); $("cpType").value = ""; return v; }
+    $("fcmExplain").addEventListener("click", function () { cpDo("explain"); });
+    // the three AI buttons: text in the box = the note (runs at once); empty box = the usual Improve / More cards / Create sheet, which has its own instruction box and Talk button
+    function aiButton(mode) { var v = typed(), c = fcCurrent(); if (mode === "improve" && c && c.kind === "statement") return cpDo("improve"); if (v) return cpLaunch(mode, v); cpHide(); cpFitSoon(); aiOpen(mode, c); }
+    $("fcmImprove").addEventListener("click", function () { aiButton("improve"); });
+    $("fcmExpand").addEventListener("click", function () { aiButton("expand"); });
+    $("fcmCreate").addEventListener("click", function () { aiButton("create"); });
+    $("cpImp").addEventListener("click", function () { cpDo("important"); });
+    $("cpStar").addEventListener("click", function () { cpDo("restudy"); });
+    $("cpFlip").addEventListener("click", function () { cpDo("flip"); });
+    $("cpGot").addEventListener("click", function () { cpDo("got"); });
+    $("cpMissed").addEventListener("click", function () { cpDo("missed"); });
+    $("cpPrev").addEventListener("click", function () { cpDo("prev"); });
+    $("cpNext").addEventListener("click", function () { cpDo("next"); });
+    $("fcmReset").addEventListener("click", function () { cpDo("reset"); });
+    $("fcmDelete").addEventListener("click", function () { cpDo("delete"); });
+    $("btnMicTest").addEventListener("click", function () { $("menu").hidden = true; mtOpen(); });
+    $("mtClose").addEventListener("click", mtClose); $("mtMic").addEventListener("click", mtCheckMic); $("mtSpeech").addEventListener("click", mtCheckSpeech); $("mtCopy").addEventListener("click", mtCopy);
+    window.__cp = { open: cpOpen, handle: cpHandle, state: function () { return { pending: CP.pending, listening: !!CP.listening, needPrime: CP.needPrime }; } };
+  }
+  // voice on the Improve / More cards / Create preview screens: "save", "cancel", "try again"
+  function aiFootVoice() {
+    var f = $("fcAiFoot"); if (!f || !MicSupport.capabilities(window, navigator).sr) return;
+    var b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.id = "aiSay"; b.textContent = "\uD83C\uDFA4 Say: save, cancel or try again";
+    var hint = document.createElement("div"); hint.className = "small aimichint"; hint.id = "aiSayHint"; hint.hidden = true; hint.setAttribute("role", "status");
+    f.appendChild(b); f.appendChild(hint);
+    function say(m) { hint.textContent = m; hint.hidden = !m; }
+    b.addEventListener("click", function () {
+      if (AI.listen) { AI.listen.stop(); return; }
+      b.textContent = "\u23F9 Listening\u2026 tap to stop";
+      function done() { AI.listen = null; b.textContent = "\uD83C\uDFA4 Say: save, cancel or try again"; }
+      AI.listen = listenOnce({
+        prime: !!AI.needPrime, onStatus: say, onInterim: function (t) { say("Hearing: \u201C" + t + "\u201D"); },
+        onError: function (info) { done(); AI.needPrime = info.kind === "blocked" || info.kind === "no-start"; say(info.message); },
+        onFinal: function (t) {
+          done(); AI.needPrime = false; var a = CardVoice.parseSheet(t), btn = a === "save" ? $("aiSave") : a === "cancel" ? $("aiDiscard") : a === "again" ? $("aiAgain") : null;
+          if (!a || a === "none") return say("I heard \u201C" + t + "\u201D. Say save, cancel or try again.");
+          if (!btn || btn.disabled) return say(a === "save" ? "Save is switched off for this one (your words came back in the card). Say try again." : "That button is not available right now.");
+          say(""); btn.click();
+        }
+      });
+    });
+  }
+
+  /* ================= v5.9.13: Menu > Test microphone: says exactly what works in this browser ================= */
+  var MT = { r: null, timer: 0, stream: null, ctx: null, speech: null };
+  function mtRender() {
+    MT.r.caps = MicSupport.capabilities(window, navigator);
+    $("mtReport").textContent = MicSupport.reportText(MT.r, APP_VERSION); $("mtVerdict").textContent = MicSupport.verdict(MT.r);
+  }
+  function mtOpen() {
+    try { stopRec(); } catch (e) {} try { dictStop(true); } catch (e) {} mtStopMeter();
+    MT.r = { caps: MicSupport.capabilities(window, navigator), perm: "checking\u2026", gum: null, level: null, devices: null, sr: null };
+    $("mtBar").style.width = "0%"; $("mtMic").disabled = false; $("mtSpeech").disabled = false;
+    if (navigator.permissions && navigator.permissions.query) { navigator.permissions.query({ name: "microphone" }).then(function (p) { MT.r.perm = p.state; mtRender(); }, function () { MT.r.perm = "this browser cannot say"; mtRender(); }); } else MT.r.perm = "this browser cannot say";
+    $("micTest").hidden = false; mtRender(); ev("mic test opened");
+  }
+  function mtStopMeter() { clearInterval(MT.timer); MT.timer = 0; stopStream(MT.stream); MT.stream = null; try { MT.ctx && MT.ctx.close(); } catch (e) {} MT.ctx = null; }
+  function mtClose() { mtStopMeter(); if (MT.speech) { MT.speech = null; listenStop(); } $("micTest").hidden = true; try { syncMic(); } catch (e) {} }
+  function mtCheckMic() {
+    mtStopMeter(); var md = navigator.mediaDevices;
+    MT.r.level = null; MT.r.gum = null;
+    if (!MT.r.caps.secure) { MT.r.gum = { ok: false, error: "page is not https" }; return mtRender(); }
+    if (!md || typeof md.getUserMedia !== "function") { MT.r.gum = { ok: false, error: "no getUserMedia in this browser" }; return mtRender(); }
+    $("mtVerdict").textContent = "Asking for the microphone\u2026 if the screen asks, tap Allow.";
+    md.getUserMedia({ audio: true }).then(function (st) {
+      MT.stream = st; MT.r.gum = { ok: true };
+      var tr = st.getAudioTracks()[0]; if (tr && tr.label) MT.r.gum.label = tr.label;
+      if (md.enumerateDevices) md.enumerateDevices().then(function (d) { MT.r.devices = d.filter(function (x) { return x.kind === "audioinput"; }).length; mtRender(); }, function () {});
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) { MT.r.level = { peak: 0, heard: null }; MT.r.level.skipped = true; mtRender(); mtStopMeter(); return; }
+      var ctx = new AC(); MT.ctx = ctx; try { if (ctx.state === "suspended") ctx.resume(); } catch (e) {}
+      var an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(st).connect(an); var buf = new Uint8Array(an.fftSize), peak = 0, t0 = Date.now();
+      $("mtVerdict").textContent = "Microphone opened. Say a few words now\u2026 (measuring for 4 seconds)";
+      MT.timer = setInterval(function () {
+        an.getByteTimeDomainData(buf); var m = 0; for (var i = 0; i < buf.length; i++) m = Math.max(m, Math.abs(buf[i] - 128) / 128);
+        peak = Math.max(peak, m); $("mtBar").style.width = Math.min(100, Math.round(m * 300)) + "%";
+        if (Date.now() - t0 > 4000) { MT.r.level = { peak: peak, heard: peak > 0.03 }; mtStopMeter(); $("mtBar").style.width = "0%"; mtRender(); }
+      }, 100);
+      mtRender();
+    }, function (e) { MT.r.gum = { ok: false, error: (e && e.name) || "error" }; mtRender(); });
+  }
+  function mtCheckSpeech() {
+    mtStopMeter(); if (MT.speech) { MT.speech.stop(); return; } MT.r.sr = null;
+    $("mtSpeech").textContent = "\u23F9 Listening\u2026 tap to stop";
+    function done() { MT.speech = null; $("mtSpeech").textContent = "2. Test speech-to-text"; }
+    var h = listenOnce({
+      prime: !!(MT.r.sr && MT.r.sr.error === "not-allowed"), onStatus: function (m) { $("mtVerdict").textContent = m; }, onInterim: function (t) { $("mtVerdict").textContent = "Hearing: \u201C" + t + "\u201D"; },
+      onFinal: function (t) { done(); MT.r.sr = { ok: true, text: t }; mtRender(); },
+      onError: function (info) { done(); MT.r.sr = { ok: false, error: info.code || info.kind }; mtRender(); $("mtVerdict").textContent = info.message; }
+    });
+    MT.speech = h && !h.done ? h : null;
+  }
+  function mtCopy() {
+    var t = $("mtReport").textContent; var b = $("mtCopy");
+    function ok() { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy this report"; }, 2000); }
+    function sel() { try { var r = document.createRange(); r.selectNodeContents($("mtReport")); var s2 = window.getSelection(); s2.removeAllRanges(); s2.addRange(r); b.textContent = "Selected: copy it with your keyboard"; } catch (e) {} }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, sel); else sel();
   }
 
   /* ================= v4.6: Ask Grok ("?" on each part -> explain further + follow-ups) ================= */
@@ -1346,7 +1603,7 @@
     return ("Front: " + c.f + "\n\nBack: " + c.b).slice(0, 4000);
   }
   function openAskCard(c) {
-    $("fcMore").hidden = true;
+    cpHide();
     var name = c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic);
     ASK.cur = { id: "card:" + c.id, key: "card:" + c.id, si: 0, kind: "card", text: askCardText(c), topicName: name, label: "Flash card \u00B7 " + name };
     $("menu").hidden = true; $("askPanel").hidden = false; document.body.classList.add("asking");
@@ -1756,7 +2013,7 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("installSheet").hidden) $("installSheet").hidden = true; });
     window.__install = { isInstalled: isInstalled, platform: installPlatform, hasPrompt: function () { return !!dip; } };
     window.__mic = { off: micIsOff, set: setMicOff, on: function () { return recOn; } };
-    $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
+    $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons and the type box.") + " Menu \u203A Test microphone shows exactly what this browser allows.";
     userMicOff = !!tutor.settings.micOff;                      // v5.9.6: the mic switch is remembered between sessions
     initFlash(); initSync(); initAsk(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();

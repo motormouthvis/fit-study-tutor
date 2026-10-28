@@ -357,6 +357,7 @@
       <button class="btn" data-goto="help">Voice commands &amp; help</button>
       <button class="btn" id="btnTestSound2">Test sound</button>
       <button class="btn" id="btnMicRetry">Restart microphone</button>
+      <button class="btn" id="btnMicTest">Test microphone</button>
       <button class="btn" id="btnGym">Gym mode (dark)</button>
       <button class="btn" data-goto="help-about">About &amp; diagnostics</button>
     </div>
@@ -364,12 +365,48 @@
 </div>
 
 <!-- AI flash cards (v4.9): card ... menu, and the Improve / Expand / Create sheet -->
-<div id="fcMore" class="fcmore" role="menu" aria-label="Card actions" hidden>
-  <button id="fcmImprove" role="menuitem">&#10024; Improve with Grok</button>
-  <button id="fcmExpand" role="menuitem">&#10133; Make more cards like this</button>
-  <button id="fcmCreate" role="menuitem">&#128221; Create a new card</button>
-  <button id="fcmReset" role="menuitem" hidden>&#8617; Reset to original</button>
-  <button id="fcmDelete" role="menuitem" hidden>&#128465; Delete this card</button>
+<div id="cardPanel" class="sheet cardpanel" role="dialog" aria-label="Card helper" hidden>
+  <div class="sheetbox cpbox">
+    <div class="sheethead"><b>&#10067; Card helper</b><button id="cpClose" class="btn">Close &#10005;</button></div>
+    <div id="cpCardLine" class="small cpcardline"></div>
+    <button id="cpTalk" class="bigbtn go cptalk" type="button" aria-pressed="false">&#127908; Tap, then say what you want</button>
+    <div id="cpStatus" class="cpstatus" role="status" aria-live="polite"></div>
+    <div id="cpHeard" class="cpheard" aria-live="polite"></div>
+    <button id="cpRetry" class="btn cpretry" type="button" hidden>&#8635; Try again</button>
+    <button id="cpCancel" class="btn" type="button" hidden>Cancel this</button>
+    <div class="airow cptype"><input id="cpType" type="text" maxlength="400" autocomplete="off" aria-label="Type what you want to do" placeholder="Or type it, e.g. explain this card"><button id="cpGo" class="btn go" type="button">Go</button></div>
+    <div class="cpgrp">Ask Grok</div>
+    <div class="cpgrid">
+      <button id="fcmExplain" class="btn" type="button">&#128161; Explain this card</button>
+      <button id="fcmImprove" class="btn" type="button">&#10024; Improve this card</button>
+      <button id="fcmExpand" class="btn" type="button">&#10133; Make another card like it</button>
+      <button id="fcmCreate" class="btn" type="button">&#128221; Create a brand new card</button>
+    </div>
+    <div class="cpgrp">This card</div>
+    <div class="cpgrid cpgrid3">
+      <button id="cpImp" class="btn" type="button" aria-pressed="false">&#9734; Important</button>
+      <button id="cpStar" class="btn" type="button" aria-pressed="false">&#9734; Restudy</button>
+      <button id="cpFlip" class="btn" type="button">&#8644; Flip</button>
+      <button id="cpPrev" class="btn" type="button">&#9664; Previous</button>
+      <button id="cpNext" class="btn" type="button">Skip &#9654;</button>
+      <button id="cpGot" class="btn go" type="button">&#10003; Got it</button>
+      <button id="cpMissed" class="btn" type="button">&#10007; Missed it</button>
+      <button id="fcmReset" class="btn" type="button" hidden>&#8617; Reset to original</button>
+      <button id="fcmDelete" class="btn" type="button" hidden>&#128465; Delete this card</button>
+    </div>
+    <p id="cpTips" class="small cptips"></p>
+  </div>
+</div>
+<div id="micTest" class="sheet" role="dialog" aria-label="Test microphone" hidden>
+  <div class="sheetbox aibox">
+    <div class="sheethead"><b>&#127908; Test microphone</b><button id="mtClose" class="btn">Close &#10005;</button></div>
+    <p class="small">Each step needs a tap from you, because browsers (and the car) only allow the microphone after a tap.</p>
+    <div class="cpgrid"><button id="mtMic" class="btn go" type="button">1. Check the microphone</button><button id="mtSpeech" class="btn go" type="button">2. Test speech-to-text</button></div>
+    <div class="mtmeter" aria-hidden="true"><div id="mtBar"></div></div>
+    <pre id="mtReport" class="mtreport" aria-live="polite"></pre>
+    <div id="mtVerdict" class="mtverdict" role="status"></div>
+    <div class="cpgrid"><button id="mtCopy" class="btn" type="button">Copy this report</button></div>
+  </div>
 </div>
 <div id="fcAi" class="sheet" role="dialog" aria-label="AI flash cards" hidden>
   <div class="sheetbox aibox">
@@ -446,6 +483,8 @@
 <script src="practice-data.js"></script>
 <script src="practice.js"></script>
 <script src="ask-config.js"></script>
+<script src="micsupport.js"></script>
+<script src="cardvoice.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
