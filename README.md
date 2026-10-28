@@ -131,6 +131,15 @@ Text lives in `cards-v50.js` (id -> [front, back]); the original wording is kept
 - The card fills the space between the top row and Got it / Missed; if a card is long its text shrinks just enough to fit. Wide screens show Statement Analysis answers beside the tables.
 - Test: `tests/e2e_v53.py` (1180x700 truck size, 1280x720, 390x844, 1366x768; long answer and a statement card).
 
+## v5.9.12 - Always on (keeps the screen awake)
+- **On by default and remembered.** The sun button at the top ("Awake" / "Tap" / "Off") and **Menu > Always on: On/Off** switch it; Settings has the same switch. The choice is saved on the phone. A saved "off" from before v5.9.12 is reset to On once.
+- **It no longer waits for a session.** The screen is held awake whenever the app is open (Learn, Quiz, Flash Cards), not only while a lesson or quiz is running.
+- **Re-acquires itself.** Screen Wake Lock is taken again whenever the browser lets go: page visible again, window focus, pageshow, resume, any tap (browsers need a gesture), audio starting, and a 30-second safety check.
+- **Fallback with no Wake Lock API** (or if Android refuses it): a 1-pixel, muted, silent, looping video (NoSleep-style, tiny built-in clip, no dependency) is played after a tap. If the browser refuses both, a plain-English note under the switch says why (for example Battery Saver) and the chip reads "Tap".
+- **Lock-screen controls (Media Session).** Title, artwork, play / pause, back / forward 10 s, previous / next topic and seek-bar are registered so Android keeps the audio session alive and shows lock-screen controls. Existing PLAY / PAUSE, skip, speed, progress bar and voice commands are unchanged.
+- **Limits.** Android Battery Saver can still turn the screen off. When the screen does lock, Chrome stops the microphone (voice commands pause), but lesson audio keeps playing and the lock-screen buttons work. Not verifiable without a real phone.
+- Code: `keepawake.js`. Tests: `tests/keepawake.test.js` (node), `tests/e2e_v5912.py`.
+
 ## v5.9.11 - skip arrows on flash cards
 On the question side of a flash card (before it is flipped), big **◀** and **▶** buttons (either side of Missed / Got it) move to the previous or next card without grading it: no Got it / Missed is recorded, stats, Restudy stars and the pass are unchanged. They stay within the current section, mode (missed / restudy / important) and shuffle order, and "Card N of M" follows along. The deck loops: Next on the last card goes to the first, Prev on the first goes to the last (buttons are disabled when only one card is left). The arrows hide once the card is flipped, so Got it / Missed are unchanged.
 Keys: on the question side, ← / → now skip (before, they did nothing there, because grading needs the answer showing). On the answer side, → = Got it and ← = Missed exactly as before. N still skips forward. Logic: `Flash.skip(queue, dir)`; tests in `tests/flashcards.test.js` and `tests/e2e_v5911.py`.

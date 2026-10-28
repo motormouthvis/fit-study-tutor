@@ -435,3 +435,10 @@ body.fcstudy #fcEmpty { margin:0; }
 .pqscore { font-size:1.2rem; margin:8px 0; }
 
 #soundCard .grid2 .bigbtn { width:100%; margin:8px 0; }
+
+/* v5.9.12: Always on chip + note */
+.awakechip { min-height:48px; padding:6px 12px; margin-left:auto; margin-right:8px; border-radius:24px; border:3px solid #fff; background:#23262d; color:#fff; font-weight:800; font-size:.9rem; cursor:pointer; white-space:nowrap; }
+.awakechip.on { border-color:var(--green); color:#c9ffd9; background:#003d17; }
+.awakechip.warn { border-color:var(--amber); color:#fff0c2; background:#33290a; }
+.awakechip.off { border-color:#888; color:#ccc; }
+.awakenote { margin:6px 0 0; } .awakenote.warn { color:#fff0c2; }

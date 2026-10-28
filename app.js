@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.11";
+  var APP_VERSION = "v5.9.12";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -244,19 +244,70 @@
     if (out.action === "mute" || out.action === "command" || out.action === "answer") consumed = true;
   }
 
-  /* ---------- wake lock ---------- */
-  var wake = null;
-  function acquireWake() {
-    if (!tutor.settings.wakeLock || !navigator.wakeLock || !tutor.running) return;
-    navigator.wakeLock.request("screen").then(function (l) { wake = l; l.addEventListener("release", function () { wake = null; updateBanner(); }); updateBanner(); }).catch(function () {});
+  /* ---------- always on (v5.9.12): wake lock + silent-video fallback, see keepawake.js ---------- */
+  var KA = window.KeepAwake.create({
+    nav: navigator, doc: document, win: window,
+    getEnabled: function () { return tutor.settings.wakeLock !== false; },
+    onChange: function () { renderAwake(); }
+  });
+  function acquireWake() { return KA.kick(); }
+  function releaseWake() { KA.release(); }
+  function renderAwake() {
+    var st = KA.state(), lab = window.KeepAwake.label(st);
+    var chip = $("btnAwake"); if (!chip) return;
+    chip.textContent = (st.enabled ? "\u2600 " : "\u263E ") + (st.enabled ? (st.active ? "Awake" : st.needTap ? "Tap" : "Awake?") : "Off");
+    chip.className = "awakechip " + (!st.enabled ? "off" : st.active ? "on" : "warn");
+    chip.title = lab; chip.setAttribute("aria-pressed", st.enabled ? "true" : "false"); chip.setAttribute("aria-label", lab + ". Tap to switch.");
+    var m = $("mAwake"); if (m) m.textContent = "\u2600 " + lab;
+    var how = !st.enabled ? "The screen may turn off by itself. Tap to turn Always on back on." : st.active ? "Screen is being kept on" + (st.mode === "video" ? " (backup method)." : ".") : (st.note || "Waiting for the screen to be visible and for one tap.");
+    if (st.enabled && st.active && st.note) how = st.note;
+    ["awakeNote", "awakeNote2"].forEach(function (id) { var n = $(id); if (n) { n.textContent = how; n.className = "small awakenote" + (st.enabled && !st.active ? " warn" : ""); } });
+    if ($("setWake")) $("setWake").checked = st.enabled;
   }
-  function releaseWake() { if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
+  function setAwake(on) { tutor.setSetting("wakeLock", !!on); KA.sync(); renderAwake(); }
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") {
-      if (tutor.running) { acquireWake(); syncMic(); if (hiddenWhileRunning) { showAlert("The screen was off or you switched apps, so Chrome paused the microphone. It is back on now. Keep the screen on during a session."); hiddenWhileRunning = false; } }
+      if (tutor.running) { syncMic(); if (hiddenWhileRunning) { showAlert("The screen was off or you switched apps, so Chrome paused the microphone. It is back on now. Keep the screen on during a session."); hiddenWhileRunning = false; } }
     } else if (tutor.running) hiddenWhileRunning = true;
   });
   var hiddenWhileRunning = false;
+
+  /* ---------- lock-screen controls (Media Session) so Android keeps the audio session alive ---------- */
+  function setupMediaSession() {
+    var ms = navigator.mediaSession; if (!ms) return;
+    function h(name, fn) { try { ms.setActionHandler(name, fn); } catch (e) {} }
+    function running() { return !!(lastSnap && lastSnap.running); }
+    h("play", function () { var s = tutor.snapshot(); if (s.running && s.audioPaused) tutor.ui("pauseaudio"); else if (!s.running) onPlay(); });
+    h("pause", function () { var s = tutor.snapshot(); if (s.running && !s.audioPaused) tutor.ui("pauseaudio"); });
+    h("stop", null);
+    h("seekbackward", function (d) { seek(-((d && d.seekOffset) || 10)); });
+    h("seekforward", function (d) { seek((d && d.seekOffset) || 10); });
+    h("previoustrack", function () { if (running()) tutor.ui(lastSnap.mode === "lesson" ? "prev" : "repeat"); });
+    h("nexttrack", function () { if (running()) tutor.ui("next"); });
+    h("seekto", function (d) { if (d && isFinite(d.seekTime) && audioEl.getAttribute("src") && audioEl.duration > 0) { try { audioEl.currentTime = Math.max(0, Math.min(audioEl.duration, d.seekTime)); } catch (e) {} } });
+    audioEl.addEventListener("play", function () { KA.kick(); updateMediaSession(); });
+    audioEl.addEventListener("playing", function () { KA.kick(); updateMediaSession(); });
+    audioEl.addEventListener("pause", updateMediaSession);
+    audioEl.addEventListener("loadedmetadata", updateMediaSession);
+    var lastPos = 0;
+    audioEl.addEventListener("timeupdate", function () {
+      var t = Date.now(); if (t - lastPos < 1000) return; lastPos = t;
+      var d = audioEl.duration; if (ms.setPositionState && isFinite(d) && d > 0) { try { ms.setPositionState({ duration: d, playbackRate: audioEl.playbackRate || 1, position: Math.min(d, audioEl.currentTime || 0) }); } catch (e) {} }
+    });
+  }
+  var lastMsKey = "";
+  function updateMediaSession() {
+    var ms = navigator.mediaSession; if (!ms || !lastSnap) return;
+    var s = lastSnap, title = "MBA Study Tutor";
+    if (s.running && s.mode === "lesson" && s.lesson) title = (s.lesson.name || s.lesson.title || s.lesson.topicName || "Lesson") + "";
+    else if (s.running && s.question) title = "Quiz: " + (s.question.topicName || "question");
+    var key = title + "|" + s.running;
+    if (key !== lastMsKey && window.MediaMetadata) {
+      lastMsKey = key;
+      try { ms.metadata = new MediaMetadata({ title: title, artist: "MBA Study Tutor", album: "BUS 5601 \u00B7 BUS 5421", artwork: [{ src: "icons/icon-192.png", sizes: "192x192", type: "image/png" }, { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" }] }); } catch (e) {}
+    }
+    try { ms.playbackState = s.running && !s.audioPaused && !s.muted ? "playing" : s.running ? "paused" : "none"; } catch (e) {}
+  }
 
   /* ---------- rendering ---------- */
   var lastSnap = null;
@@ -280,7 +331,7 @@
     $("sessCount").textContent = s.session.answered; $("sessRight").textContent = s.session.correct;
     $("gymSub").textContent = s.muted ? 'Say "' + tutor.settings.unmuteKeyword + '" or tap the button' : (s.running ? "Tap the button to pause" : "");
     renderGym(s);
-    if (!s.running) releaseWake();
+    updateMediaSession();
     updateLessonsView(s);
     if (window.__v4ready) updateLearnLayout();
     syncMic();
@@ -501,7 +552,7 @@
   }
   function renderSettings() {
     $("setKeyword").value = tutor.settings.unmuteKeyword; $("setRate").value = tutor.settings.rate; $("rateVal").textContent = tutor.settings.rate.toFixed(2) + "x";
-    $("setBarge").checked = tutor.settings.bargeIn; $("setAuto").checked = tutor.settings.autoAdvance; $("setLessonAuto").checked = tutor.settings.lessonAuto; $("setAlsoUnmute").checked = tutor.settings.alsoUnmute; $("setWake").checked = tutor.settings.wakeLock;
+    $("setBarge").checked = tutor.settings.bargeIn; $("setAuto").checked = tutor.settings.autoAdvance; $("setLessonAuto").checked = tutor.settings.lessonAuto; $("setAlsoUnmute").checked = tutor.settings.alsoUnmute; renderAwake();
     Array.prototype.forEach.call(document.getElementsByName("muteMode"), function (r) { r.checked = r.value === tutor.settings.muteMode; });
     document.documentElement.style.fontSize = (20 * tutor.settings.fontScale) + "px";
     fillVoiceSelect();
@@ -1709,7 +1760,9 @@
     $("setAlsoUnmute").addEventListener("change", function () { tutor.setSetting("alsoUnmute", this.checked); });
     $("setBarge").addEventListener("change", function () { tutor.setSetting("bargeIn", this.checked); syncMic(); });
     $("setAuto").addEventListener("change", function () { tutor.setSetting("autoAdvance", this.checked); });
-    $("setWake").addEventListener("change", function () { tutor.setSetting("wakeLock", this.checked); if (this.checked) acquireWake(); else releaseWake(); });
+    $("setWake").addEventListener("change", function () { setAwake(this.checked); });
+    $("btnAwake").addEventListener("click", function () { setAwake(!tutor.settings.wakeLock); });
+    $("mAwake").addEventListener("click", function () { setAwake(!tutor.settings.wakeLock); });
     Array.prototype.forEach.call(document.getElementsByName("muteMode"), function (r) { r.addEventListener("change", function () { if (this.checked) { tutor.setSetting("muteMode", this.value); syncMic(); } }); });
     $("fontUp").addEventListener("click", function () { tutor.setSetting("fontScale", Math.min(1.6, +(tutor.settings.fontScale + 0.1).toFixed(2))); renderSettings(); });
     $("fontDown").addEventListener("click", function () { tutor.setSetting("fontScale", Math.max(0.8, +(tutor.settings.fontScale - 0.1).toFixed(2))); renderSettings(); });
@@ -1758,6 +1811,9 @@
     window.__mic = { off: micIsOff, set: setMicOff, on: function () { return recOn; } };
     $("supportNote").textContent = (SR ? "Voice listening is available." : "This browser can not listen to your voice. Use Chrome on Android. You can still use the buttons.");
     userMicOff = !!tutor.settings.micOff;                      // v5.9.6: the mic switch is remembered between sessions
+    // v5.9.12: Always on is ON by default, and once from an older version a saved "off" is reset to on (the switch is in the menu)
+    if (!tutor.settings.awakeV2) { tutor.settings.awakeV2 = true; tutor.setSetting("wakeLock", true); }
+    setupMediaSession(); KA.sync(); window.__awake = KA;
     initFlash(); initSync(); initAsk(); initV4(); window.__v4ready = true;
     renderSettings(); renderHelp(); renderLessons(); render(); renderDbg();
     if ("serviceWorker" in navigator && location.protocol !== "file:") {

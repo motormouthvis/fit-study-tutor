@@ -17,6 +17,7 @@
 <header class="top">
   <div class="title">MBA Study Tutor <span class="sub">BUS 5601 &middot; BUS 5421 &middot; <span id="ver">v5.8.4</span></span></div>
   <div id="netNote" class="net" hidden>offline</div>
+  <button id="btnAwake" class="awakechip on" type="button" aria-pressed="true">&#9728; Awake</button>
   <button id="btnMenu" class="menubtn" aria-haspopup="dialog">&#9776; Menu</button>
 </header>
 
@@ -265,7 +266,8 @@
       <label class="check"><input id="setLessonAuto" type="checkbox"> Lessons continue to the next part by themselves (after the audio really finishes)</label>
       <label class="check"><input id="setAlsoUnmute" type="checkbox"> Also accept the single word "unmute" to turn listening back on</label>
       <label class="check"><input id="setAuto" type="checkbox"> Go to the next question automatically</label>
-      <label class="check"><input id="setWake" type="checkbox"> Keep the screen on during a session</label>
+      <label class="check"><input id="setWake" type="checkbox"> Always on: keep the screen awake while the app is open (recommended; on by default)</label>
+      <p id="awakeNote2" class="small awakenote"></p>
     </div>
     <div class="card"><h2>Offline audio</h2>
       <p class="small">Audio is saved on the phone the first time each clip plays. To save all of it now (about 30 MB), connect to Wi-Fi and tap below.</p>
@@ -300,7 +302,7 @@
     </div>
     <div class="card"><h2>Honest limits of a phone browser</h2>
       <ul class="limits">
-        <li><b>Keep the screen on.</b> Chrome on Android stops listening when the screen locks or you switch apps. This app asks the phone to keep the screen awake. At the gym: plug in or keep it in a pocket holder, use Gym mode (dark screen) and earbuds.</li>
+        <li><b>Keep the screen on.</b> Chrome on Android stops listening when the screen locks or you switch apps. Menu > Always on (or the sun button at the top) asks the phone to keep the screen awake; it is on by default. If your phone is in Battery Saver, Android can still switch the screen off, and a locked screen still stops listening for voice (the lesson audio keeps playing and the lock screen has play / pause / skip buttons). At the gym: plug in or keep it in a pocket holder, use Gym mode (dark screen) and earbuds.</li>
         <li><b>Listening needs internet.</b> Chrome sends your voice to Google to turn it into text. If you are offline, use the buttons. Questions and tapping still work offline.</li>
         <li><b>You may hear a small beep or tone</b> each time the microphone restarts. That is Chrome, not this app.</li>
         <li><b>Free-form answers are graded by keywords.</b> I look for the key ideas in what you said. It is approximate. Tap "I was right" or "I was wrong" (or say it) to overrule me.</li>
@@ -338,6 +340,8 @@
     </div>
     <button class="btn warn wide m-run" data-ui="stop" id="mStop">Stop session</button>
     <div class="msec">Other</div>
+    <button class="btn wide" id="mAwake" type="button">&#9728; Always on: On</button>
+    <p id="awakeNote" class="small awakenote"></p>
     <div class="mgrid">
       <button class="btn" id="mStmt">&#128202; Show statements</button>
     </div>
@@ -446,6 +450,7 @@
 <script src="practice-data.js"></script>
 <script src="practice.js"></script>
 <script src="ask-config.js"></script>
+<script src="keepawake.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
