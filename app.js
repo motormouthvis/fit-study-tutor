@@ -4,7 +4,7 @@
   var E = window.Engine, B = window.Bank, LD = window.LessonData;
   var $ = function (id) { return document.getElementById(id); };
   var LS = "tutor.v1.";
-  var APP_VERSION = "v5.9.14";
+  var APP_VERSION = "v5.9.15";
   var MAN = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.clips) || {};
 
   /* ---------- storage ---------- */
@@ -934,7 +934,7 @@
   /* ================= v4.9: AI flash cards (Improve / Expand / Create), My cards, export / import =================
      v5.9: Improve and Expand now start with an instruction box (type it or talk it) and the improved card is shown
      as a preview you can Save, Cancel or refine again. base = the version the next instruction works from. */
-  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", instr: "", prompt: "", topic: "mine", tries: 0, base: null, asked: [], echo: false, strict: false };
+  var MYC = { cards: [], over: {} }, AI = { mode: null, card: null, busy: false, res: null, err: "", instr: "", disc: "", prompt: "", topic: "mine", tries: 0, base: null, asked: [], echo: false, strict: false };
   function mycLoad() {
     var m = storage.load("mycards", null); MYC = (m && typeof m === "object") ? m : {};
     if (!Array.isArray(MYC.cards)) MYC.cards = []; if (!MYC.over || typeof MYC.over !== "object") MYC.over = {};
@@ -1139,6 +1139,7 @@
         "a question (\"begin with what decision?\"), or just confusion (\"im confused\"). Whatever form it takes, the note is FEEDBACK ABOUT THE CARD. " +
         "It is never text to put in the card, and it is never a question for you to answer in conversation.\n\n" +
         "NOTE FROM BILL\n>>>\n" + instr.slice(0, AI_INSTR_MAX) + "\n<<<\n\n" +
+        (AI.disc ? "CONTEXT: " + String(AI.disc).slice(0, 400) + "\n\n" : "") +
         "WHAT TO DO WITH THE NOTE\n" +
         "- If it asks a question or says he is confused, the card is at fault. " + (expand ? "Write cards that clear the confusion up" : "Fix the card so the question is answered and the confusion cannot happen again") +
         ": add one short, plain sentence that spells out whatever the card assumed he already knew, naming the thing he is asking about in this card's own example.\n" +
@@ -1172,7 +1173,7 @@
   }
   function aiResEchoes(cards) {
     var instr = String(AI.mode === "create" ? AI.prompt : AI.instr || "").trim(); if (!instr || !cards) return false;
-    return cards.some(function (x) { return aiEchoes(instr, x.f + " " + x.b, AI.mode === "create" ? 6 : 3); });
+    return cards.some(function (x) { var t = x.f + " " + x.b; return aiEchoes(instr, t, AI.mode === "create" ? 6 : 3) || (AI.parts || []).some(function (w) { return aiEchoes(w, t, 4); }); });
   }
   function aiRun(again) {
     dictStop(true);
@@ -1193,7 +1194,7 @@
   function aiDoInstr() {
     var v = ($("aiInstr").value || "").trim();
     if (AI.mode === "improve" && !v) { AI.err = "Say or type what you want changed (or tap one of the suggestions)."; aiRender(); return; }
-    dictStop(true); AI.instr = v.slice(0, AI_INSTR_MAX); AI.asked = v ? [AI.instr] : []; aiRun();
+    dictStop(true); AI.disc = ""; AI.parts = null; AI.instr = v.slice(0, AI_INSTR_MAX); AI.asked = v ? [AI.instr] : []; aiRun();
   }
   // refine: the next instruction works from the card Grok just produced, so changes build up
   function aiRefine() {
@@ -1201,14 +1202,14 @@
     if (!v) { if (ta) { ta.focus(); } return; }
     dictStop(true);
     if (AI.res && AI.res[0] && AI.mode === "improve") AI.base = { f: AI.res[0].f, b: AI.res[0].b };
-    AI.instr = v.slice(0, AI_INSTR_MAX); AI.asked = (AI.asked || []).concat([AI.instr]).slice(-4); aiRun();
+    AI.disc = ""; AI.parts = null; AI.instr = v.slice(0, AI_INSTR_MAX); AI.asked = (AI.asked || []).concat([AI.instr]).slice(-4); aiRun();
   }
   function aiBackToInstr() { dictStop(true); AI.res = null; AI.err = ""; aiRender(); }
   function aiOpen(mode, card) {
     $("menu").hidden = true; cpHide();
     if (mode !== "create" && !card) { fcSay("No card is showing. Open Flash Cards first."); return; }
     if (mode === "improve" && card.kind === "statement") { fcSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic."); return; }
-    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", instr: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1, base: null, asked: [], echo: false, strict: false };
+    AI = { mode: mode, card: card || null, busy: false, res: null, err: "", instr: "", disc: "", prompt: "", topic: (card && card.topic && FL.validTopic(card.topic)) ? card.topic : "mine", tries: AI.tries + 1, base: null, asked: [], echo: false, strict: false };
     aiShow(); aiRender();
   }
   function aiSaveImprove() {
@@ -1338,18 +1339,18 @@
   }
 
   /* ================= v5.9.13: the single "?" card button: the card helper ================= */
-  var CP = { pending: null, listening: null, delAt: 0, needPrime: false };
+  var CP = { pending: null, listening: null, delAt: 0, needPrime: false, disc: false };
   var CP_PENDING = { improve: ["Improve this card", "What should change on this card? Say it or type it, for example \u201Cmake the question harder\u201D.", "Improve it"], create: ["Create a brand new card", "What should the new card cover? Say it or type it, for example \u201Cworking capital\u201D.", "Draft the card"] };
   function cpOpen() {
     var c = fcCurrent(); if (!c) return;
     try { stopRec(); } catch (e) {} try { dictStop(true); } catch (e) {} $("menu").hidden = true;
-    CP.pending = null; cpRefresh(); cpSay(cpIdleMsg(), ""); $("cpHeard").textContent = ""; $("cpRetry").hidden = true;
+    CP.pending = null; CP.disc = false; $("cardPanel").classList.remove("disc"); $("cpDisc").hidden = true; cpRefresh(); cpSay(cpIdleMsg(), ""); $("cpHeard").textContent = ""; $("cpRetry").hidden = true;
     $("cardPanel").hidden = false; document.body.classList.add("cpopen"); cpFitSoon();
     try { $("cpTalk").focus({ preventScroll: true }); } catch (e) {}
     ev("card helper opened");
   }
   function cpFitSoon() { setTimeout(function () { try { fcFit(); } catch (e) {} }, 60); }
-  function cpHide() { var p = $("cardPanel"); if (!p) return; if (CP.listening) { CP.listening = null; listenStop(); } CP.pending = null; p.hidden = true; document.body.classList.remove("cpopen"); }
+  function cpHide() { var p = $("cardPanel"); if (!p) return; if (CP.listening) { CP.listening = null; listenStop(); } CP.pending = null; CP.disc = false; p.classList.remove("disc"); try { $("cpDisc").hidden = true; dsStopAll(); } catch (e) {} p.hidden = true; document.body.classList.remove("cpopen"); }
   function cpClose() {
     cpHide(); cpFitSoon(); try { syncMic(); } catch (e) {}
     try { var a = document.activeElement; if (a && a.blur) a.blur(); if ($("tab-cards").classList.contains("active")) $("fcCard").focus({ preventScroll: true }); } catch (e) {}
@@ -1363,7 +1364,7 @@
   function cpSay(msg, cls) { var e = $("cpStatus"); e.textContent = msg || ""; e.className = "cpstatus" + (cls ? " " + cls : ""); }
   function cpTalkLabel() {
     var b = $("cpTalk"), caps = MicSupport.capabilities(window, navigator), on = !!CP.listening;
-    b.textContent = on ? "\u23F9 Listening\u2026 tap to stop" : !caps.sr || !caps.secure ? "\uD83C\uDFA4 Voice not available here" : CP.pending ? "\uD83C\uDFA4 Say it now" : "\uD83C\uDFA4 Tap, then say what you want";
+    b.textContent = on ? "\u23F9 Listening\u2026 tap to stop" : !caps.sr || !caps.secure ? "\uD83C\uDFA4 Voice not available here" : CP.pending ? "\uD83C\uDFA4 Say it now" : CP.disc ? "\uD83C\uDFA4 Tap, then talk to Grok" : "\uD83C\uDFA4 Tap, then say what you want";
     b.setAttribute("aria-pressed", on ? "true" : "false"); b.classList.toggle("on", on); b.disabled = !on && (!caps.sr || !caps.secure);
   }
   function cpRefresh() {
@@ -1378,7 +1379,8 @@
     $("cpGo").textContent = p ? CP_PENDING[p][2] : "Go";
     $("cpType").placeholder = p ? (p === "create" ? "e.g. working capital, with a small example" : "e.g. make the question harder") : "Or type it, e.g. explain this card";
     $("cpCancel").hidden = !p; cpTalkLabel();
-    var ph = CardVoice.PHRASES; $("cpTips").innerHTML = "You can say: " + ["explain", "improve", "similar", "create", "important", "restudy", "flip", "got", "missed", "next", "prev", "close"].filter(function (k) { return !(isSt && k === "improve"); }).map(function (k) { return ph[k]; }).join(" &middot; ") + (c.improved ? " &middot; " + ph.reset : "") + (c.custom ? " &middot; " + ph["delete"] : "") + ".";
+    if (CP.disc) { $("cpGo").textContent = "Send"; $("cpType").placeholder = "Type to Grok about this card"; }
+    var ph = CardVoice.PHRASES; $("cpTips").innerHTML = "You can say: " + ["discuss", "explain", "improve", "similar", "create", "important", "restudy", "flip", "got", "missed", "next", "prev", "close"].filter(function (k) { return !(isSt && k === "improve"); }).map(function (k) { return ph[k]; }).join(" &middot; ") + (c.improved ? " &middot; " + ph.reset : "") + (c.custom ? " &middot; " + ph["delete"] : "") + ".";
   }
   function cpPendingStart(mode) {
     CP.pending = mode; $("cpType").value = ""; cpSay(CP_PENDING[mode][0] + ": " + CP_PENDING[mode][1], "ask"); $("cpHeard").textContent = ""; cpRefresh();
@@ -1387,18 +1389,19 @@
     if (!(caps.sr && caps.secure && touch)) { try { $("cpType").focus({ preventScroll: true }); } catch (e) {} }
   }
   // The words he says or types are FEEDBACK about the card, sent to Grok as a note; the Improve / Create code checks the result and blocks Save if his words came back in the card.
-  function cpLaunch(mode, note) {
+  function cpLaunch(mode, note, ctx) {
     var c = fcCurrent(); note = String(note || "").trim();
     if (!c && mode !== "create") { ev("card helper: no card for " + mode); cpSay("That card is no longer showing, so I could not " + (mode === "improve" ? "improve" : "make another from") + " it. Close this, open a card, and try again.", "err"); return; }
     ev("card helper: " + mode + (note ? " with a note" : "")); cpHide(); cpFitSoon(); aiOpen(mode, c);
-    if (mode === "create") { AI.prompt = note.slice(0, 300); AI.asked = [AI.prompt]; }
-    else { AI.instr = note.slice(0, AI_INSTR_MAX); AI.asked = note ? [AI.instr] : []; }
+    if (mode === "create") { AI.prompt = String(ctx && ctx.prompt || note).slice(0, 300); AI.asked = [AI.prompt]; }
+    else { AI.instr = String(ctx ? ctx.instr : note).slice(0, AI_INSTR_MAX); AI.disc = ctx ? ctx.disc : ""; AI.parts = ctx ? ctx.parts : null; AI.asked = AI.instr ? [AI.instr] : []; }
     aiRun();
   }
   function cpDo(action, note) {
     var c = fcCurrent(); if (!c && action === "close") { cpClose(); return; } if (!c) { ev("card helper: no card for " + action); cpSay("No card is showing, so \u201C" + action + "\u201D did nothing. Open a card in Flash Cards first.", "err"); return; } var said = "", cls = "ok";
     if (action !== "delete") CP.delAt = 0;
     switch (action) {
+      case "discuss": return dsOpen(note);
       case "explain": cpClose(); openAskCard(c); return;
       case "improve":
         if (c.kind === "statement") { cpSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic. You can still explain it or make another.", "err"); return; }
@@ -1424,8 +1427,146 @@
     if (!fcCurrent()) { cpClose(); return; }
     cpRefresh(); cpSay(said, cls);
   }
+  /* ================= v5.9.15: discuss a card =================
+     A conversation thread tied to the card on screen. It reuses the Ask Grok Worker (POST <url>/ask, kind "card", the same streaming
+     reply), sending the card text plus the last few turns. Replies show as text and are spoken (speechSynthesis, Mute remembered).
+     Voice: one tap = one listen (the same listenOnce as the rest of the helper); the optional "Keep talking" switch listens again
+     after each spoken reply and switches itself off on the first listen that fails. Typing always works, so the Cybertruck
+     (no microphone) can still type to Grok. The words he says are sent as chat turns and, for Improve / Make another / Create,
+     as the NOTE about the card (existing rules: never pasted into card text, Save blocked when they show up in it). */
+  var DS = { threads: {}, busy: false, ctrl: null, live: "", err: "", keep: false, mute: false, speaking: false, spoken: 0, turnTimer: null };
+  try { DS.mute = !!storage.load("dsmute", false); } catch (e) {}
+  var DS_TURNS = 9;   // turns sent with each question; the Worker allows 13 messages and 40 KB
+  function dsCard() { return fcCurrent(); }
+  function dsThread(c) { c = c || dsCard(); if (!c) return { msgs: [] }; return DS.threads[c.id] || (DS.threads[c.id] = { msgs: [] }); }
+  function dsPlain(t) { return String(t || "").replace(/\*\*|__|`|^#+\s*/gm, "").replace(/\s+/g, " ").trim(); }
+  function dsStopSpeech() { DS.speaking = false; try { if (synth) synth.cancel(); } catch (e) {} }
+  function dsStopAll() { DS.keep = false; clearTimeout(DS.turnTimer); if (DS.ctrl) { try { DS.ctrl.abort(); } catch (e) {} DS.ctrl = null; } DS.busy = false; DS.live = ""; dsStopSpeech(); }
+  function dsSpeak(text, done) {
+    var fin = false, wd; function end() { if (fin) return; fin = true; clearTimeout(wd); DS.speaking = false; if (done) done(); }
+    if (DS.mute || !synth || typeof SpeechSynthesisUtterance === "undefined") return end();
+    try {
+      synth.cancel(); var u = new SpeechSynthesisUtterance(dsPlain(text).slice(0, 1500)); u.rate = tutor.settings.rate || 1; u.lang = "en-US"; var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; }
+      u.onend = end; u.onerror = end; DS.speaking = true; DS.spoken++; wd = setTimeout(function () { try { synth.cancel(); } catch (e) {} end(); }, 6000 + text.length * 90);
+      synth.speak(u);
+    } catch (e) { end(); }
+  }
+  function dsRender() {
+    var c = dsCard(), th = dsThread(c), box = $("dsLog"), h = "";
+    if (!th.msgs.length && !DS.busy) h = "<div class='asknote'>Talk this card through with Grok. Ask what a word means, why the answer is what it is, or say \u201Cimprove this card\u201D when you are ready to change it. " + (ASK.url ? "" : "<b>Ask Grok is not switched on yet, so Grok cannot answer.</b>") + "</div>";
+    th.msgs.forEach(function (m) { h += "<div class='askmsg " + (m.role === "user" ? "me" : "ai") + "'>" + (m.role === "user" ? askEsc(m.content) : askFormat(m.content)) + "</div>"; });
+    if (DS.busy) h += "<div class='askmsg ai streaming'>" + (DS.live ? askFormat(DS.live) : "<span class='askdots'>Grok is thinking\u2026</span>") + "</div>";
+    if (DS.err) h += "<div class='askmsg ai err' role='alert'>" + askEsc(DS.err) + "</div>";
+    box.innerHTML = h; box.scrollTop = box.scrollHeight;
+    var caps = MicSupport.capabilities(window, navigator), canListen = caps.sr && caps.secure;
+    $("dsKeep").textContent = "\uD83D\uDD01 Keep talking: " + (DS.keep ? "on" : "off"); $("dsKeep").setAttribute("aria-pressed", DS.keep ? "true" : "false"); $("dsKeep").classList.toggle("on", DS.keep); $("dsKeep").title = canListen ? "" : "Voice is not available on this device";
+    $("dsMute").textContent = DS.mute ? "\uD83D\uDD07 Voice: muted" : "\uD83D\uDD0A Voice: on"; $("dsMute").setAttribute("aria-pressed", DS.mute ? "true" : "false"); $("dsMute").classList.toggle("on", DS.mute);
+    $("dsReset").hidden = !(th.msgs.length || DS.err);
+    $("dsImprove").hidden = !!(c && c.kind === "statement");
+    $("cpType").disabled = false;
+  }
+  function dsOpen(first) {
+    var c = fcCurrent(); if (!c) { cpSay("No card is showing. Open a card in Flash Cards first.", "err"); return; }
+    CP.pending = null; CP.disc = true; $("cardPanel").classList.add("disc"); $("cpDisc").hidden = false; DS.err = "";
+    cpRefresh(); dsRender(); cpSay("Discussing this card. Tap the big button and talk, or type below.", ""); $("cpHeard").textContent = ""; ev("card discussion opened");
+    if (first) dsSend(first);
+  }
+  function dsLeave(quiet) {
+    dsStopAll(); if (CP.listening) { CP.listening = null; listenStop(); }
+    CP.disc = false; $("cardPanel").classList.remove("disc"); $("cpDisc").hidden = true; cpRefresh(); if (!quiet) cpSay("Back to the card helper. The discussion is kept until you open another card.", "");
+  }
+  function dsFail(msg, text) {
+    DS.busy = false; DS.live = ""; DS.ctrl = null; DS.err = msg; var th = dsThread();
+    var last = th.msgs[th.msgs.length - 1]; if (last && last.role === "user") { th.msgs.pop(); if (text) { try { $("cpType").value = last.content; } catch (e) {} } }   // nothing is lost: it goes back in the type box
+    DS.keep = false; dsRender(); cpSay(msg, "err");
+  }
+  function dsSend(text) {
+    text = String(text || "").trim().slice(0, 1500); var c = dsCard(); if (!text) return;
+    if (!c) { cpSay("That card is no longer showing. Close this and open a card.", "err"); return; }
+    if (DS.busy) { cpSay("Grok is still answering. One moment.", "ask"); return; }
+    dsStopSpeech(); var th = dsThread(c); DS.err = "";
+    if (!ASK.url) { th.msgs.push({ role: "user", content: text }); DS.err = "Ask Grok is not switched on yet, so Grok cannot answer. Your card and buttons still work."; th.msgs.pop(); dsRender(); cpSay(DS.err, "err"); return; }
+    th.msgs.push({ role: "user", content: text }); DS.busy = true; DS.live = ""; dsRender(); cpSay("", "");
+    var name = c.course === "sa" ? "Statement Analysis" : FL.topicName(c.topic), cid = c.id, turns = th.msgs.slice(-DS_TURNS);
+    while (turns.length && turns[0].role !== "user") turns.shift();
+    var framing = "\n\n[Discussion mode: Bill is talking this card through with you, out loud. Answer his latest message directly, in 1 to 4 short spoken-style sentences, plain text with no lists or markdown. Do not re-explain the whole card unless he asks.]";
+    var payload = { kind: "card", topic: name, partText: askCardText(c).slice(0, 3500) + framing, messages: turns.map(function (m) { return { role: m.role, content: m.content.slice(0, m.role === "user" ? 1500 : 3500) }; }) };
+    var ctrl = window.AbortController ? new AbortController() : null; DS.ctrl = ctrl; var reply = "";
+    function stale() { return DS.ctrl !== ctrl; }
+    function done() {
+      if (stale()) return; DS.busy = false; DS.ctrl = null; DS.live = "";
+      if (!reply.trim()) return dsFail("Grok sent an empty answer. Say or type it again.", text);
+      th.msgs.push({ role: "assistant", content: reply }); dsRender(); ev("card discussion reply");
+      if (!CP.disc || dsCard() !== c && (!dsCard() || dsCard().id !== cid)) return;
+      dsSpeak(reply, function () { if (DS.keep && CP.disc && !CP.listening && !DS.busy) { clearTimeout(DS.turnTimer); DS.turnTimer = setTimeout(function () { if (DS.keep && CP.disc && !CP.listening && !DS.busy) cpStartListen(false); }, 250); } });
+    }
+    function eat(chunk, st) {
+      st.buf += chunk; var lines = st.buf.split("\n"); st.buf = lines.pop();
+      lines.forEach(function (ln) { ln = ln.trim(); if (ln.indexOf("data:") !== 0) return; var d = ln.slice(5).trim(); if (d === "[DONE]") return;
+        try { var j = JSON.parse(d), t = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content; if (t) { reply += t; DS.live = reply; if (!stale()) dsRender(); } } catch (e) {} });
+    }
+    fetch(ASK.url + "/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) {
+        if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) {
+          if (stale()) return; var code = j && j.error;
+          if (r.status === 429) { var mins = Math.max(1, Math.round((j.retryAfter || 3600) / 60)); dsFail(j.scope === "day" ? "You have used today's Grok questions. They reset in about " + Math.max(1, Math.round(mins / 60)) + " hours. The card buttons still work." : "That is a lot of Grok questions this hour (the limit is 20). Try again in about " + mins + " minutes. The card buttons still work.", text); }
+          else if (r.status === 503) dsFail("Ask Grok is not switched on yet.", text);
+          else if (r.status === 413 || code === "too_many_followups" || code === "message_too_long" || code === "part_too_long") dsFail("This discussion got too long for Grok to take in one go. Tap \u201CStart this discussion over\u201D and ask again.", text);
+          else dsFail("Grok could not answer right now (error " + r.status + "). Say or type it again.", text);
+        });
+        var st = { buf: "" };
+        if (!r.body || !r.body.getReader) return r.text().then(function (t) { eat(t, st); eat("\n", st); done(); });
+        var rd = r.body.getReader(), dec = new TextDecoder();
+        function pump() { return rd.read().then(function (x) { if (x.done) { eat("\n", st); return done(); } eat(dec.decode(x.value, { stream: true }), st); return pump(); }); }
+        return pump();
+      })
+      .catch(function (e) { if (stale() || (e && e.name === "AbortError")) return; dsFail(navigator.onLine === false ? "No internet connection. Grok needs internet." : "Could not reach Grok. Check the connection and say or type it again.", text); });
+  }
+  // inside the thread only a clear command (it starts with the command) leaves the conversation; questions that merely contain "change" stay a conversation
+  var DS_PRE = "^(please |ok |okay |now |and |then |can you |could you |go ahead and |let's |lets |i want you to |i want to )*";
+  var DS_CMD = {
+    improve: new RegExp(DS_PRE + "(improve|rewrite|revise|polish|redo|tweak|fix|edit|update|change|make) (this |the |my )?(card|question|answer)\\b|" + DS_PRE + "(improve|rewrite|revise|polish)\\b|" + DS_PRE + "make (it|this) (a (little|bit) )?(shorter|clearer|simpler|harder|easier|better|longer)"),
+    similar: new RegExp(DS_PRE + "(make|create|write|give me|add|generate|do)( me)?( one| a few| some| two| three| 2| 3)? (more|another|other|similar)\\b|" + DS_PRE + "expand\\b|" + DS_PRE + "(one|a card) more like"),
+    create: new RegExp(DS_PRE + "(create|make|write|add|start|build|draft|generate)( me)? (a |an |one )?(brand )?(new|blank|fresh|different) (flash ?)?card\\b|" + DS_PRE + "(create|write|make|add) (a |an )?(flash ?)?card (about|on|for)\\b|^new card\\b")
+  };
+  function dsHandle(text) {
+    var n = CardVoice.norm(text), r = CardVoice.parse(text), asQ = /\?\s*$/.test(String(text).trim());
+    if (/^(close|done|exit|back|go back|that's all|thats all|end( the)? (discussion|chat|talk)|stop( talking)?|never ?mind|i'm done|im done)$/.test(n)) { dsLeave(); return; }
+    if (/^(mute|mute (it|the voice)|voice off)$/.test(n)) { dsSetMute(true); return; }
+    if (/^(unmute|unmute (it|the voice)|voice on)$/.test(n)) { dsSetMute(false); return; }
+    if (!asQ && (r.action === "improve" || r.action === "similar" || r.action === "create") && DS_CMD[r.action].test(n)) return dsAction(r.action, r.note);
+    dsSend(text);
+  }
+  function dsSetMute(m) { DS.mute = !!m; storage.save("dsmute", DS.mute); if (DS.mute) dsStopSpeech(); dsRender(); cpSay(DS.mute ? "Voice is muted. Grok's answers show as text only." : "Voice is on.", ""); }
+  function dsSetKeep(on) {
+    var caps = MicSupport.capabilities(window, navigator);
+    if (on && !(caps.sr && caps.secure)) { DS.keep = false; dsRender(); cpSay("Keep talking needs voice, and voice is not available here. You can still type to Grok.", "err"); return; }
+    DS.keep = !!on; if (!on) { clearTimeout(DS.turnTimer); if (CP.listening) { CP.listening = null; listenStop(); cpTalkLabel(); } } dsRender(); cpSay(on ? "Keep talking is on: after each answer I will listen again. It switches itself off if I hear nothing." : "Keep talking is off. Tap the big button for each turn.", on ? "ask" : "");
+    if (on && !CP.listening && !DS.busy && !DS.speaking) cpStartListen(false);
+  }
+  // the discussion becomes the NOTE about the card. His own words (the chat turns he said + any words after the command) are the note,
+  // so the existing echo check blocks Save if they come back inside the new card. Grok's side is only context.
+  function dsContext(mode, note) {
+    var th = dsThread(), mine = th.msgs.filter(function (m) { return m.role === "user"; }).slice(-4).map(function (m) { return m.content.replace(/\s+/g, " ").slice(0, 150); });
+    if (note) mine.push(note);
+    var lastAi = th.msgs.filter(function (m) { return m.role === "assistant"; }).pop(), c = dsCard();
+    var ctx = lastAi ? "Bill talked this card through with you. Your latest answer to him began: \"" + dsPlain(lastAi.content).slice(0, 260) + "\" (context only; never copy it into the card either)." : "";
+    var prompt = note || (mine.length ? mine[mine.length - 1] : "") || ("another card on the topic of " + (c ? FL.topicName(c.topic) : "this card"));
+    return { instr: mine.join(" | ").slice(0, 420), disc: ctx, prompt: prompt, parts: mine.slice() };
+  }
+  function dsAction(cmd, note) {
+    var c = dsCard(); if (!c) { cpSay("That card is no longer showing. Close this and open a card.", "err"); return; }
+    if (cmd === "improve" && c.kind === "statement") { cpSay("Improve works on the text cards. Statement Analysis cards are generated with checked arithmetic. You can still make another or keep talking.", "err"); return; }
+    var th = dsThread(c), said = th.msgs.some(function (m) { return m.role === "user"; });
+    if (!said && !note) { dsLeave(true); return cpDo(cmd, note); }   // nothing discussed yet: the normal "what should change?" step
+    var mode = cmd === "similar" ? "expand" : cmd, ctx = dsContext(mode, note);
+    dsStopAll(); if (CP.listening) { CP.listening = null; listenStop(); }
+    CP.disc = false; $("cardPanel").classList.remove("disc"); $("cpDisc").hidden = true;
+    cpLaunch(mode, note, ctx);
+  }
   function cpHandle(text) {
     text = String(text || "").trim(); if (!text) return; $("cpHeard").textContent = "Heard: \u201C" + text + "\u201D";
+    if (CP.disc) return dsHandle(text);
     if (CP.pending) {
       if (/^(cancel|never ?mind|stop|close|go back)$/i.test(CardVoice.norm(text))) { CP.pending = null; cpRefresh(); cpSay("Okay, cancelled.", ""); return; }
       var mode = CP.pending; CP.pending = null; return cpLaunch(mode, text);
@@ -1438,13 +1579,15 @@
   function cpStartListen(prime) {
     $("cpRetry").hidden = true; $("cpHeard").textContent = "";
     if (CP.listening) { var h = CP.listening; h.stop(); return; }
+    try { clearTimeout(DS.turnTimer); if (DS.speaking) dsStopSpeech(); } catch (e) {}   // talking over Grok's voice stops it
     var handle = listenOnce({
       prime: !!prime || CP.needPrime,
       onStatus: function (m) { cpSay(m, "ask"); },
       onInterim: function (t) { $("cpHeard").textContent = "Hearing: \u201C" + t + "\u201D"; },
       onFinal: function (t) { cpEndListen(); CP.needPrime = false; cpSay("", ""); ev("card helper heard: " + String(t).slice(0, 40)); cpHandle(t); },
       onError: function (info) {
-        cpEndListen(); CP.needPrime = info.kind === "blocked" || info.kind === "no-start";   // the next Try again asks for the mic itself, from that tap
+        cpEndListen(); if (CP.disc && DS.keep) { DS.keep = false; try { dsRender(); } catch (e) {} }   // Keep talking switches itself off on the first failed listen
+        CP.needPrime = info.kind === "blocked" || info.kind === "no-start";   // the next Try again asks for the mic itself, from that tap
         cpSay(info.message, "err"); $("cpRetry").hidden = !info.retry; if (!info.retry || info.fatal) { try { $("cpType").focus({ preventScroll: true }); } catch (e) {} }
       }
     });
@@ -1460,6 +1603,14 @@
     $("cpType").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } });
     function typed() { var v = $("cpType").value.trim(); $("cpType").value = ""; return v; }
     $("fcmExplain").addEventListener("click", function () { cpDo("explain"); });
+    $("fcmDiscuss").addEventListener("click", function () { var v = typed(); dsOpen(v || ""); });
+    $("dsKeep").addEventListener("click", function () { dsSetKeep(!DS.keep); });
+    $("dsMute").addEventListener("click", function () { dsSetMute(!DS.mute); });
+    $("dsBack").addEventListener("click", function () { dsLeave(); });
+    $("dsReset").addEventListener("click", function () { var c = dsCard(); if (c) delete DS.threads[c.id]; DS.err = ""; dsStopAll(); dsRender(); cpSay("Started over. Talk or type when you are ready.", ""); });
+    $("dsImprove").addEventListener("click", function () { var v = typed(); dsAction("improve", v); });
+    $("dsExpand").addEventListener("click", function () { var v = typed(); dsAction("similar", v); });
+    $("dsCreate").addEventListener("click", function () { var v = typed(); dsAction("create", v); });
     // the three AI buttons: text in the box = the note (runs at once); empty box = the usual Improve / More cards / Create sheet, which has its own instruction box and Talk button
     function aiButton(mode) { var v = typed(), c = fcCurrent(); if (mode === "improve" && c && c.kind === "statement") return cpDo("improve"); if (v) return cpLaunch(mode, v); cpHide(); cpFitSoon(); aiOpen(mode, c); }
     $("fcmImprove").addEventListener("click", function () { aiButton("improve"); });
@@ -1476,7 +1627,7 @@
     $("fcmDelete").addEventListener("click", function () { cpDo("delete"); });
     $("btnMicTest").addEventListener("click", function () { $("menu").hidden = true; mtOpen(); });
     $("mtClose").addEventListener("click", mtClose); $("mtMic").addEventListener("click", mtCheckMic); $("mtSpeech").addEventListener("click", mtCheckSpeech); $("mtCopy").addEventListener("click", mtCopy);
-    window.__cp = { open: cpOpen, handle: cpHandle, state: function () { return { pending: CP.pending, listening: !!CP.listening, needPrime: CP.needPrime }; } };
+    window.__cp = { open: cpOpen, handle: cpHandle, state: function () { return { pending: CP.pending, listening: !!CP.listening, needPrime: CP.needPrime, disc: CP.disc, keep: DS.keep, mute: DS.mute, busy: DS.busy, spoken: DS.spoken }; } };
   }
   // voice on the Improve / More cards / Create preview screens: "save", "cancel", "try again"
   function aiFootVoice() {

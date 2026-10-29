@@ -455,6 +455,18 @@ body.fcstudy #fcEmpty { margin:0; }
 .cpgrid3 { grid-template-columns:1fr 1fr 1fr; }
 .cpgrid .btn:disabled { opacity:.45; }
 .cptips { margin:10px 0 0; }
+.cpwide { grid-column:1 / -1; }
+.cpdisc { margin:6px 0 0; } .cpdisc[hidden] { display:none; }
+.dslog { max-height:34vh; overflow-y:auto; margin:0 0 8px; -webkit-overflow-scrolling:touch; }
+.dslog .askmsg { margin:6px 0; font-size:1rem; }
+.dslog .askmsg.me { margin-left:12%; }
+.dslog .asknote { color:var(--mut); font-size:.95rem; padding:6px 2px; }
+.dsbar { margin:0 0 8px; } .dsbar .btn { min-height:48px; font-size:.9rem; }
+.dsbar .btn.on { background:var(--amber); color:#000; border-color:var(--amber); font-weight:800; }
+.dsbar .btn:disabled { opacity:.55; }
+#dsReset { width:100%; margin:0 0 6px; }
+.cardpanel.disc .cpgrp, .cardpanel.disc .cpgrid:not(.dsbar), .cardpanel.disc .cptips { display:none; }
+body.dev-desktop .dslog { max-height:48vh; }
 .mtmeter { height:14px; border:2px solid var(--line); border-radius:8px; margin:10px 0; overflow:hidden; background:#0e1013; }
 #mtBar { height:100%; width:0; background:var(--green); transition:width .08s linear; }
 .mtreport { background:#0e1013; border:2px solid var(--line); border-radius:10px; padding:10px; font-size:.85rem; white-space:pre-wrap; word-break:break-word; margin:6px 0; max-height:34vh; overflow:auto; user-select:text; }

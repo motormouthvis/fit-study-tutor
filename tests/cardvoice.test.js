@@ -4,7 +4,7 @@ const CV = require("../cardvoice.js");
 const act = (t) => CV.parse(t).action;
 test("every action is reachable by at least one spoken phrase", () => {
   const phrases = {
-    explain: "explain this card", improve: "improve this card", similar: "make another card like this", create: "create a new card about working capital",
+    discuss: "discuss this card", explain: "explain this card", improve: "improve this card", similar: "make another card like this", create: "create a new card about working capital",
     important: "mark important", restudy: "restudy", flip: "flip", got: "got it", missed: "missed it", prev: "previous", next: "skip",
     reset: "reset to original", delete: "delete this card", close: "close", help: "what can I say"
   };
@@ -40,3 +40,10 @@ test("sheet commands (preview screens)", () => {
   assert.strictEqual(CV.parseSheet("purple"), "none");
 });
 test("a phrase list exists for the help text", () => { CV.ACTIONS.filter((a) => a !== "help").forEach((a) => assert.ok(CV.PHRASES[a], "phrase for " + a)); });
+test("v5.9.15: discuss phrases open the discussion, with an optional first question", () => {
+  ["discuss this card", "discuss it", "let's talk", "lets talk about this card", "talk about this card", "talk it through", "let\u2019s discuss"].forEach((t) => assert.equal(CV.parse(t).action, "discuss", t));
+  assert.equal(CV.parse("discuss this card").note, "");
+  assert.equal(CV.parse("talk about this card, why is it six dollars").note, "why is it six dollars");
+  assert.equal(CV.parse("delete this card").action, "delete");
+  assert.equal(CV.parse("explain this card").action, "explain");
+});

@@ -4,7 +4,7 @@
    about the card and NEVER puts it into the card text. */
 (function (root, factory) { if (typeof module === "object" && module.exports) module.exports = factory(); else root.CardVoice = factory(); })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var ACTIONS = ["explain", "improve", "similar", "create", "important", "restudy", "flip", "got", "missed", "prev", "next", "reset", "delete", "close", "help"];
+  var ACTIONS = ["discuss", "explain", "improve", "similar", "create", "important", "restudy", "flip", "got", "missed", "prev", "next", "reset", "delete", "close", "help"];
   function norm(t) { return String(t || "").toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim(); }
   // text after the matched command, minus filler words, e.g. "and make it shorter" -> "make it shorter"
   function tail(n, m) {
@@ -13,6 +13,7 @@
   }
   var RULES = [
     ["delete", /\b(delete|remove|throw away|get rid of) (this |the )?(card|it)\b|^(delete|remove)$/],
+    ["discuss", /\b(discuss|talk (about|through|over)|talk it (through|over)|talk this (through|over)|let'?s (talk|discuss|chat)|lets (talk|discuss|chat)|have a (talk|conversation|chat)|chat about|conversation about)\b/],
     ["similar", /\b(make|create|write|give me|add|generate|do)( me)?( one| a few| some| two| three| 2| 3)? (more|another|other|similar)( cards?| ones?| one)?( like (this|it|that)( one| card)?)?|\b(more|another|similar) cards? (like|about|on|from)\b|\bcards? like (this|it)\b|\bone more like\b|\bexpand( this| the)?( card)?\b/],
     ["create", /\b(create|make|write|add|start|build|draft|generate)( me)? (a |an |one )?(brand )?(new|blank|fresh|different) (flash ?)?card\b|\b(create|write|make|add) (a |an )?(flash ?)?card (about|on|for|covering|that)\b|\bnew card\b|\bcreate (a )?card\b|\bfrom scratch\b/],
     ["improve", /\b(improve|rewrite|fix|edit|revise|tweak|redo|polish|change|update)\b( this| the| my)?( card| question| answer)?|\bmake (it|this|the card|the question|the answer) (a (little|bit) )?(shorter|clearer|simpler|harder|easier|better|longer|more \w+|less \w+)|\b(better|simpler|shorter|clearer) (card|wording)\b/],
@@ -32,7 +33,8 @@
     var n = norm(text); if (!n) return { action: "none", note: "", text: n };
     for (var i = 0; i < RULES.length; i++) {
       var m = RULES[i][1].exec(n); if (!m) continue; var a = RULES[i][0], note = "";
-      if (a === "improve") {
+      if (a === "discuss") { note = tail(n, m).replace(/^(about|on|through|over|of)( this| the| it| that)?( card| one)?( |$)/, "").replace(/^(and |then |so )+/, "").replace(/^((this|the|that|it|one) )*(card|one|it)$/, "").trim(); }
+      else if (a === "improve") {
         // "make it shorter" is itself the instruction; "improve this card, add an example" -> "add an example"
         note = /^make /.test(m[0]) || /^(better|simpler|shorter|clearer) /.test(m[0]) ? n.slice(m.index) : tail(n, m);
         if (/^(fix|change|edit|update|redo)$/.test(note)) note = "";
@@ -54,7 +56,7 @@
     return "none";
   }
   var PHRASES = {
-    explain: "\u201Cexplain this card\u201D", improve: "\u201Cimprove this card\u201D (add what to change: \u201Cimprove this card, make it shorter\u201D)", similar: "\u201Cmake another card like it\u201D",
+    discuss: "\u201Cdiscuss this card\u201D or \u201Clet's talk\u201D", explain: "\u201Cexplain this card\u201D", improve: "\u201Cimprove this card\u201D (add what to change: \u201Cimprove this card, make it shorter\u201D)", similar: "\u201Cmake another card like it\u201D",
     create: "\u201Ccreate a new card about working capital\u201D", important: "\u201Cmark important\u201D", restudy: "\u201Crestudy\u201D", flip: "\u201Cflip\u201D", got: "\u201Cgot it\u201D", missed: "\u201Cmissed it\u201D",
     prev: "\u201Cprevious\u201D", next: "\u201Cnext\u201D or \u201Cskip\u201D", reset: "\u201Creset to original\u201D", delete: "\u201Cdelete this card\u201D (say it twice)", close: "\u201Cclose\u201D"
   };
