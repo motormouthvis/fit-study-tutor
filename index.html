@@ -375,8 +375,23 @@
     <button id="cpRetry" class="btn cpretry" type="button" hidden>&#8635; Try again</button>
     <button id="cpCancel" class="btn" type="button" hidden>Cancel this</button>
     <div class="airow cptype"><input id="cpType" type="text" maxlength="400" autocomplete="off" aria-label="Type what you want to do" placeholder="Or type it, e.g. explain this card"><button id="cpGo" class="btn go" type="button">Go</button></div>
+    <div id="cpDisc" class="cpdisc" hidden>
+      <div id="dsLog" class="dslog" role="log" aria-live="polite"></div>
+      <div class="cpgrid cpgrid3 dsbar">
+        <button id="dsKeep" class="btn" type="button" aria-pressed="false">&#128257; Keep talking: off</button>
+        <button id="dsMute" class="btn" type="button" aria-pressed="false">&#128266; Voice: on</button>
+        <button id="dsBack" class="btn" type="button">&#8592; Card helper</button>
+      </div>
+      <div class="cpgrid cpgrid3 dsbar">
+        <button id="dsImprove" class="btn" type="button">&#10024; Improve this card</button>
+        <button id="dsExpand" class="btn" type="button">&#10133; Make another like it</button>
+        <button id="dsCreate" class="btn" type="button">&#128221; Create a new card</button>
+      </div>
+      <button id="dsReset" class="btn" type="button" hidden>Start this discussion over</button>
+    </div>
     <div class="cpgrp">Ask Grok</div>
     <div class="cpgrid">
+      <button id="fcmDiscuss" class="btn cpwide" type="button">&#128172; Discuss this card</button>
       <button id="fcmExplain" class="btn" type="button">&#128161; Explain this card</button>
       <button id="fcmImprove" class="btn" type="button">&#10024; Improve this card</button>
       <button id="fcmExpand" class="btn" type="button">&#10133; Make another card like it</button>
