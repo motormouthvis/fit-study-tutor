@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 68 + 48);
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 52 + 68 + 48); // +52 Froeb Ch 5 study-doc deck
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,20 +229,20 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 166); assert.equal(F.BK.length, 316);
+  assert.equal(FR.length, 166 + 52); assert.equal(F.BK.length, 316 + 52); // +52 Ch 5 study-doc deck
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
     "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades"];
   // the Ch 3 "Summary of Main Points" cards are quoted word for word from a page we do not know, so they carry no page ref either
-  const noPage = c => VERBATIM.includes(c.id) || /^froeb-ch03-ch3-summary-\d+$/.test(c.id);
+  const noPage = c => VERBATIM.includes(c.id) || /^froeb-ch03-ch3-summary-\d+$/.test(c.id) || /^froeb-ch05-study-/.test(c.id); // Ch 5 study-doc deck comes from Bill's own notes, no page refs
   // Chapter 4 is written in our own words from the chapter, so its answers end with a section reference instead of a page
   const ch4ref = c => /^froeb-ch04-/.test(c.id) && / \(Ch 4, [^)]+\)$/.test(c.b);
   // Chapter 5 is also in our own words; each answer ends with a section and page reference, or the overview
   const ch5ref = c => /^froeb-ch05-/.test(c.id) && / \(Ch 5, (overview|sect 5\.[1-6], p\. \d+)(; summary)?\)$/.test(c.b);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-6]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || ch5ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 40, 42, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 33, 40, 42, 52, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -496,7 +496,7 @@ test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 42 cards, between C
   assert.ok(ch, "no chapter 5"); assert.equal(ch.title, "Investment Decisions: Look Ahead and Reason Back");
   assert.equal(ch.key, "book:froeb-ch05");
   assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 5: Investment Decisions: Look Ahead and Reason Back");
-  assert.deepEqual(b.chapters.map(c => c.n), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(b.chapters.map(c => c.n), [1, 2, 3, 4, 5, 5, 6]); // Ch 5 also has the study-doc deck
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05");
   assert.equal(cards.length, 42);
   assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 5 && /^froeb-ch05-[a-z0-9-]+$/.test(c.id)));

@@ -460,7 +460,7 @@
   var BD = (typeof module === "object" && module.exports) ? require("./books-data.js") : (typeof window !== "undefined" && window.BooksData) || { books: [] };
   var BK = [], BOOKS = BD.books || [], bkSeen = {};
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
-  function chapterKey(b, ch) { return b.id + "-ch" + pad2(ch.n); }
+  function chapterKey(b, ch) { return b.id + "-ch" + pad2(ch.n) + (ch.deck ? "-" + ch.deck : ""); } // optional deck suffix lets one chapter have a second deck without changing existing ids
   BOOKS.forEach(function (b) {
     b.chapters.forEach(function (ch) {
       var key = chapterKey(b, ch); ch.key = "book:" + key;
