@@ -188,18 +188,18 @@ test("v5.0: Statement Analysis prompts say what to calculate", () => {
 test("v5.1: Chapter 1 key terms are built in: 82 cards, stable unique ids, course 5601, own section with the long title", () => {
   const ch = F.BOOKS[0].chapters[0];
   const W = F.BK.filter(c => c.book === "wt16" && c.topic === ch.key);
-  assert.equal(W.length, 82); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 82);
+  assert.equal(W.length, 77); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 77);
   assert.ok(W.every(c => c.course === "acct" && /^wt16-ch01-[a-z0-9-]+$/.test(c.id) && c.f && c.b));
   assert.equal(ch.title_full, "Course 5601 - Book: Financial & Managerial Accounting, Chapter 1: Introduction to Accounting and Business");
   const sec = F.sectionById(ch.key); assert.equal(sec.title, ch.title_full);
-  assert.equal(F.sectionStats(sec, F.newState()).total, 82);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 77);
 });
 test("v5.1: every card belongs to a section (course topics, book chapters, Statement Analysis) and nothing was dropped", () => {
   const gs = F.sectionList(), secs = [].concat(...gs.map(g => g.sections)).filter(s => s.id !== "all" && s.id !== "mine");
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71); // v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17); // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -214,7 +214,7 @@ test("v5.1: Study all / missed / restudy filters pick the right cards", () => {
   F.answer(st, ids.slice(), ids[0], true); F.answer(st, ids.slice(), ids[1], false); F.setRestudy(st, ids[0], true);
   const f = m => F.filterCards("sec:topic:balance:" + m, st).map(c => c.id);
   assert.equal(f("all").length, ids.length); assert.deepEqual(f("wrong"), [ids[1]]); assert.deepEqual(f("restudy").sort(), [ids[0], ids[1]].sort());
-  assert.equal(F.filterCards("sec:book:wt16-ch01:all", st).length, 82); assert.equal(F.filterCards("sec:sa:wrong", st).length, 0);
+  assert.equal(F.filterCards("sec:book:wt16-ch01:all", st).length, 77); assert.equal(F.filterCards("sec:sa:wrong", st).length, 0);
   assert.deepEqual(F.parseSec("sec:book:wt16-ch01:wrong"), { id: "book:wt16-ch01", mode: "wrong" });
 });
 test("v5.1: session history keeps the latest 20 per section, newest first", () => {
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 166 + 32); assert.equal(F.BK.length, 316 + 32 + 71); // v5.9.17 Ch 3-5 rebuild
+  assert.equal(FR.length, 166 + 32 - 9); assert.equal(F.BK.length, 316 + 32 + 71 - 17); // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
@@ -242,7 +242,7 @@ test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section title
   const ch5ref = c => /^froeb-ch05-/.test(c.id) && / \(Ch 5, (overview|sect 5\.[1-6], p\. \d+)(; summary)?\)$/.test(c.b);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-6]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || ch5ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [23, 25, 34, 67, 46, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [22, 25, 34, 55, 50, 3]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -258,10 +258,10 @@ test("v5.7.2: missed card is requeued to the end, after every remaining card", (
 
 test("v5.7.3: Scott Chapters 1-3 cards: 66 cards, course 5601, page refs, no Q: prefix", () => {
   const S = F.BK.filter(c => c.book === "scott" && /^scott-ch0[1-3]-/.test(c.id));
-  assert.equal(S.length, 68);
+  assert.equal(S.length, 65); // v5.9.21: -3 duplicates
   assert.ok(S.every(c => c.course === "acct" && /^scott-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \((p\. \d+|page not given)\)$/.test(c.b) && !/^Q:/.test(c.f)));
   const b = F.BOOKS.find(x => x.id === "scott");
-  assert.deepEqual(b.chapters.slice(0, 3).map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 15]);
+  assert.deepEqual(b.chapters.slice(0, 3).map(ch => S.filter(c => c.topic === ch.key).length), [29, 21, 15]);
   assert.equal(b.chapters[2].title_full, "Course 5601 - Book: College Accounting: A Career Approach (Scott, 13th ed.), Chapter 3: The General Journal and the General Ledger");
 });
 
@@ -397,24 +397,24 @@ test("v5.9.5: the problem 3-1 card teaches profit given up, not the price of the
   assert.match(c.b, / \(p\. 29\)$/);
 });
 
-test("v5.9.7: Froeb Chapter 4 is a chapter like the others: 67 cards, stable ids, in every chapter filter", () => {
+test("v5.9.7: Froeb Chapter 4 is a chapter like the others: 55 cards, stable ids, in every chapter filter", () => {
   const b = F.BOOKS.find(x => x.id === "froeb"), ch = b.chapters.find(c => c.n === 4);
   assert.ok(ch, "no chapter 4"); assert.equal(ch.title, "Extent (How Much) Decisions");
   assert.equal(ch.key, "book:froeb-ch04");
   assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 4: Extent (How Much) Decisions");
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04");
-  assert.equal(cards.length, 67);
+  assert.equal(cards.length, 55);
   assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 4 && /^froeb-ch04-[a-z0-9-]+$/.test(c.id)));
   // the sections list builds the chapter pickers, so Chapter 4 gets Study all / missed / restudy / important for free
   const sec = F.sectionById("book:froeb-ch04");
   assert.ok(sec, "chapter 4 has no section"); assert.equal(sec.title, ch.title_full);
   const books = F.sectionList().find(g => g.id === "books");
   assert.ok(books.sections.some(s => s.id === "book:froeb-ch04"), "chapter 4 missing from Books and chapters");
-  assert.equal(F.sectionStats(sec, F.newState()).total, 67);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 55);
   const st = F.newState(); F.setImportant(st, cards[0].id, true);
   assert.deepEqual(F.filterCards("sec:book:froeb-ch04:important", st).map(c => c.id), [cards[0].id]);
   assert.equal(F.sectionStats(sec, st).important, 1);
-  assert.equal(F.filterCards("sec:book:froeb-ch04:all", st).length, 67);
+  assert.equal(F.filterCards("sec:book:froeb-ch04:all", st).length, 55);
 });
 test("v5.9.7: every Chapter 4 card matches the written wording, front and back, in order", () => {
   const want = [
@@ -427,8 +427,7 @@ test("v5.9.7: every Chapter 4 card matches the written wording, front and back, 
     ["fixed-cost-part-is-irrelevant", "Which part of average cost is irrelevant to an extent decision?", "The fixed-cost part. Fixed costs do not change when you do one more, so they play no role in the how-much decision. Only marginal cost matters. (Ch 4, sect 4.1, pp. 37-38; summary)"],
     ["hospital-fixed-cost-fallacy", "A hospital's average cost per delivery is higher than its average revenue per delivery, so the CEO refuses to expand. What mistake is this?", "The fixed-cost fallacy. Average cost includes fixed overhead that does not change with one more delivery. The right test is whether the marginal revenue of one more delivery beats its marginal cost. (Ch 4, sect 4.1, pp. 37-38)"],
     ["rising-average-cost", "What does it mean when average cost is rising? How does that connect to marginal cost?", "Average cost rises only when the marginal cost of the latest unit is above the current average. If MC is below the average, the average falls. (Ch 4, end-of-chapter questions)"],
-    ["how-much-to-spend-on-advertising", "How do you decide how much to spend on advertising?", "Keep spending as long as the extra revenue from the next ad dollar is bigger than its cost. Stop where the marginal cost of winning one more customer equals the marginal revenue from that customer.\nExample (the radio-station case): Each new listener is worth about $21 in donations. Ad spending stops being worth it when the cost of winning one more listener rises to $21. (Ch 4, sect 4.2, pp. 39-40)"],
-    ["customer-acquisition-cost", "What is \"customer acquisition cost\" in this chapter's language?", "The marginal cost of winning one more customer. It is the number you compare to the marginal revenue from that customer. (Ch 4, sect 4.2, pp. 39-40)"],
+    ["how-much-to-spend-on-advertising", "How do you decide how much to spend on advertising?", "Keep spending as long as the extra revenue from the next ad dollar is bigger than its cost. Stop where the marginal cost of winning one more customer (the customer acquisition cost) equals the marginal revenue from that customer.\nExample (the radio-station case): Each new listener is worth about $21 in donations. Ad spending stops being worth it when the cost of winning one more listener rises to $21. (Ch 4, sect 4.2, pp. 39-40)"],
     ["splitting-a-fixed-budget", "You have a fixed budget to split between two options. How do you divide it?", "Move dollars toward the option where the next dollar wins more (lower marginal cost). Keep shifting until the marginal costs of the two options are equal. At that point, no move can improve the result. (Ch 4, sect 4.3, pp. 40-43)"],
     ["opportunity-cost-of-a-budget-dollar", "With a fixed budget, what is the opportunity cost of a dollar spent on option A?", "The benefit that same dollar would have produced on option B. That is why the two marginal costs must be equal at the best split. (Ch 4, sect 4.3, pp. 40-43)"],
     ["comparing-plants-cost-per-hour", "When you compare plants by cost per hour of work, what should you check before shifting production?", "(1) Take fixed overhead out, since it is not marginal. (2) Check that cost per hour is a good stand-in for true marginal cost. (3) Watch for hidden costs, such as politics or disruption, that limit how far you can shift. (Ch 4, sect 4.3, pp. 40-43)"],
@@ -436,7 +435,6 @@ test("v5.9.7: every Chapter 4 card matches the written wording, front and back, 
     ["fixed-fee-does-not-change-effort", "Why doesn't a fixed fee change how hard someone works?", "Effort is an extent decision. A fixed fee does not change what one more unit of effort earns, so the marginal benefit of effort is the same either way. Only pay that moves with output changes behavior. (Ch 4, sect 4.4, pp. 43-44; summary)"],
     ["fixed-fee-vs-per-tree-charge", "A logger pays a fixed fee for the right to cut trees. How does that differ from paying per tree?", "The fixed fee is a sunk cost, so the logger cuts every tree that earns any profit. A per-tree charge raises the marginal cost of each tree, so the least valuable trees are left standing. (Ch 4, sect 4.4, pp. 43-44)"],
     ["lower-commission-and-shirking", "Why can a lower commission rate make a salesperson shirk, even with a salary added?", "The salary does not change the payoff from one more sale. A lower commission cuts the marginal benefit of each sale. Hard sales stop being worth the effort, so only the easy ones get made. (Ch 4, sect 4.4, pp. 43-44)"],
-    ["incentives-that-increase-effort", "What kind of incentive increases effort?", "One that raises the marginal benefit (MR) of effort or lowers its marginal cost (MC). Fixed fees and flat pay do neither. (Ch 4, summary)"],
     ["pay-on-measures-that-reflect-effort", "What does \"tie pay to performance measures that reflect effort\" mean?", "Pay people on results they can actually influence. If the measure moves for reasons they do not control, the pay does not reward effort.\nExample: A manager is measured on revenue and only the costs he controls, not shared overhead. (Ch 4, sect 4.5, pp. 44-45; summary)"],
     ["incentive-must-reach-the-worker", "Why does it matter that an incentive reaches the person who does the work?", "Effort responds to the share of the gain that person keeps. If part of the payoff goes to someone else, the marginal incentive shrinks and so does effort. (Ch 4, sect 4.5, pp. 44-45)"],
     ["limits-of-incentive-pay", "What limits incentive pay?", "(1) Performance can be hard to measure, so people chase the measure instead of the goal. (2) It works best where effort really changes results. (3) Some jobs cover many tasks, so recognition and other non-money rewards also matter. (Ch 4, sect 4.5, pp. 44-45)"],
@@ -448,9 +446,9 @@ test("v5.9.7: every Chapter 4 card matches the written wording, front and back, 
     ["marginal-cost-of-one-more-worker", "When hiring one more worker means raising the wage of everyone already working, what is the worker's marginal cost?", "The new worker's pay plus the raises given to all the others. Do not use only the new worker's wage.\nExample: 9 workers earn $10 an hour, and a tenth would only join at $12, which is then paid to all 10. Total pay goes from $90 to $120, so the marginal cost is $30 an hour, not $12. (Ch 4, practice-problem skill)"],
     ["which-facility-to-cut", "Sales volume falls and you must cut capacity at one of two facilities. Which costs guide the choice?", "Compare the variable (marginal) cost per unit at each facility, and cut where it is highest. Ignore the fixed costs, since they do not change with the volume you shift. (Unless the choice would actually shut a facility and avoid its fixed costs.) (Ch 4, practice-problem skill; sect 4.1)"],
     ["more-workers-or-more-machines", "You can add either more workers or more machines. How do you decide?", "Compare how much extra output each adds PER DOLLAR it costs. Put the next dollar where output per dollar is higher. Stop shifting when the two are equal. (Ch 4, practice-problem skill; sect 4.3)"],
-    ["decision-rule-for-effort", "The decision rule for effort: when does a worker put in more effort?", "When the marginal benefit to the worker of the extra effort (MR) is greater than its marginal cost to the worker (MC). To get more effort, raise the first or lower the second. (Ch 4, sect 4.4; summary)"]
+    ["decision-rule-for-effort", "The decision rule for effort: when does a worker put in more effort?", "When the marginal benefit to the worker of the extra effort (MR) is greater than its marginal cost to the worker (MC). So an incentive raises effort only if it raises that marginal benefit or lowers that marginal cost; fixed fees and flat pay do neither. (Ch 4, sect 4.4; summary)"],
   ];
-  assert.equal(want.length, 31);
+  assert.equal(want.length, 29);
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04");
   assert.ok(cards.length >= want.length, "chapter 4 lost cards");   // later cards are checked by their own tests
   want.forEach(([slug, f, b]) => {   // v5.9.17: the deck was reordered (terms first), so match by id
@@ -462,7 +460,7 @@ test("v5.9.7: every Chapter 4 card matches the written wording, front and back, 
 
 test("v5.9.17: Chapter 4 opens with terms, the AC-rising duplicate is folded into rising-average-cost", () => {
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch04"), ids = cards.map(c => c.id.replace("froeb-ch04-", ""));
-  assert.deepEqual(ids.slice(0, 5), ["q-quantity", "p-price", "tr-total-revenue", "tc-total-cost", "profit-term"]);
+  assert.deepEqual(ids.slice(0, 3), ["tr-total-revenue", "tc-total-cost", "profit-term"]);
   assert.ok(!ids.includes("ac-rising-mc-above"));
   const at = s => ids.indexOf(s);
   for (const [a, b] of [["marginal-cost", "decision-rule-mr-vs-mc"], ["avoidable-cost", "shutdown-rule-short-vs-long-run"], ["average-variable-cost", "shutdown-price"], ["break-even-price", "break-even-quantity-formula"], ["break-even-quantity-formula", "practice-open-or-exit-avc-6-atc-9"], ["fixed-cost-part-is-irrelevant", "hospital-fixed-cost-fallacy"]])
@@ -470,16 +468,16 @@ test("v5.9.17: Chapter 4 opens with terms, the AC-rising duplicate is folded int
   for (const c of cards) { assert.match(c.b, / \(Ch 4, [^)]+\)$/); assert.equal(F.ALL.filter(x => x.id === c.id).length, 1); }
 });
 
-test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 46 cards, between Chapters 4 and 6, in every chapter filter", () => {
+test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 50 cards, between Chapters 4 and 6, in every chapter filter", () => {
   const b = F.BOOKS.find(x => x.id === "froeb"), ch = b.chapters.find(c => c.n === 5);
   assert.ok(ch, "no chapter 5"); assert.equal(ch.title, "Investment Decisions: Look Ahead and Reason Back");
   assert.equal(ch.key, "book:froeb-ch05");
   assert.equal(ch.title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 5: Investment Decisions: Look Ahead and Reason Back");
   assert.deepEqual(b.chapters.map(c => c.n), [1, 2, 3, 4, 5, 6]); // v5.9.17: study-doc deck folded into Ch 3-5
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05");
-  assert.equal(cards.length, 46);
+  assert.equal(cards.length, 50);
   assert.ok(cards.every(c => c.course === "econ" && c.book === "froeb" && c.chapter === 5 && /^froeb-ch05-[a-z0-9-]+$/.test(c.id)));
-  assert.equal(new Set(cards.map(c => c.id)).size, 46, "duplicate ids");
+  assert.equal(new Set(cards.map(c => c.id)).size, 50, "duplicate ids");
   // page references come from the section pages in the notes
   const pages = { "5.1": 49, "5.2": 51, "5.3": 53, "5.4": 55, "5.5": 56, "5.6": 56 };
   for (const c of cards) { const m = c.b.match(/\(Ch 5, sect (5\.\d), p\. (\d+)/); if (m) assert.equal(+m[2], pages[m[1]], c.id); else assert.match(c.b, /\(Ch 5, overview\)$/, c.id); }
@@ -487,10 +485,10 @@ test("v5.9.10: Froeb Chapter 5 is a chapter like the others: 46 cards, between C
   assert.ok(sec, "chapter 5 has no section"); assert.equal(sec.title, ch.title_full);
   const books = F.sectionList().find(g => g.id === "books").sections.map(s => s.id);
   assert.ok(books.indexOf("book:froeb-ch04") < books.indexOf("book:froeb-ch05") && books.indexOf("book:froeb-ch05") < books.indexOf("book:froeb-ch06"), "chapter order");
-  assert.equal(F.sectionStats(sec, F.newState()).total, 46);
+  assert.equal(F.sectionStats(sec, F.newState()).total, 50);
   const st = F.newState(); F.setImportant(st, cards[0].id, true);
   assert.deepEqual(F.filterCards("sec:book:froeb-ch05:important", st).map(c => c.id), [cards[0].id]);
-  assert.equal(F.filterCards("sec:book:froeb-ch05:all", st).length, 46);
+  assert.equal(F.filterCards("sec:book:froeb-ch05:all", st).length, 50);
 });
 test("v5.9.10: Chapter 5 covers the seven summary points and the key worked numbers", () => {
   const cards = F.ALL.filter(c => c.topic === "book:froeb-ch05"), txt = cards.map(c => c.b).join("\n");
@@ -533,4 +531,24 @@ test("v5.9.18: BUS 5601 Week 2 decks: Scott Ch 4 (25) and Ch 5 (21), Warren Ch 1
   const s4 = F.BK.filter(c => c.topic === "book:scott-ch04"); assert.match(s4[0].f, /cash basis/);
   const w12 = F.BK.filter(c => c.topic === "book:wt16-ch12"); assert.match(w12[0].f, /What is a corporation/);
   assert.ok(F.BK.filter(c => /^(scott-ch0[45]|wt16-ch12)-/.test(c.id)).every(c => c.course === "acct"));
+});
+
+test("v5.9.21: audit fixes: terms before use, consistent Scott cycle, duplicates trimmed, ids kept", () => {
+  const ids = t => F.ALL.filter(c => c.topic === t).map(c => c.id.replace(/^[a-z0-9]+-ch\d\d-/, ""));
+  const w = ids("book:wt16-ch01"), at = (a, x) => a.indexOf(x);
+  for (const [x, y] of [["assets", "account-payable"], ["liabilities", "account-payable"], ["equity", "the-accounting-equation"], ["revenue", "net-income-or-net-profit"], ["net-income-or-net-profit", "retained-earnings"], ["dividends", "retained-earnings"]])
+    assert.ok(at(w, x) >= 0 && at(w, x) < at(w, y), x + " before " + y);
+  for (const gone of ["earnings", "profit", "historical-cost-principle", "owner-s-equity", "stockholders-equity"]) assert.ok(!w.includes(gone), gone);
+  const f5 = ids("book:froeb-ch05");
+  assert.deepEqual(f5.slice(0, 6), ["contribution-margin", "present-value-term", "discounting-term", "cost-of-capital-term", "npv-term", "irr-term"]);
+  for (const [x, y] of [["irr-by-trial-and-error", "irr-is-harder-use-npv"], ["apartment-wacc-example", "max-price-from-profit-and-cost-of-capital"], ["higher-cost-of-capital-lowers-value", "firms-have-different-discount-rates"], ["shutdown-price-lease-example", "more-avoidable-costs-higher-shutdown-price"]])
+    assert.ok(at(f5, x) >= 0 && at(f5, x) < at(f5, y), x + " before " + y);
+  const sd = F.ALL.find(c => c.id === "froeb-ch05-shutdown-benefit-versus-cost");
+  assert.match(sd.b, /only when all costs are avoidable/);
+  assert.ok(!F.ALL.some(c => c.id === "scott-ch03-accounting-cycle-eight-steps"));
+  const cyc = F.ALL.find(c => c.id === "scott-ch05-order-main-accounting-cycle-steps").b;
+  assert.ok(cyc.indexOf("financial statements") < cyc.indexOf("adjusting entries") && cyc.indexOf("adjusting entries") < cyc.indexOf("closing entries"));
+  assert.ok(!/cash flows/.test(cyc));
+  assert.match(F.ALL.find(c => c.id === "froeb-ch01-rational-actor-paradigm").b, /The lever: change the incentives/);
+  assert.match(F.ALL.find(c => c.id === "wt16-ch01-debit-credit-rules").b, /^Debits increase Assets/);
 });
