@@ -187,7 +187,7 @@ test("v5.0: Statement Analysis prompts say what to calculate", () => {
 /* ---------- v5.1: books/chapters and sections ---------- */
 test("v5.1: Chapter 1 key terms are built in: 82 cards, stable unique ids, course 5601, own section with the long title", () => {
   const ch = F.BOOKS[0].chapters[0];
-  const W = F.BK.filter(c => c.book === "wt16");
+  const W = F.BK.filter(c => c.book === "wt16" && c.topic === ch.key);
   assert.equal(W.length, 82); assert.equal(F.BK.filter(c => c.topic === ch.key).length, 82);
   assert.ok(W.every(c => c.course === "acct" && /^wt16-ch01-[a-z0-9-]+$/.test(c.id) && c.f && c.b));
   assert.equal(ch.title_full, "Course 5601 - Book: Financial & Managerial Accounting, Chapter 1: Introduction to Accounting and Business");
@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48); // v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71); // v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 166 + 32); assert.equal(F.BK.length, 316 + 32); // v5.9.17 Ch 3-5 rebuild
+  assert.equal(FR.length, 166 + 32); assert.equal(F.BK.length, 316 + 32 + 71); // v5.9.17 Ch 3-5 rebuild
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
     "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
@@ -257,11 +257,11 @@ test("v5.7.2: missed card is requeued to the end, after every remaining card", (
 });
 
 test("v5.7.3: Scott Chapters 1-3 cards: 66 cards, course 5601, page refs, no Q: prefix", () => {
-  const S = F.BK.filter(c => c.book === "scott");
+  const S = F.BK.filter(c => c.book === "scott" && /^scott-ch0[1-3]-/.test(c.id));
   assert.equal(S.length, 68);
   assert.ok(S.every(c => c.course === "acct" && /^scott-ch0[1-3]-[a-z0-9-]+$/.test(c.id) && / \((p\. \d+|page not given)\)$/.test(c.b) && !/^Q:/.test(c.f)));
   const b = F.BOOKS.find(x => x.id === "scott");
-  assert.deepEqual(b.chapters.map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 15]);
+  assert.deepEqual(b.chapters.slice(0, 3).map(ch => S.filter(c => c.topic === ch.key).length), [30, 23, 15]);
   assert.equal(b.chapters[2].title_full, "Course 5601 - Book: College Accounting: A Career Approach (Scott, 13th ed.), Chapter 3: The General Journal and the General Ledger");
 });
 
@@ -525,4 +525,12 @@ test("v5.9.13: the IRR-by-trial-and-error card sits right after the IRR worked e
   assert.ok(pv(0.4) > 100 && pv(0.42) < 100);
   assert.ok(!F.newState().cards[c.id], "not marked important or restudy by default");
   assert.deepEqual(F.filterCards("sec:book:froeb-ch05:important", F.newState()).map(x => x.id), []);
+});
+
+test("v5.9.18: BUS 5601 Week 2 decks: Scott Ch 4 (25) and Ch 5 (21), Warren Ch 12 (25), terms first", () => {
+  const n = (id, ch) => F.BK.filter(c => c.topic === "book:" + id + "-ch" + String(ch).padStart(2, "0")).length;
+  assert.equal(n("scott", 4), 25); assert.equal(n("scott", 5), 21); assert.equal(n("wt16", 12), 25);
+  const s4 = F.BK.filter(c => c.topic === "book:scott-ch04"); assert.match(s4[0].f, /cash basis/);
+  const w12 = F.BK.filter(c => c.topic === "book:wt16-ch12"); assert.match(w12[0].f, /What is a corporation/);
+  assert.ok(F.BK.filter(c => /^(scott-ch0[45]|wt16-ch12)-/.test(c.id)).every(c => c.course === "acct"));
 });
