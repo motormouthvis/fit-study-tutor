@@ -245,14 +245,23 @@
 
   /* ---------- wake lock ---------- */
   var wake = null;
+  // v5.9.19: keep the screen awake whenever the app is visible and the setting is on
+  // (flashcards, reading, lessons), not only while a voice session runs. Chrome drops the
+  // lock whenever the page hides, so re-acquire on visible and on any tap/key if it was lost.
+  var wakePending = false;
   function acquireWake() {
-    if (!tutor.settings.wakeLock || !navigator.wakeLock || !tutor.running) return;
-    navigator.wakeLock.request("screen").then(function (l) { wake = l; l.addEventListener("release", function () { wake = null; updateBanner(); }); updateBanner(); }).catch(function () {});
+    if (!tutor.settings.wakeLock || !navigator.wakeLock || document.visibilityState !== "visible") return;
+    if ((wake && !wake.released) || wakePending) return;
+    wakePending = true;
+    navigator.wakeLock.request("screen").then(function (l) { wakePending = false; wake = l; l.addEventListener("release", function () { if (wake === l) wake = null; updateBanner(); }); updateBanner(); }).catch(function () { wakePending = false; });
   }
+  ["pointerdown", "keydown", "touchstart", "click"].forEach(function (ev) { document.addEventListener(ev, function () { if (!wake) acquireWake(); }, { capture: true, passive: true }); });
+  setTimeout(acquireWake, 0);
   function releaseWake() { if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") {
-      if (tutor.running) { acquireWake(); syncMic(); if (hiddenWhileRunning) { showAlert("The screen was off or you switched apps, so Chrome paused the microphone. It is back on now. Keep the screen on during a session."); hiddenWhileRunning = false; } }
+      acquireWake();
+      if (tutor.running) { syncMic(); if (hiddenWhileRunning) { showAlert("The screen was off or you switched apps, so Chrome paused the microphone. It is back on now. Keep the screen on during a session."); hiddenWhileRunning = false; } }
     } else if (tutor.running) hiddenWhileRunning = true;
   });
   var hiddenWhileRunning = false;
@@ -279,7 +288,6 @@
     $("sessCount").textContent = s.session.answered; $("sessRight").textContent = s.session.correct;
     $("gymSub").textContent = s.muted ? 'Say "' + tutor.settings.unmuteKeyword + '" or tap the button' : (s.running ? "Tap the button to pause" : "");
     renderGym(s);
-    if (!s.running) releaseWake();
     updateLessonsView(s);
     if (window.__v4ready) updateLearnLayout();
     syncMic();
