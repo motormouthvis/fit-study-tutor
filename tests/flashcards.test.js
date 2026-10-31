@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17); // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17 + 14); // v5.9.22: Froeb Ch6 +19, Warren Ch12 +5, -10 Froeb Ch2/Ch3 duplicates; // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,11 +229,9 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 166 + 32 - 9); assert.equal(F.BK.length, 316 + 32 + 71 - 17); // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
+  assert.equal(FR.length, 166 + 32 - 9 + 9); assert.equal(F.BK.length, 316 + 32 + 71 - 17 + 14); // v5.9.22: Ch6 +19, Ch2 -2, Ch3 -8; // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
-  const VERBATIM = ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling",
-    "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-one-lesson-of-economics",
-    "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades"];
+  const VERBATIM = []; // v5.9.22: no word-for-word cards remain
   // the Ch 3 "Summary of Main Points" cards are quoted word for word from a page we do not know, so they carry no page ref either
   const noPage = c => VERBATIM.includes(c.id) || /^froeb-ch03-ch3-summary-\d+$/.test(c.id) || /^froeb-ch05-study-/.test(c.id); // Ch 5 study-doc deck comes from Bill's own notes, no page refs
   // Chapter 4 is written in our own words from the chapter, so its answers end with a section reference instead of a page
@@ -242,7 +240,7 @@ test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section title
   const ch5ref = c => /^froeb-ch05-/.test(c.id) && / \(Ch 5, (overview|sect 5\.[1-6], p\. \d+)(; summary)?\)$/.test(c.b);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-6]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || ch5ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [22, 25, 34, 55, 50, 3]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [22, 23, 26, 55, 50, 22]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -266,46 +264,6 @@ test("v5.7.3: Scott Chapters 1-3 cards: 66 cards, course 5601, page refs, no Q: 
 });
 
 /* ---------- v5.9: Froeb Ch 3 wealth/government card, and the Important star ---------- */
-test("v5.9: Froeb Ch 2 has the 'Does the Government Create Wealth?' card, word for word from the textbook", () => {
-  const c = F.ALL.find(x => x.id === "froeb-ch02-does-the-government-create-wealth");
-  assert.ok(c, "card missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch02");
-  assert.equal(c.f, "Does the Government Create Wealth?");
-  assert.equal(c.b, "Governments play a critical role in the wealth-creating process by enforcing property rights and contracts\u2014legal mechanisms that facilitate voluntary transactions. By making sure that buyers and sellers can keep the gains from trade, our legal system makes trade more likely, which contributes to America's enormous wealth-creating ability.");
-  assert.equal(F.BOOKS.find(x => x.id === "froeb").chapters.filter(ch => ch.n === 3).length, 1);   // no new chapter was created
-});
-
-test("v5.9: Froeb Ch 1 has the price floor and price ceiling cards, word for word, and only one of each", () => {
-  const want = {
-    "froeb-ch01-what-is-a-price-floor": ["What is a price floor?",
-      "A government-set minimum price below which a good or service cannot legally be sold. It is binding when set above the market equilibrium price, causing a surplus \u2014 quantity supplied exceeds quantity demanded."],
-    "froeb-ch01-what-is-a-price-ceiling": ["What is a price ceiling?",
-      "A government-set maximum price above which a good or service cannot legally be sold. It is binding when set below the market equilibrium price, causing a shortage \u2014 quantity demanded exceeds quantity supplied."]
-  };
-  for (const id of Object.keys(want)) {
-    const c = F.ALL.find(x => x.id === id);
-    assert.ok(c, id + " missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch01");
-    assert.equal(c.f, want[id][0]); assert.equal(c.b, want[id][1]);
-  }
-  assert.equal(F.ALL.filter(c => /^What is a price (floor|ceiling)\?$/.test(c.f)).length, 2);   // defined once each, nowhere duplicated
-  assert.equal(F.ALL.filter(c => c.topic === "book:froeb-ch02" && /price (floor|ceiling)/i.test(c.f)).length, 1);   // Ch 2 keeps only its rent-cap / minimum-wage card
-});
-
-test("v5.9: the other three Froeb Ch 2 cards are word for word from the textbook too", () => {
-  const want = {
-    "froeb-ch02-what-is-the-one-lesson-of-economics": ["What is the one lesson of economics?",
-      "The art of economics consists in looking not merely at the immediate but at the longer effects of any act or policy; it consists of tracing the consequences of that policy not merely for one group but for all groups."],
-    "froeb-ch02-what-is-the-opposite-of-a-tax": ["What is the opposite of a tax, and what does it do to wealth?",
-      "A subsidy. By encouraging low-value consumers to buy or high-value sellers to sell, subsidies destroy wealth by moving assets from higher- to lower-valued uses\u2014in exactly the wrong direction."],
-    "froeb-ch02-how-do-taxes-destroy-wealth-blocked-trades": ["How do taxes destroy wealth?",
-      "A tax raises the cost of something, so fewer people buy and some trades that should have happened don't \u2014 it blocks good trades that would have created wealth."]
-  };
-  for (const id of Object.keys(want)) {
-    const c = F.ALL.find(x => x.id === id);
-    assert.ok(c, id + " missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch02");
-    assert.equal(c.f, want[id][0]); assert.equal(c.b, want[id][1]);
-  }
-});
-
 test("v5.9: Important is a separate star: set, clear, count per section and lifetime, and it never changes on a miss", () => {
   const st = F.newState(), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id), sec = F.sectionById("topic:balance");
   assert.equal(F.sectionStats(sec, st).important, 0);
@@ -336,53 +294,6 @@ test("v5.9: old saved progress still works and Important rides along with the ex
   F.setImportant(st, "balance-1", true); st.cards["balance-1"].u = 2000;
   const merged = SMx.merge({ cards: { "balance-1": { seen: 2, got: 1, miss: 1, u: 1000 } } }, { cards: st.cards });
   assert.equal(merged.cards["balance-1"].imp, true);                                     // newest write wins, Important included
-});
-
-test("v5.9.3: Froeb Ch 3 cost cards are word for word from the textbook, and nothing existing was touched", () => {
-  const want = {
-    "froeb-ch03-explicit-costs-what-the-book-calls-them": ["Explicit costs: what are they, and what does Froeb call them?",
-      "The book does not use the term \"explicit costs\" by itself; it calls them accounting costs: costs paid to suppliers for product ingredients, general operating expenses (such as salaries to factory managers and marketing expenses), depreciation expenses related to investments in buildings and equipment, and interest payments on borrowed funds. \"These types of expenses are the accounting costs of the business.\" (p. 28)"],
-    "froeb-ch03-what-are-implicit-costs": ["What are implicit costs?",
-      "\"Economists, however, are interested in all the relevant costs of decisions, including the implicit costs that do not show up in the accounting statements.\" Example: the income statement \"reflects no charge for equity even though this is an important consideration for investment decisions.\" (p. 28)"],
-  };
-  for (const id of Object.keys(want)) {
-    const c = F.ALL.find(x => x.id === id);
-    assert.ok(c, id + " missing"); assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch03");
-    assert.equal(c.f, want[id][0]); assert.equal(c.b, want[id][1]);
-  }
-  const ch3 = F.ALL.filter(c => c.topic === "book:froeb-ch03");
-  assert.equal(ch3.length, 34);                                                   // v5.9.17: +3 term cards from the study doc, -2 duplicates
-  for (const old of ["opportunity-cost", "implicit-costs", "accounting-costs", "economic-profit", "key-maxim-of-chapter-3"])
-    assert.ok(ch3.some(c => c.id === "froeb-ch03-" + old), "existing card lost: " + old);
-});
-
-test("v5.9.4: every point of the Froeb Ch 3 Summary of Main Points is a card, word for word and with no page ref", () => {
-  const want = [
-    ["Chapter 3 summary: how are costs related to decisions?",
-      "Costs are associated with decisions."],
-    ["Chapter 3 summary: what is the opportunity cost of an alternative?",
-      "The opportunity cost of an alternative is the profit you give up to pursue it."],
-    ["Chapter 3 summary: which costs and benefits should you consider in a decision, and what are they called?",
-      "Consider all costs and benefits that vary with the consequences of a decision and only costs and benefits that vary with the consequences of a decision. These are the relevant costs and relevant benefits of a decision."],
-    ["Chapter 3 summary: fixed costs vs variable costs, and which change when a decision changes output?",
-      "Fixed costs do not vary with the amount of output. Variable costs change as output changes. Decisions that change output change only variable costs."],
-    ["Chapter 3 summary: does accounting profit equal economic profit?",
-      "Accounting profit does not necessarily correspond to economic profit."],
-    ["Chapter 3 summary: what is the fixed-cost fallacy (sunk-cost fallacy), and what is a common example?",
-      "The fixed-cost fallacy or sunk-cost fallacy means that you consider irrelevant costs. A common fixed-cost fallacy is to let overhead or depreciation costs influence short-run decisions."],
-    ["Chapter 3 summary: what is the hidden-cost fallacy, and what is a common example?",
-      "The hidden-cost fallacy occurs when you ignore relevant costs. A common hidden-cost fallacy is to ignore the opportunity cost of capital when making investment or shutdown decisions."],
-    ["Chapter 3 summary: where should you begin when analyzing a decision?",
-      "If you begin by looking at the costs, you will always get confused; if you begin with the decision you are considering, you will never get confused."]
-  ];
-  want.forEach(([f, b], i) => {
-    const c = F.ALL.find(x => x.id === "froeb-ch03-ch3-summary-" + (i + 1));
-    assert.ok(c, "summary card " + (i + 1) + " missing");
-    assert.equal(c.course, "econ"); assert.equal(c.topic, "book:froeb-ch03");
-    assert.equal(c.f, f); assert.equal(c.b, b);
-    assert.ok(!/\(p\. \d+\)|\(page not given\)/.test(c.b), "summary card " + (i + 1) + " should carry no page reference");
-  });
-  assert.equal(F.ALL.filter(c => c.topic === "book:froeb-ch03").length, 34);   // v5.9.17 rebuild
 });
 
 test("v5.9.5: the problem 3-1 card teaches profit given up, not the price of the alternative", () => {
@@ -527,7 +438,7 @@ test("v5.9.13: the IRR-by-trial-and-error card sits right after the IRR worked e
 
 test("v5.9.18: BUS 5601 Week 2 decks: Scott Ch 4 (25) and Ch 5 (21), Warren Ch 12 (25), terms first", () => {
   const n = (id, ch) => F.BK.filter(c => c.topic === "book:" + id + "-ch" + String(ch).padStart(2, "0")).length;
-  assert.equal(n("scott", 4), 25); assert.equal(n("scott", 5), 21); assert.equal(n("wt16", 12), 25);
+  assert.equal(n("scott", 4), 25); assert.equal(n("scott", 5), 21); assert.equal(n("wt16", 12), 30); // v5.9.22: +5 stock dividend / split / no-par cards
   const s4 = F.BK.filter(c => c.topic === "book:scott-ch04"); assert.match(s4[0].f, /cash basis/);
   const w12 = F.BK.filter(c => c.topic === "book:wt16-ch12"); assert.match(w12[0].f, /What is a corporation/);
   assert.ok(F.BK.filter(c => /^(scott-ch0[45]|wt16-ch12)-/.test(c.id)).every(c => c.course === "acct"));
@@ -551,4 +462,25 @@ test("v5.9.21: audit fixes: terms before use, consistent Scott cycle, duplicates
   assert.ok(!/cash flows/.test(cyc));
   assert.match(F.ALL.find(c => c.id === "froeb-ch01-rational-actor-paradigm").b, /The lever: change the incentives/);
   assert.match(F.ALL.find(c => c.id === "wt16-ch01-debit-credit-rules").b, /^Debits increase Assets/);
+});
+
+test("v5.9.22: audit leftovers: own words, Froeb Ch6 built out, Scott Ch1 teaching order, Warren Ch12 stock dividends and splits", () => {
+  const ids = t => F.ALL.filter(c => c.topic === t).map(c => c.id.replace(/^[a-z0-9]+-ch\d\d-/, ""));
+  for (const id of ["froeb-ch01-what-is-a-price-floor", "froeb-ch01-what-is-a-price-ceiling", "froeb-ch02-does-the-government-create-wealth", "froeb-ch02-what-is-the-opposite-of-a-tax", "froeb-ch03-ch3-summary-6", "froeb-ch03-ch3-summary-7"]) {
+    const c = F.ALL.find(x => x.id === id); assert.ok(c, id); assert.ok(/\((p\. \d+|page not given)\)$/.test(c.b), id); }
+  assert.match(F.ALL.find(x => x.id === "froeb-ch02-does-the-government-create-wealth").b, /^Not directly/);
+  const c2 = ids("book:froeb-ch02"), c3 = ids("book:froeb-ch03");
+  for (const gone of ["what-is-the-one-lesson-of-economics", "how-do-taxes-destroy-wealth-blocked-trades"]) assert.ok(!c2.includes(gone), gone);
+  for (const gone of ["what-are-implicit-costs", "explicit-costs-what-the-book-calls-them", "ch3-summary-1", "ch3-summary-2", "ch3-summary-3", "ch3-summary-4", "ch3-summary-5", "ch3-summary-8"]) assert.ok(!c3.includes(gone), gone);
+  for (const keep of ["implicit-costs", "accounting-costs", "opportunity-cost", "key-maxim-of-chapter-3"]) assert.ok(c3.includes(keep), keep);
+  const f6 = ids("book:froeb-ch06");
+  assert.equal(f6.length, 22); assert.equal(f6[0], "demand-curve-term");
+  for (const k of ["elasticity-sign-size-direction", "gasoline-short-vs-long-run-elasticity", "positive-price-elasticity-is-rare"]) assert.ok(f6.includes(k), k);
+  assert.ok(f6.indexOf("price-elasticity-term") < f6.indexOf("elasticity-sign-size-direction") && f6.indexOf("elasticity-and-revenue") < f6.indexOf("markup-rule-formula"));
+  const s1 = ids("book:scott-ch01"); assert.equal(s1.length, 29); assert.equal(s1[0], "sole-proprietorship");
+  assert.ok(s1.indexOf("assets") < s1.indexOf("accounts-payable") && s1.indexOf("liabilities") < s1.indexOf("fundamental-accounting-equation-assets-liabilities"));
+  assert.ok(F.ALL.filter(c => /^scott-ch0[12]-/.test(c.id)).every(c => !/^"/.test(c.b)), "Scott Ch1-2 definitions are in our own words");
+  const w = ids("book:wt16-ch12");
+  for (const k of ["entry-issue-nopar-stock", "entry-stock-dividend-declared", "practice-stock-dividend", "stock-split", "practice-stock-split"]) assert.ok(w.includes(k), k);
+  assert.ok(w.indexOf("stock-dividend") < w.indexOf("entry-stock-dividend-declared"));
 });
