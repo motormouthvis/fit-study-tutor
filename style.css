@@ -502,3 +502,5 @@ body.fcfull .fcmeta { justify-content:flex-start; min-height:44px; padding-right
 body.fcfull .fcmeta > span:first-child { display:none; }
 body.fcfull .fcstars .fcstar { min-height:40px; padding:4px 10px; font-size:.95rem; }
 body.fcfull .fcq.big { margin:6px 0; }
+/* v5.9.29: panels (card helper, AI cards, Ask, menu) must sit above the phone full-screen card view */
+body.fcfull .sheet { z-index:70; }
