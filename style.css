@@ -491,4 +491,14 @@ body.fcfull .fcq.big.sm { font-size:1.15rem; line-height:1.4; }
 body.fcfull .fcbacktxt { font-size:1.18rem; line-height:1.45; }
 body.fcfull .fccard { color:#fff; }
 body.fcfull .fcbtns .bigbtn { min-height:56px; }
-body.fcfull .fcmeta { flex-wrap:wrap; row-gap:6px; } body.fcfull .fcmeta > span:first-child { flex:1 1 100%; }
+
+/* v5.9.27: phone full screen hides everything above the card except the Exit overlay */
+body.fcfull .fchead, body.fcfull #fcEmpty:empty, body.fcfull #alert, body.fcfull #heardLine, body.fcfull #audioErr, body.fcfull #netNote, body.fcfull .fckeys { display:none !important; }
+body.fcfull #tab-cards { height:100dvh; padding-top:calc(env(safe-area-inset-top,0px) + 2px); }
+body.fcfull #fcStudy { height:100% !important; }
+body.fcfull .fcexitfull { top:calc(env(safe-area-inset-top,0px) + 4px); right:6px; min-height:44px; padding:6px 12px; font-size:1rem; background:rgba(20,20,20,.85); }
+body.fcfull #fcStage .fccard { padding:6px 10px; }
+body.fcfull .fcmeta { justify-content:flex-start; min-height:44px; padding-right:84px; margin:0; }
+body.fcfull .fcmeta > span:first-child { display:none; }
+body.fcfull .fcstars .fcstar { min-height:40px; padding:4px 10px; font-size:.95rem; }
+body.fcfull .fcq.big { margin:6px 0; }
