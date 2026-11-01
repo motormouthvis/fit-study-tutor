@@ -653,7 +653,7 @@
   function fcRender() {
     if (fc.view !== "study" || !fc.queue) { renderSections(); return; }
     $("fcStudy").hidden = false; $("fcSections").hidden = true;
-    $("fcSecName").textContent = fcSecLabel(fc.filter); $("fcSecName").title = fcSecLabel(fc.filter); document.body.classList.add("fcstudy");
+    $("fcSecName").textContent = fcSecLabel(fc.filter); $("fcSecName").title = fcSecLabel(fc.filter); document.body.classList.add("fcstudy"); fcPhoneFull(true);
     var st = FL.stats(fc.st), id = fc.queue[0], c = id && fcCard(id);
     var pinf = fcPassKey() && fcPassInfo(fcPassKey());
     $("fcScore").innerHTML =  (pinf && pinf.left ? "<b>Card " + (pinf.pos + ((fc.off || 0) % Math.max(1, fc.queue.length))) + " of " + pinf.total + "</b> &middot; " : "") + "<b>This session:</b> " + fc.sess.got + " got, " + fc.sess.miss + " missed &middot; " + fc.queue.length + " left" +
@@ -758,7 +758,29 @@
     setZ(1); while (card.scrollHeight > card.clientHeight + 1 && z > 0.42) { z = Math.round((z - 0.04) * 100) / 100; setZ(z); }
     card.classList.toggle("fcover", card.scrollHeight > card.clientHeight + 1);
   }
-  function fcUnfit() { document.body.classList.remove("fcstudy"); var stg = $("fcStudy"); if (stg) stg.style.height = ""; }
+  function fcUnfit() { fcPhoneFull(false); document.body.classList.remove("fcstudy"); var stg = $("fcStudy"); if (stg) stg.style.height = ""; }
+  // v5.9.26: on phones the study screen becomes a full-screen app view (Fullscreen API where allowed, fixed full-viewport CSS fallback for iOS)
+  function fcIsPhone() { return window.matchMedia("(max-width:760px), (pointer:coarse) and (max-width:1024px)").matches; }
+  function fcPhoneFull(on) {
+    var b = document.body, was = b.classList.contains("fcfull"), btn = $("fcExitFull");
+    if (on && !fcIsPhone()) on = false;
+    if (on === was) return;
+    b.classList.toggle("fcfull", on); if (btn) btn.hidden = !on;
+    var de = document.documentElement;
+    if (on) {
+      try { if (!history.state || !history.state.fcfull) history.pushState({ fcfull: 1 }, ""); } catch (e) {}
+      try { var rq = de.requestFullscreen || de.webkitRequestFullscreen; if (rq && !document.fullscreenElement && !document.webkitFullscreenElement) { var r = rq.call(de); if (r && r.catch) r.catch(function () {}); } } catch (e) {}
+    } else {
+      try { var fe = document.fullscreenElement || document.webkitFullscreenElement, ex = document.exitFullscreen || document.webkitExitFullscreen; if (fe && ex) { var r2 = ex.call(document); if (r2 && r2.catch) r2.catch(function () {}); } } catch (e) {}
+      try { if (history.state && history.state.fcfull) history.back(); } catch (e) {}
+    }
+    setTimeout(fcFit, 120);
+  }
+  function fcExitFull() { if (fc && fc.view === "study") { fc.view = "sections"; fcRender(); window.scrollTo(0, 0); } else fcPhoneFull(false); }
+  window.addEventListener("popstate", function () { if (document.body.classList.contains("fcfull")) { document.body.classList.remove("fcfull"); fcExitFull(); } });
+  ["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) { document.addEventListener(ev, function () { if (!document.fullscreenElement && !document.webkitFullscreenElement && document.body.classList.contains("fcfull")) fcExitFull(); }); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("fcfull")) fcExitFull(); });
+  document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#fcExitFull")) fcExitFull(); });
   window.addEventListener("resize", function () { if (fc && fc.view === "study") { clearTimeout(fcFit.t); fcFit.t = setTimeout(fcFit, 80); } });
   function renderSections() {
     var box = $("fcSections"); if (!box || !fc) return; fcUnfit();

@@ -475,3 +475,20 @@ body.dev-desktop .dslog { max-height:48vh; }
 body.dev-desktop .cardpanel { inset:0 0 0 auto; width:min(420px, 36vw); justify-content:flex-end; align-items:stretch; }
 body.dev-desktop .cardpanel .sheetbox { height:100vh; max-height:100vh; border-radius:0; border-width:0 0 0 3px; max-width:none; }
 body.dev-desktop.cpopen main { margin-right:min(420px, 36vw); }
+
+/* v5.9.26: phone full-screen flash cards, one step larger text, always-visible Exit */
+.fcexitfull { display:none; }
+body.fcfull { overflow:hidden; }
+body.fcfull .top, body.fcfull .tabs, body.fcfull #viewToggle, body.fcfull #statusBanner, body.fcfull #chrome, body.fcfull .chromehot { display:none !important; }
+body.fcfull #tab-cards { position:fixed; inset:0; z-index:50; background:var(--bg,#000); margin:0; max-width:none; overflow:hidden;
+  padding:calc(env(safe-area-inset-top,0px) + 4px) 8px calc(env(safe-area-inset-bottom,0px) + 4px); height:100dvh; }
+body.fcfull .fcexitfull { display:block; position:fixed; top:calc(env(safe-area-inset-top,0px) + 6px); right:8px; z-index:60; min-height:48px; min-width:72px;
+  padding:8px 14px; font-size:1.1rem; font-weight:800; color:#fff; background:#222; border:2px solid #fff; border-radius:12px; }
+body.fcfull .fchead { padding-right:88px; }
+body.fcfull .fcq.big { font-size:1.5rem; line-height:1.4; }
+body.fcfull .fcq.big.mid { font-size:1.3rem; line-height:1.4; }
+body.fcfull .fcq.big.sm { font-size:1.15rem; line-height:1.4; }
+body.fcfull .fcbacktxt { font-size:1.18rem; line-height:1.45; }
+body.fcfull .fccard { color:#fff; }
+body.fcfull .fcbtns .bigbtn { min-height:56px; }
+body.fcfull .fcmeta { flex-wrap:wrap; row-gap:6px; } body.fcfull .fcmeta > span:first-child { flex:1 1 100%; }
