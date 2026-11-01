@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17 + 14 + 1); // v5.9.23: Warren Ch12 +1 Hendrix distribution card; // v5.9.22: Froeb Ch6 +19, Warren Ch12 +5, -10 Froeb Ch2/Ch3 duplicates; // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17 + 14 + 1 + 12); // v5.9.25: Warren Ch12 rebuilt one idea per card (31 -> 43); // v5.9.23: Warren Ch12 +1 Hendrix distribution card; // v5.9.22: Froeb Ch6 +19, Warren Ch12 +5, -10 Froeb Ch2/Ch3 duplicates; // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 166 + 32 - 9 + 9); assert.equal(F.BK.length, 316 + 32 + 71 - 17 + 14 + 1); // v5.9.23 +1; // v5.9.22: Ch6 +19, Ch2 -2, Ch3 -8; // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
+  assert.equal(FR.length, 166 + 32 - 9 + 9); assert.equal(F.BK.length, 316 + 32 + 71 - 17 + 14 + 1 + 12); // v5.9.23 +1; // v5.9.22: Ch6 +19, Ch2 -2, Ch3 -8; // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = []; // v5.9.22: no word-for-word cards remain
   // the Ch 3 "Summary of Main Points" cards are quoted word for word from a page we do not know, so they carry no page ref either
@@ -438,7 +438,7 @@ test("v5.9.13: the IRR-by-trial-and-error card sits right after the IRR worked e
 
 test("v5.9.18: BUS 5601 Week 2 decks: Scott Ch 4 (25) and Ch 5 (21), Warren Ch 12 (25), terms first", () => {
   const n = (id, ch) => F.BK.filter(c => c.topic === "book:" + id + "-ch" + String(ch).padStart(2, "0")).length;
-  assert.equal(n("scott", 4), 25); assert.equal(n("scott", 5), 21); assert.equal(n("wt16", 12), 31); // v5.9.23: +1 Hendrix distribution card; // v5.9.22: +5 stock dividend / split / no-par cards
+  assert.equal(n("scott", 4), 25); assert.equal(n("scott", 5), 21); assert.equal(n("wt16", 12), 43); // v5.9.23: +1 Hendrix distribution card; // v5.9.22: +5 stock dividend / split / no-par cards
   const s4 = F.BK.filter(c => c.topic === "book:scott-ch04"); assert.match(s4[0].f, /cash basis/);
   const w12 = F.BK.filter(c => c.topic === "book:wt16-ch12"); assert.match(w12[0].f, /What is a corporation/);
   assert.ok(F.BK.filter(c => /^(scott-ch0[45]|wt16-ch12)-/.test(c.id)).every(c => c.course === "acct"));
@@ -481,6 +481,6 @@ test("v5.9.22: audit leftovers: own words, Froeb Ch6 built out, Scott Ch1 teachi
   assert.ok(s1.indexOf("assets") < s1.indexOf("accounts-payable") && s1.indexOf("liabilities") < s1.indexOf("fundamental-accounting-equation-assets-liabilities"));
   assert.ok(F.ALL.filter(c => /^scott-ch0[12]-/.test(c.id)).every(c => !/^"/.test(c.b)), "Scott Ch1-2 definitions are in our own words");
   const w = ids("book:wt16-ch12");
-  for (const k of ["entry-issue-nopar-stock", "entry-stock-dividend-declared", "practice-stock-dividend", "stock-split", "practice-stock-split"]) assert.ok(w.includes(k), k);
+  for (const k of ["entry-issue-nopar-stock", "entry-stock-dividend-declared", "stock-split", "practice-stock-split"]) assert.ok(w.includes(k), k);
   assert.ok(w.indexOf("stock-dividend") < w.indexOf("entry-stock-dividend-declared"));
 });
