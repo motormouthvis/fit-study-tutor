@@ -199,7 +199,7 @@ test("v5.1: every card belongs to a section (course topics, book chapters, State
   for (const c of F.ALL) assert.ok(secs.some(s => s.test(c)), "no section for " + c.id);
   assert.equal(F.sectionStats(F.sectionById("all"), F.newState()).total, F.ALL.length);
   assert.equal(F.sectionStats(F.sectionById("sa"), F.newState()).total, F.SA.length);
-  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17 + 14 + 1 + 12 + 131 + 1); // v5.9.33 +1 inelastic revenue card; v5.9.32: Week 3: Froeb Ch6 rebuilt (22 -> 48), Froeb Ch7 +30, Warren Ch13 +33, Ch14 +42 // v5.9.25: Warren Ch12 rebuilt one idea per card (31 -> 43); // v5.9.23: Warren Ch12 +1 Hendrix distribution card; // v5.9.22: Froeb Ch6 +19, Warren Ch12 +5, -10 Froeb Ch2/Ch3 duplicates; // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
+  assert.equal(F.CARDS.length, 331); assert.equal(F.ALL.length, 331 + 82 + 166 + 32 + 68 + 48 + 71 - 17 + 14 + 1 + 12 + 131 + 1 + 6); // v5.9.34 +6 set-price cards; v5.9.33 +1 inelastic revenue card; v5.9.32: Week 3: Froeb Ch6 rebuilt (22 -> 48), Froeb Ch7 +30, Warren Ch13 +33, Ch14 +42 // v5.9.25: Warren Ch12 rebuilt one idea per card (31 -> 43); // v5.9.23: Warren Ch12 +1 Hendrix distribution card; // v5.9.22: Froeb Ch6 +19, Warren Ch12 +5, -10 Froeb Ch2/Ch3 duplicates; // v5.9.21: audit fixes (-23 duplicate/near-duplicate cards, +6 new term/scope cards); v5.9.18: +71 (Scott Ch 4-5, Warren Ch 12); v5.9.17: Ch 3-5 rebuilt, study-doc deck folded in (net +32 after removing duplicates)
 });
 test("v5.1: section counts: right / wrong / unseen add up to total; restudy overlaps; legacy progress without lastOk still counts", () => {
   const st = F.newState(), sec = F.sectionById("topic:balance"), ids = F.ALL.filter(c => c.topic === "balance").map(c => c.id);
@@ -229,7 +229,7 @@ test("v5.1: books-data.js is well formed (unique slugs, no empty text)", () => {
 
 test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section titles", () => {
   const FR = F.BK.filter(c => c.book === "froeb");
-  assert.equal(FR.length, 166 + 32 - 9 + 9 + 26 + 30 + 1); assert.equal(F.BK.length, 316 + 32 + 71 - 17 + 14 + 1 + 12 + 131 + 1); // v5.9.33 +1 inelastic revenue card; v5.9.32 Week 3 // v5.9.23 +1; // v5.9.22: Ch6 +19, Ch2 -2, Ch3 -8; // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
+  assert.equal(FR.length, 166 + 32 - 9 + 9 + 26 + 30 + 1 + 6); assert.equal(F.BK.length, 316 + 32 + 71 - 17 + 14 + 1 + 12 + 131 + 1 + 6); // v5.9.34 +6 set-price cards; v5.9.33 +1 inelastic revenue card; v5.9.32 Week 3 // v5.9.23 +1; // v5.9.22: Ch6 +19, Ch2 -2, Ch3 -8; // v5.9.17 Ch 3-5 rebuild; v5.9.21 audit trims
   // every card carries a page ref, except the ones quoted word for word from the book (see the v5.9 test)
   const VERBATIM = []; // v5.9.22: no word-for-word cards remain
   // the Ch 3 "Summary of Main Points" cards are quoted word for word from a page we do not know, so they carry no page ref either
@@ -240,7 +240,7 @@ test("v5.7: Froeb Chapters 1-6 cards: course 5421, page refs, long section title
   const ch5ref = c => /^froeb-ch05-/.test(c.id) && / \(Ch 5, (overview|sect 5\.[1-6], p\. \d+)(; summary)?\)$/.test(c.b);
   assert.ok(FR.every(c => c.course === "econ" && /^froeb-ch0[1-7]-[a-z0-9-]+$/.test(c.id) && (noPage(c) || ch4ref(c) || ch5ref(c) || / \((p\. \d+|page not given)\)$/.test(c.b))));
   const b = F.BOOKS.find(x => x.id === "froeb");
-  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [22, 23, 26, 55, 50, 49, 30]);
+  assert.deepEqual(b.chapters.map(ch => FR.filter(c => c.topic === ch.key).length), [22, 23, 26, 55, 50, 55, 30]);
   assert.equal(b.chapters[1].title_full, "Course 5421 - Book: Managerial Economics (Froeb, 5th ed.), Chapter 2: The One Lesson of Business");
 });
 
@@ -474,7 +474,7 @@ test("v5.9.22: audit leftovers: own words, Froeb Ch6 built out, Scott Ch1 teachi
   for (const gone of ["what-are-implicit-costs", "explicit-costs-what-the-book-calls-them", "ch3-summary-1", "ch3-summary-2", "ch3-summary-3", "ch3-summary-4", "ch3-summary-5", "ch3-summary-8"]) assert.ok(!c3.includes(gone), gone);
   for (const keep of ["implicit-costs", "accounting-costs", "opportunity-cost", "key-maxim-of-chapter-3"]) assert.ok(c3.includes(keep), keep);
   const f6 = ids("book:froeb-ch06");
-  assert.equal(f6.length, 49); assert.equal(f6[0], "ac-average-cost-term"); // v5.9.32 rebuild
+  assert.equal(f6.length, 55); assert.equal(f6[0], "ac-average-cost-term"); // v5.9.32 rebuild
   for (const k of ["elasticity-sign-size-direction", "gasoline-short-vs-long-run-elasticity", "positive-price-elasticity-is-rare"]) assert.ok(f6.includes(k), k);
   assert.ok(f6.indexOf("price-elasticity-term") < f6.indexOf("elasticity-sign-size-direction") && f6.indexOf("elasticity-and-revenue") < f6.indexOf("mr-elasticity-formula"));
   const s1 = ids("book:scott-ch01"); assert.equal(s1.length, 29); assert.equal(s1[0], "sole-proprietorship");
