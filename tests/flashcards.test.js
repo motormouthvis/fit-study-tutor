@@ -484,3 +484,36 @@ test("v5.9.22: audit leftovers: own words, Froeb Ch6 built out, Scott Ch1 teachi
   for (const k of ["entry-issue-nopar-stock", "entry-stock-dividend-declared", "stock-split", "practice-stock-split"]) assert.ok(w.includes(k), k);
   assert.ok(w.indexOf("stock-dividend") < w.indexOf("entry-stock-dividend-declared"));
 });
+
+test("v5.9.35: every Froeb Ch6 card that uses a benchmark states its definition, so Shuffle order still teaches", () => {
+  const cards = F.ALL.filter(c => c.topic === "book:froeb-ch06");
+  assert.equal(cards.length, 55);
+  const card = slug => { const c = cards.find(x => x.id === "froeb-ch06-" + slug); assert.ok(c, slug + " missing"); return c; };
+  // the front of each of these cards spells out the benchmark it leans on, so the card teaches on its own
+  const FRONT_DEFS = {
+    "setprice-table": ["actual margin = (P − MC)/P", "desired margin = 1/|e|"],
+    "setprice-rule": ["actual margin = (P − MC)/P", "desired margin = 1/|e|"],
+    "setprice-first-row": ["desired margin = 1/|e|"],
+    "setprice-best-row": ["actual margin = (P − MC)/P", "desired margin = 1/|e|"],
+    "setprice-too-high": ["desired margin = 1/|e|"],
+    "setprice-find-mc": ["actual margin (P − MC)/P"],
+    "margin-rule": ["current margin = (P − MC)/P", "desired margin = 1/|e|"],
+    "margin-rule-example": ["current margin = (P − MC)/P", "desired margin = 1/|e|"],
+    "practice-markup-rule": ["(P − MC)/P", "desired margin 1/|e|"],
+    "mr-elasticity-use": ["MR = P(1 − 1/|e|)", "cut price if MR > MC, raise if MR < MC"],
+    "brand-vs-industry-elasticity": ["brand e ≈ industry e ÷ share", "desired margin = 1/|e|"],
+    "practice-stay-even": ["(P − MC)/P", "%ΔQ = %ΔP ÷ (%ΔP + margin)"],
+    "stay-even-mattel": ["%ΔQ = %ΔP ÷ (%ΔP + margin)"],
+  };
+  for (const [slug, defs] of Object.entries(FRONT_DEFS)) for (const d of defs) assert.ok(card(slug).f.includes(d), slug + " front does not state: " + d);
+  assert.match(card("setprice-first-row").b, /Desired margin = 1\/\|e\| = 1\/1\.4 = \.71/);
+  assert.match(card("setprice-too-high").b, /Desired margin = 1\/2\.3 = \.43/);
+  assert.match(card("setprice-find-mc").b, /MC = \$5\.20 × \(1 − \.50\) = \$2\.60/);
+  assert.match(card("mr-elasticity-use").b, /MR = 10 × \(1 − 1\/2\) = \$5/);
+  assert.match(card("brand-vs-industry-elasticity").b, /Brand e ≈ −0\.4 ÷ 0\.20 = −2\.0/);
+  assert.match(card("practice-stay-even").b, /−0\.10 ÷ \(−0\.10 \+ 0\.50\) = −25%/);
+  // the arithmetic on those cards is right
+  assert.equal((1 / 1.4).toFixed(2), "0.71"); assert.equal((1 / 2.3).toFixed(2), "0.43");
+  assert.equal(5.2 * (1 - 0.5), 2.6); assert.equal(10 * (1 - 1 / 2), 5); assert.equal(-0.4 / 0.2, -2);
+  assert.equal((-0.1 / (-0.1 + 0.5)).toFixed(2), "-0.25"); assert.equal(30 / (1 - 0.25), 40);
+});
